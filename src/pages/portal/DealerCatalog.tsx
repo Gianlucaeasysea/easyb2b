@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Package, Search, Filter, ShoppingCart } from "lucide-react";
+import { useClientMode } from "@/contexts/ClientModeContext";
+import { Package, Search, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { useState } from "react";
 
 const DealerCatalog = () => {
   const { user } = useAuth();
+  const { isClientMode } = useClientMode();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -43,10 +45,16 @@ const DealerCatalog = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">Product Catalog</h1>
-          <p className="text-sm text-muted-foreground">
-            Your B2B pricing: <span className="text-success font-semibold">-{discountPct}%</span> (Class {client?.discount_class || "D"})
-          </p>
+          <h1 className="font-heading text-2xl font-bold text-foreground">
+            {isClientMode ? "Our Products" : "Product Catalog"}
+          </h1>
+          {isClientMode ? (
+            <p className="text-sm text-muted-foreground">Retail prices shown</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Your B2B pricing: <span className="text-success font-semibold">-{discountPct}%</span> (Class {client?.discount_class || "D"})
+            </p>
+          )}
         </div>
         <Badge variant="outline" className="text-xs">{filtered.length} products</Badge>
       </div>
@@ -90,8 +98,10 @@ const DealerCatalog = () => {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map(p => {
+            const retailPrice = Number(p.compare_at_price || p.price);
             const b2bPrice = Number(p.price) * (1 - discountPct / 100);
             const inStock = (p.stock_quantity ?? 0) > 0;
+
             return (
               <div key={p.id} className="glass-card-solid overflow-hidden group hover:border-primary/30 transition-colors">
                 <div className="aspect-square bg-secondary flex items-center justify-center relative">
@@ -108,28 +118,43 @@ const DealerCatalog = () => {
                 </div>
                 <div className="p-4">
                   <h3 className="font-heading text-sm font-semibold text-foreground mb-1">{p.name}</h3>
-                  {p.sku && <p className="text-xs font-mono text-muted-foreground mb-1">{p.sku}</p>}
+                  {!isClientMode && p.sku && <p className="text-xs font-mono text-muted-foreground mb-1">{p.sku}</p>}
                   {p.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{p.description}</p>}
 
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground line-through">€{Number(p.price).toFixed(2)}</p>
-                      <p className="font-heading text-lg font-bold text-foreground">€{b2bPrice.toFixed(2)}</p>
-                    </div>
-                    <div className="text-right">
+                  {isClientMode ? (
+                    /* CLIENT MODE: show only retail price */
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="font-heading text-lg font-bold text-foreground">€{retailPrice.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">Retail price</p>
+                      </div>
                       <span className={`text-xs font-heading font-semibold ${inStock ? "text-success" : "text-destructive"}`}>
-                        {inStock ? `${p.stock_quantity} in stock` : "Out of stock"}
+                        {inStock ? "Available" : "Out of stock"}
                       </span>
                     </div>
-                  </div>
-
-                  <Button
-                    disabled={!inStock}
-                    size="sm"
-                    className="w-full mt-3 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs"
-                  >
-                    <ShoppingCart size={14} /> Add to Order
-                  </Button>
+                  ) : (
+                    /* DEALER MODE: show B2B price with discount */
+                    <>
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground line-through">€{Number(p.price).toFixed(2)}</p>
+                          <p className="font-heading text-lg font-bold text-foreground">€{b2bPrice.toFixed(2)}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs font-heading font-semibold ${inStock ? "text-success" : "text-destructive"}`}>
+                            {inStock ? `${p.stock_quantity} in stock` : "Out of stock"}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        disabled={!inStock}
+                        size="sm"
+                        className="w-full mt-3 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs"
+                      >
+                        <ShoppingCart size={14} /> Add to Order
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             );
