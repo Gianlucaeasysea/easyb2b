@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Target, Activity, Calendar, Phone, Mail, MessageCircle, TrendingUp, Trophy, Flame, Star, Zap, Award } from "lucide-react";
-import { format, isToday, isPast, startOfMonth, endOfMonth } from "date-fns";
-import { Progress } from "@/components/ui/progress";
+import { Users, Target, Activity, Calendar, Phone, Mail, MessageCircle, TrendingUp } from "lucide-react";
+import { format, isToday, isPast } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
