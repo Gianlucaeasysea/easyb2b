@@ -60,8 +60,7 @@ const VideoTestimonials = () => (
       <VideoTestimonial key={i} url={url} />
     ))}
   </motion.div>
-  );
-};
+);
 
 const TestimonialsSection = () => (
   <section id="partners" className="py-28 section-alt">
