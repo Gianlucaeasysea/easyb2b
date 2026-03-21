@@ -1,42 +1,44 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Globe } from "lucide-react";
+import logo from "@/assets/easysea-logo.png";
 
 const Footer = () => (
-  <footer className="bg-foreground text-primary-foreground/70 py-16">
+  <footer className="border-t border-border py-16 bg-background">
     <div className="container mx-auto px-4">
       <div className="grid md:grid-cols-4 gap-10 mb-12">
         <div>
-          <h3 className="font-heading text-2xl font-extrabold text-primary-foreground mb-4">EASYSEA</h3>
-          <p className="text-sm leading-relaxed">Il tuo partner B2B di fiducia nel settore nautico. Qualità, affidabilità e innovazione.</p>
+          <img src={logo} alt="Easysea" className="h-7 mb-4" />
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Italian innovative company designing beautiful and innovative nautical accessories. Worldwide distribution.
+          </p>
         </div>
         <div>
-          <h4 className="font-heading font-bold text-primary-foreground mb-4">Link utili</h4>
-          <ul className="space-y-2 text-sm">
-            <li><a href="#chi-siamo" className="hover:text-primary-foreground transition-colors">Chi siamo</a></li>
-            <li><a href="#prodotti" className="hover:text-primary-foreground transition-colors">Prodotti</a></li>
-            <li><Link to="/diventa-distributore" className="hover:text-primary-foreground transition-colors">Diventa distributore</Link></li>
-            <li><Link to="/login" className="hover:text-primary-foreground transition-colors">Accedi</Link></li>
+          <h4 className="font-heading text-sm font-bold text-foreground mb-4 uppercase tracking-wider">Quick Links</h4>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li><a href="#about" className="hover:text-foreground transition-colors">About</a></li>
+            <li><a href="#products" className="hover:text-foreground transition-colors">Products</a></li>
+            <li><Link to="/become-a-dealer" className="hover:text-foreground transition-colors">Become a Dealer</Link></li>
+            <li><Link to="/login" className="hover:text-foreground transition-colors">Dealer Login</Link></li>
           </ul>
         </div>
         <div>
-          <h4 className="font-heading font-bold text-primary-foreground mb-4">Contatti</h4>
-          <ul className="space-y-3 text-sm">
-            <li className="flex items-center gap-2"><Mail size={14} /> info@easysea.it</li>
-            <li className="flex items-center gap-2"><Phone size={14} /> +39 02 1234567</li>
-            <li className="flex items-center gap-2"><MapPin size={14} /> Milano, Italia</li>
+          <h4 className="font-heading text-sm font-bold text-foreground mb-4 uppercase tracking-wider">Contact</h4>
+          <ul className="space-y-3 text-sm text-muted-foreground">
+            <li className="flex items-center gap-2"><Mail size={14} /> b2b@easysea.org</li>
+            <li className="flex items-center gap-2"><Globe size={14} /> easysea.org</li>
           </ul>
         </div>
         <div>
-          <h4 className="font-heading font-bold text-primary-foreground mb-4">Legale</h4>
-          <ul className="space-y-2 text-sm">
-            <li><a href="#" className="hover:text-primary-foreground transition-colors">Privacy Policy</a></li>
-            <li><a href="#" className="hover:text-primary-foreground transition-colors">Termini di servizio</a></li>
-            <li><a href="#" className="hover:text-primary-foreground transition-colors">Cookie Policy</a></li>
+          <h4 className="font-heading text-sm font-bold text-foreground mb-4 uppercase tracking-wider">Legal</h4>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li><a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a></li>
+            <li><a href="#" className="hover:text-foreground transition-colors">Terms of Service</a></li>
+            <li><a href="#" className="hover:text-foreground transition-colors">Cookie Policy</a></li>
           </ul>
         </div>
       </div>
-      <div className="border-t border-primary-foreground/10 pt-6 text-center text-xs">
-        &copy; {new Date().getFullYear()} Easysea. Tutti i diritti riservati.
+      <div className="border-t border-border pt-6 text-center text-xs text-muted-foreground">
+        &copy; {new Date().getFullYear()} Easysea Srl — Italian Innovative Company. All rights reserved.
       </div>
     </div>
   </footer>

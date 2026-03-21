@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
-import DiventaDistributore from "./pages/DiventaDistributore";
+import BecomeADealer from "./pages/BecomeADealer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,7 +19,9 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/diventa-distributore" element={<DiventaDistributore />} />
+          <Route path="/become-a-dealer" element={<BecomeADealer />} />
+          {/* Legacy Italian routes redirect */}
+          <Route path="/diventa-distributore" element={<BecomeADealer />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
