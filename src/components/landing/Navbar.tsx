@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import logo from "@/assets/easysea-logo.png";
+import logo from "@/assets/white_logo.png";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
