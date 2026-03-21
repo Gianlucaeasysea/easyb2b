@@ -2,7 +2,10 @@ import { motion } from "framer-motion";
 import { Star, Play } from "lucide-react";
 import { useState, useRef } from "react";
 
-const TESTIMONIAL_VIDEO_URL = "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial1.mp4";
+const TESTIMONIAL_VIDEOS = [
+  "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial1.mp4",
+  "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial2.mp4",
+];
 
 const testimonials = [
   { name: "Thomas Berger", company: "Segelshop Hamburg, Germany", quote: "Easysea products sell themselves. The Flipper winch handle is our #1 bestseller — customers love it.", stars: 5 },
