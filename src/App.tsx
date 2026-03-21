@@ -33,6 +33,7 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminRequests from "./pages/admin/AdminRequests";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminClientDetail from "./pages/admin/AdminClientDetail";
 
 // CRM
 import CRMDashboard from "./pages/crm/CRMDashboard";
@@ -80,6 +81,7 @@ const App = () => (
             }>
               <Route index element={<AdminDashboard />} />
               <Route path="clients" element={<AdminClients />} />
+              <Route path="clients/:id" element={<AdminClientDetail />} />
               <Route path="products" element={<AdminProducts />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="requests" element={<AdminRequests />} />
