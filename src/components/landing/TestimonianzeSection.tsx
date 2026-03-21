@@ -3,8 +3,8 @@ import { Star, Play } from "lucide-react";
 import { useState, useRef } from "react";
 
 const TESTIMONIAL_VIDEOS = [
-  "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial1.mp4",
-  "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial2.mp4",
+  { url: "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial1.mp4", vertical: false },
+  { url: "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial2.mp4", vertical: true },
 ];
 
 const testimonials = [
@@ -13,7 +13,7 @@ const testimonials = [
   { name: "James Whitfield", company: "SailTech UK, United Kingdom", quote: "250+ 5-star reviews speak for themselves. Easysea delivers quality and innovation like no other brand.", stars: 5 },
 ];
 
-const VideoTestimonial = ({ url }: { url: string }) => {
+const VideoTestimonial = ({ url, vertical }: { url: string; vertical?: boolean }) => {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -25,7 +25,7 @@ const VideoTestimonial = ({ url }: { url: string }) => {
   };
 
   return (
-    <div className="relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 aspect-video">
+    <div className={`relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 ${vertical ? "aspect-[9/16] max-h-[500px]" : "aspect-video"}`}>
       <video
         ref={videoRef}
         src={url}
@@ -54,10 +54,10 @@ const VideoTestimonials = () => (
     initial={{ opacity: 0, y: 30 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
-    className="mb-16 grid md:grid-cols-2 gap-6 max-w-5xl mx-auto"
+    className="mb-16 flex flex-col md:flex-row items-center justify-center gap-6 max-w-5xl mx-auto"
   >
-    {TESTIMONIAL_VIDEOS.map((url, i) => (
-      <VideoTestimonial key={i} url={url} />
+    {TESTIMONIAL_VIDEOS.map((v, i) => (
+      <VideoTestimonial key={i} url={v.url} vertical={v.vertical} />
     ))}
   </motion.div>
 );
