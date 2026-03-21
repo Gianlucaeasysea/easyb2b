@@ -54,10 +54,10 @@ const VideoTestimonials = () => (
     initial={{ opacity: 0, y: 30 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
-    className="mb-16 grid md:grid-cols-2 gap-6 max-w-5xl mx-auto"
+    className="mb-16 flex flex-col md:flex-row items-center justify-center gap-6 max-w-5xl mx-auto"
   >
-    {TESTIMONIAL_VIDEOS.map((url, i) => (
-      <VideoTestimonial key={i} url={url} />
+    {TESTIMONIAL_VIDEOS.map((v, i) => (
+      <VideoTestimonial key={i} url={v.url} vertical={v.vertical} />
     ))}
   </motion.div>
 );
