@@ -25,7 +25,7 @@ const VideoTestimonial = ({ url, vertical }: { url: string; vertical?: boolean }
   };
 
   return (
-    <div className={`relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 ${vertical ? "aspect-[9/16] max-h-[600px] w-[340px] md:w-[380px]" : "aspect-video w-[400px] md:w-[450px]"}`}>
+    <div className={`relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 ${vertical ? "aspect-[9/16] h-[450px] md:h-[520px]" : "aspect-video h-[450px] md:h-[520px]"}`}>
       <video
         ref={videoRef}
         src={url}
