@@ -74,6 +74,126 @@ const CRMDashboard = () => {
         <StatCard icon={Activity} label="Overdue Tasks" value={String(overdueActivities)} color={overdueActivities > 0 ? "bg-destructive" : "gradient-blue"} />
       </div>
 
+      {/* Gamification Section */}
+      <div className="glass-card-solid p-6 mb-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl gradient-blue flex items-center justify-center">
+            <Trophy className="text-primary-foreground" size={18} />
+          </div>
+          <div>
+            <h2 className="font-heading font-bold text-foreground">Your Goals</h2>
+            <p className="text-xs text-muted-foreground">Monthly performance tracker</p>
+          </div>
+        </div>
+
+        {(() => {
+          const monthStart = startOfMonth(new Date());
+          const monthEnd = endOfMonth(new Date());
+          const monthLeads = leads?.filter(l => new Date(l.created_at) >= monthStart && new Date(l.created_at) <= monthEnd).length || 0;
+          const monthWon = leads?.filter(l => l.status === "won" && new Date(l.updated_at) >= monthStart).length || 0;
+          const monthContacted = leads?.filter(l => l.status !== "new" && new Date(l.updated_at) >= monthStart).length || 0;
+
+          const goals = [
+            { label: "New Leads", icon: Users, current: monthLeads, target: 15, color: "bg-primary" },
+            { label: "Deals Won", icon: Star, current: monthWon, target: 5, color: "bg-success" },
+            { label: "Leads Contacted", icon: Zap, current: monthContacted, target: 20, color: "bg-warning" },
+          ];
+
+          const totalPoints = (monthLeads * 10) + (monthWon * 50) + (monthContacted * 5);
+          const level = totalPoints < 100 ? "Bronze" : totalPoints < 300 ? "Silver" : totalPoints < 600 ? "Gold" : "Platinum";
+          const levelColors: Record<string, string> = {
+            Bronze: "text-orange-400", Silver: "text-muted-foreground", Gold: "text-yellow-400", Platinum: "text-primary"
+          };
+          const levelEmoji: Record<string, string> = {
+            Bronze: "🥉", Silver: "🥈", Gold: "🥇", Platinum: "💎"
+          };
+
+          // Achievements
+          const achievements = [
+            { label: "First Blood", desc: "Win your first deal", unlocked: wonLeads > 0, icon: "🎯" },
+            { label: "Pipeline Builder", desc: "10+ leads in pipeline", unlocked: openLeads >= 10, icon: "🔨" },
+            { label: "Closer", desc: "5+ deals won", unlocked: wonLeads >= 5, icon: "🏆" },
+            { label: "Streak", desc: "Contact 20+ leads/month", unlocked: monthContacted >= 20, icon: "🔥" },
+          ];
+
+          return (
+            <>
+              {/* Level & Points */}
+              <div className="flex items-center gap-4 mb-6 p-3 rounded-xl bg-secondary/50">
+                <span className="text-3xl">{levelEmoji[level]}</span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-heading font-bold text-lg ${levelColors[level]}`}>{level}</span>
+                    <span className="text-xs text-muted-foreground">• {totalPoints} pts this month</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    +10 per lead • +50 per deal won • +5 per contact
+                  </p>
+                </div>
+                <div className="text-right">
+                  <Flame size={20} className="text-warning inline-block" />
+                </div>
+              </div>
+
+              {/* Goal progress bars */}
+              <div className="grid sm:grid-cols-3 gap-4 mb-6">
+                {goals.map(g => {
+                  const pct = Math.min((g.current / g.target) * 100, 100);
+                  const remaining = Math.max(g.target - g.current, 0);
+                  const Icon = g.icon;
+                  return (
+                    <div key={g.label} className="p-4 rounded-xl bg-secondary/30 border border-border/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Icon size={14} className="text-muted-foreground" />
+                        <span className="text-xs font-heading font-semibold uppercase tracking-wider">{g.label}</span>
+                      </div>
+                      <div className="flex items-end gap-2 mb-2">
+                        <span className="font-heading text-2xl font-bold text-foreground">{g.current}</span>
+                        <span className="text-sm text-muted-foreground mb-0.5">/ {g.target}</span>
+                      </div>
+                      <Progress value={pct} className="h-2 mb-2" />
+                      {remaining > 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          <span className="text-warning font-semibold">{remaining} more</span> to reach goal
+                        </p>
+                      ) : (
+                        <p className="text-xs text-success font-semibold flex items-center gap-1">
+                          <Award size={12} /> Goal reached! 🎉
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Achievements */}
+              <div>
+                <h3 className="text-xs font-heading font-bold uppercase tracking-wider text-muted-foreground mb-3">Achievements</h3>
+                <div className="flex gap-3 flex-wrap">
+                  {achievements.map(a => (
+                    <div
+                      key={a.label}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                        a.unlocked
+                          ? "border-primary/30 bg-primary/5"
+                          : "border-border/50 bg-secondary/20 opacity-50 grayscale"
+                      }`}
+                    >
+                      <span className="text-lg">{a.icon}</span>
+                      <div>
+                        <p className="text-xs font-heading font-semibold">{a.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{a.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          );
+        })()}
+      </div>
+
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Pipeline Summary */}
         <div className="glass-card-solid p-6">
