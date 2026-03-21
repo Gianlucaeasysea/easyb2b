@@ -33,6 +33,7 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminRequests from "./pages/admin/AdminRequests";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminClientDetail from "./pages/admin/AdminClientDetail";
 
 // CRM
 import CRMDashboard from "./pages/crm/CRMDashboard";
