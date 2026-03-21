@@ -15,14 +15,32 @@ import Footer from "@/components/landing/Footer";
 
 const BecomeADealer = () => {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   const [form, setForm] = useState({
     companyName: "", contactName: "", email: "", phone: "",
     zone: "", businessType: "", website: "", message: "", privacy: false,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    const { error } = await supabase.from("distributor_requests").insert({
+      company_name: form.companyName,
+      contact_name: form.contactName,
+      email: form.email,
+      phone: form.phone,
+      zone: form.zone,
+      business_type: form.businessType,
+      website: form.website || null,
+      message: form.message || null,
+    });
+    setLoading(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setSubmitted(true);
+    }
   };
 
   if (submitted) {
