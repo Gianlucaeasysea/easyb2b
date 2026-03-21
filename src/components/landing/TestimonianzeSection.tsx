@@ -13,7 +13,7 @@ const testimonials = [
   { name: "James Whitfield", company: "SailTech UK, United Kingdom", quote: "250+ 5-star reviews speak for themselves. Easysea delivers quality and innovation like no other brand.", stars: 5 },
 ];
 
-const VideoTestimonial = () => {
+const VideoTestimonial = ({ url }: { url: string }) => {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -25,34 +25,41 @@ const VideoTestimonial = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="mb-16"
-    >
-      <div className="relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 max-w-4xl mx-auto aspect-video group">
-        <video
-          ref={videoRef}
-          src={TESTIMONIAL_VIDEO_URL}
-          controls={playing}
-          playsInline
-          preload="metadata"
-          className="w-full h-full object-cover"
-          onEnded={() => setPlaying(false)}
-        />
-        {!playing && (
-          <button
-            onClick={handlePlay}
-            className="absolute inset-0 flex items-center justify-center bg-foreground/30 hover:bg-foreground/40 transition-colors cursor-pointer"
-          >
-            <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-              <Play size={32} className="text-primary-foreground ml-1" />
-            </div>
-          </button>
-        )}
-      </div>
-    </motion.div>
+    <div className="relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 aspect-video">
+      <video
+        ref={videoRef}
+        src={url}
+        controls={playing}
+        playsInline
+        preload="metadata"
+        className="w-full h-full object-cover"
+        onEnded={() => setPlaying(false)}
+      />
+      {!playing && (
+        <button
+          onClick={handlePlay}
+          className="absolute inset-0 flex items-center justify-center bg-foreground/30 hover:bg-foreground/40 transition-colors cursor-pointer"
+        >
+          <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+            <Play size={32} className="text-primary-foreground ml-1" />
+          </div>
+        </button>
+      )}
+    </div>
+  );
+};
+
+const VideoTestimonials = () => (
+  <motion.div
+    initial={{ opacity: 0, y: 30 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    className="mb-16 grid md:grid-cols-2 gap-6 max-w-5xl mx-auto"
+  >
+    {TESTIMONIAL_VIDEOS.map((url, i) => (
+      <VideoTestimonial key={i} url={url} />
+    ))}
+  </motion.div>
   );
 };
 
