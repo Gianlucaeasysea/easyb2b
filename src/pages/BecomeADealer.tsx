@@ -1,0 +1,142 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { motion } from "framer-motion";
+import { ArrowLeft, CheckCircle } from "lucide-react";
+import Navbar from "@/components/landing/Navbar";
+import Footer from "@/components/landing/Footer";
+
+const BecomeADealer = () => {
+  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({
+    companyName: "", contactName: "", email: "", phone: "",
+    zone: "", businessType: "", website: "", message: "", privacy: false,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
+  };
+
+  if (submitted) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center bg-background pt-16">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card-solid p-12 text-center max-w-md">
+            <CheckCircle className="mx-auto text-success mb-6" size={56} />
+            <h2 className="font-heading text-2xl font-bold text-foreground mb-4">Application Received!</h2>
+            <p className="text-muted-foreground mb-8 text-sm">We'll review your application and get back to you within 2 business days.</p>
+            <Link to="/">
+              <Button className="rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">Back to Home</Button>
+            </Link>
+          </motion.div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-background pt-24 pb-16">
+        <div className="container mx-auto px-4 max-w-2xl">
+          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8">
+            <ArrowLeft size={16} /> Back to Home
+          </Link>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <p className="text-xs uppercase tracking-[0.3em] text-primary font-heading font-semibold mb-3">Dealer Application</p>
+            <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-3">Become a Dealer</h1>
+            <p className="text-muted-foreground mb-10 text-sm">Join our worldwide network of nautical dealers and retailers.</p>
+
+            <form onSubmit={handleSubmit} className="glass-card-solid p-8 space-y-5">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Company Name *</Label>
+                  <Input required className="rounded-lg bg-secondary border-border" value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Contact Person *</Label>
+                  <Input required className="rounded-lg bg-secondary border-border" value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Business Email *</Label>
+                  <Input type="email" required className="rounded-lg bg-secondary border-border" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Phone *</Label>
+                  <Input type="tel" required className="rounded-lg bg-secondary border-border" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Region *</Label>
+                  <Select required onValueChange={v => setForm(f => ({ ...f, zone: v }))}>
+                    <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Select..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="europe">Europe</SelectItem>
+                      <SelectItem value="north-america">North America</SelectItem>
+                      <SelectItem value="south-america">South America</SelectItem>
+                      <SelectItem value="asia-pacific">Asia Pacific</SelectItem>
+                      <SelectItem value="middle-east-africa">Middle East & Africa</SelectItem>
+                      <SelectItem value="oceania">Oceania</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Business Type *</Label>
+                  <Select required onValueChange={v => setForm(f => ({ ...f, businessType: v }))}>
+                    <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Select..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="chandlery">Chandlery / Marine Store</SelectItem>
+                      <SelectItem value="marina">Marina</SelectItem>
+                      <SelectItem value="boatyard">Boatyard / Shipyard</SelectItem>
+                      <SelectItem value="online">Online Retailer</SelectItem>
+                      <SelectItem value="distributor">Distributor</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Website</Label>
+                <Input type="url" className="rounded-lg bg-secondary border-border" placeholder="https://" value={form.website} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Message</Label>
+                <Textarea className="rounded-lg bg-secondary border-border min-h-[100px]" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} />
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Checkbox id="privacy" required checked={form.privacy} onCheckedChange={c => setForm(f => ({ ...f, privacy: !!c }))} />
+                <Label htmlFor="privacy" className="text-xs text-muted-foreground leading-snug cursor-pointer">
+                  I agree to the Privacy Policy and Terms of Service *
+                </Label>
+              </div>
+
+              <Button type="submit" size="lg" className="w-full rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6">
+                Submit Application
+              </Button>
+            </form>
+          </motion.div>
+        </div>
+      </div>
+      <Footer />
+    </>
+  );
+};
+
+export default BecomeADealer;
