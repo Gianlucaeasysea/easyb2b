@@ -2,7 +2,10 @@ import { motion } from "framer-motion";
 import { Star, Play } from "lucide-react";
 import { useState, useRef } from "react";
 
-const TESTIMONIAL_VIDEO_URL = "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial1.mp4";
+const TESTIMONIAL_VIDEOS = [
+  "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial1.mp4",
+  "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial2.mp4",
+];
 
 const testimonials = [
   { name: "Thomas Berger", company: "Segelshop Hamburg, Germany", quote: "Easysea products sell themselves. The Flipper winch handle is our #1 bestseller — customers love it.", stars: 5 },
@@ -10,7 +13,7 @@ const testimonials = [
   { name: "James Whitfield", company: "SailTech UK, United Kingdom", quote: "250+ 5-star reviews speak for themselves. Easysea delivers quality and innovation like no other brand.", stars: 5 },
 ];
 
-const VideoTestimonial = () => {
+const VideoTestimonial = ({ url }: { url: string }) => {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -22,36 +25,42 @@ const VideoTestimonial = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="mb-16"
-    >
-      <div className="relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 max-w-4xl mx-auto aspect-video group">
-        <video
-          ref={videoRef}
-          src={TESTIMONIAL_VIDEO_URL}
-          controls={playing}
-          playsInline
-          preload="metadata"
-          className="w-full h-full object-cover"
-          onEnded={() => setPlaying(false)}
-        />
-        {!playing && (
-          <button
-            onClick={handlePlay}
-            className="absolute inset-0 flex items-center justify-center bg-foreground/30 hover:bg-foreground/40 transition-colors cursor-pointer"
-          >
-            <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-              <Play size={32} className="text-primary-foreground ml-1" />
-            </div>
-          </button>
-        )}
-      </div>
-    </motion.div>
+    <div className="relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 aspect-video">
+      <video
+        ref={videoRef}
+        src={url}
+        controls={playing}
+        playsInline
+        preload="metadata"
+        className="w-full h-full object-cover"
+        onEnded={() => setPlaying(false)}
+      />
+      {!playing && (
+        <button
+          onClick={handlePlay}
+          className="absolute inset-0 flex items-center justify-center bg-foreground/30 hover:bg-foreground/40 transition-colors cursor-pointer"
+        >
+          <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+            <Play size={32} className="text-primary-foreground ml-1" />
+          </div>
+        </button>
+      )}
+    </div>
   );
 };
+
+const VideoTestimonials = () => (
+  <motion.div
+    initial={{ opacity: 0, y: 30 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    className="mb-16 grid md:grid-cols-2 gap-6 max-w-5xl mx-auto"
+  >
+    {TESTIMONIAL_VIDEOS.map((url, i) => (
+      <VideoTestimonial key={i} url={url} />
+    ))}
+  </motion.div>
+);
 
 const TestimonialsSection = () => (
   <section id="partners" className="py-28 section-alt">
@@ -61,8 +70,8 @@ const TestimonialsSection = () => (
         <h2 className="font-heading text-3xl md:text-5xl font-bold text-foreground">What our dealers say</h2>
       </motion.div>
 
-      {/* Video Testimonial */}
-      <VideoTestimonial />
+      {/* Video Testimonials */}
+      <VideoTestimonials />
 
       {/* Text Testimonials */}
       <div className="grid md:grid-cols-3 gap-6">
