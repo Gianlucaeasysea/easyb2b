@@ -13,7 +13,7 @@ const testimonials = [
   { name: "James Whitfield", company: "SailTech UK, United Kingdom", quote: "250+ 5-star reviews speak for themselves. Easysea delivers quality and innovation like no other brand.", stars: 5 },
 ];
 
-const VideoTestimonial = ({ url }: { url: string }) => {
+const VideoTestimonial = ({ url, vertical }: { url: string; vertical?: boolean }) => {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
