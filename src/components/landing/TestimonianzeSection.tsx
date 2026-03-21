@@ -3,8 +3,8 @@ import { Star, Play } from "lucide-react";
 import { useState, useRef } from "react";
 
 const TESTIMONIAL_VIDEOS = [
-  "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial1.mp4",
-  "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial2.mp4",
+  { url: "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial1.mp4", vertical: false },
+  { url: "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial2.mp4", vertical: true },
 ];
 
 const testimonials = [
