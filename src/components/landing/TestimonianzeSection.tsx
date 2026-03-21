@@ -70,8 +70,8 @@ const TestimonialsSection = () => (
         <h2 className="font-heading text-3xl md:text-5xl font-bold text-foreground">What our dealers say</h2>
       </motion.div>
 
-      {/* Video Testimonial */}
-      <VideoTestimonial />
+      {/* Video Testimonials */}
+      <VideoTestimonials />
 
       {/* Text Testimonials */}
       <div className="grid md:grid-cols-3 gap-6">
