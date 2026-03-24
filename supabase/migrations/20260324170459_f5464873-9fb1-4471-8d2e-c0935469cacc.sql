@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD CONSTRAINT products_shopify_id_key UNIQUE (shopify_id);

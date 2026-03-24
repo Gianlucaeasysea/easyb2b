@@ -39,26 +39,26 @@ const AdminProducts = () => {
       const { data, error } = await supabase.functions.invoke("shopify-sync");
       if (error) throw error;
 
-      const variants = data.products || [];
-      let upserted = 0;
-      for (const v of variants) {
+      const variants = (data.products || []).map((v: any) => ({
+        shopify_id: v.shopify_variant_id,
+        name: v.variant_title,
+        sku: v.sku,
+        price: v.price,
+        compare_at_price: v.compare_at_price,
+        stock_quantity: v.inventory_quantity,
+        images: v.image ? [v.image] : null,
+        active_b2b: true,
+      }));
+
+      if (variants.length > 0) {
         const { error: upsertErr } = await supabase.from("products").upsert(
-          {
-            shopify_id: v.shopify_variant_id,
-            name: v.variant_title,
-            sku: v.sku,
-            price: v.price,
-            compare_at_price: v.compare_at_price,
-            stock_quantity: v.inventory_quantity,
-            images: v.image ? [v.image] : null,
-            active_b2b: true,
-          } as any,
+          variants as any,
           { onConflict: "shopify_id" }
         );
-        if (!upsertErr) upserted++;
+        if (upsertErr) throw upsertErr;
       }
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
-      toast.success(`Sincronizzati ${upserted} prodotti da Shopify`);
+      toast.success(`Sincronizzati ${variants.length} prodotti da Shopify`);
     } catch (err: any) {
       toast.error("Errore sync: " + err.message);
     } finally {
