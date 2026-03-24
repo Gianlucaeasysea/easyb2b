@@ -92,6 +92,8 @@ const App = () => (
               <Route path="orders/:id" element={<AdminOrderDetail />} />
               <Route path="requests" element={<AdminRequests />} />
               <Route path="settings" element={<AdminSettings />} />
+              <Route path="import" element={<AdminImport />} />
+              <Route path="price-lists" element={<AdminPriceLists />} />
             </Route>
 
             {/* CRM */}
