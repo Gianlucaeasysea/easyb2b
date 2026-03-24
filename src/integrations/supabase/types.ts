@@ -70,6 +70,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          address: string | null
           assigned_sales_id: string | null
           company_name: string
           contact_name: string | null
@@ -83,9 +84,11 @@ export type Database = {
           status: string | null
           updated_at: string
           user_id: string | null
+          vat_number: string | null
           zone: string | null
         }
         Insert: {
+          address?: string | null
           assigned_sales_id?: string | null
           company_name: string
           contact_name?: string | null
@@ -99,9 +102,11 @@ export type Database = {
           status?: string | null
           updated_at?: string
           user_id?: string | null
+          vat_number?: string | null
           zone?: string | null
         }
         Update: {
+          address?: string | null
           assigned_sales_id?: string | null
           company_name?: string
           contact_name?: string | null
@@ -115,7 +120,35 @@ export type Database = {
           status?: string | null
           updated_at?: string
           user_id?: string | null
+          vat_number?: string | null
           zone?: string | null
+        }
+        Relationships: []
+      }
+      discount_tiers: {
+        Row: {
+          created_at: string
+          discount_pct: number
+          id: string
+          label: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          discount_pct?: number
+          id?: string
+          label: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          discount_pct?: number
+          id?: string
+          label?: string
+          name?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -332,6 +365,87 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_list_items: {
+        Row: {
+          custom_price: number
+          id: string
+          price_list_id: string
+          product_id: string
+        }
+        Insert: {
+          custom_price: number
+          id?: string
+          price_list_id: string
+          product_id: string
+        }
+        Update: {
+          custom_price?: number
+          id?: string
+          price_list_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_list_items_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_lists: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          description: string | null
+          discount_tier_id: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          discount_tier_id?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          discount_tier_id?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_lists_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_lists_discount_tier_id_fkey"
+            columns: ["discount_tier_id"]
+            isOneToOne: false
+            referencedRelation: "discount_tiers"
             referencedColumns: ["id"]
           },
         ]
