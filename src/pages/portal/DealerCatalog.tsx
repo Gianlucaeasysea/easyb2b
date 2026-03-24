@@ -16,6 +16,7 @@ const DealerCatalog = () => {
   const { isClientMode } = useClientMode();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { addItem, totalItems } = useCart();
 
   const { data: client } = useQuery({
     queryKey: ["my-client"],
