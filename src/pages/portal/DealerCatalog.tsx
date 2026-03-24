@@ -60,7 +60,17 @@ const DealerCatalog = () => {
             </p>
           )}
         </div>
-        <Badge variant="outline" className="text-xs">{filtered.length} products</Badge>
+        <div className="flex items-center gap-2">
+          {totalItems > 0 && (
+            <Link to="/portal/cart">
+              <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold text-xs gap-1.5 rounded-lg">
+                <ShoppingCart size={14} />
+                Cart ({totalItems})
+              </Button>
+            </Link>
+          )}
+          <Badge variant="outline" className="text-xs">{filtered.length} products</Badge>
+        </div>
       </div>
 
       {/* Search & Filters */}
