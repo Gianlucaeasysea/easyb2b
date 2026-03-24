@@ -35,6 +35,7 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminRequests from "./pages/admin/AdminRequests";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminClientDetail from "./pages/admin/AdminClientDetail";
+import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
 
 // CRM
 import CRMDashboard from "./pages/crm/CRMDashboard";
@@ -86,6 +87,7 @@ const App = () => (
               <Route path="clients/:id" element={<AdminClientDetail />} />
               <Route path="products" element={<AdminProducts />} />
               <Route path="orders" element={<AdminOrders />} />
+              <Route path="orders/:id" element={<AdminOrderDetail />} />
               <Route path="requests" element={<AdminRequests />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
