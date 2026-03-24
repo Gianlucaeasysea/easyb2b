@@ -25,6 +25,7 @@ import DealerPromos from "./pages/portal/DealerPromos";
 import DealerGoals from "./pages/portal/DealerGoals";
 import DealerMarketing from "./pages/portal/DealerMarketing";
 import DealerSupport from "./pages/portal/DealerSupport";
+import DealerCart from "./pages/portal/DealerCart";
 
 // Admin Panel
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -67,6 +68,7 @@ const App = () => (
               <Route index element={<DealerDashboard />} />
               <Route path="catalog" element={<DealerCatalog />} />
               <Route path="orders" element={<DealerOrders />} />
+              <Route path="cart" element={<DealerCart />} />
               <Route path="promos" element={<DealerPromos />} />
               <Route path="goals" element={<DealerGoals />} />
               <Route path="marketing" element={<DealerMarketing />} />

@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Package, Trophy, Megaphone, HelpCircle, FileImage } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, Trophy, Megaphone, HelpCircle, FileImage, ShoppingCart } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -9,6 +9,7 @@ import {
 const items = [
   { title: "Dashboard", url: "/portal", icon: LayoutDashboard },
   { title: "Catalog", url: "/portal/catalog", icon: Package },
+  { title: "Cart", url: "/portal/cart", icon: ShoppingCart },
   { title: "My Orders", url: "/portal/orders", icon: ShoppingBag },
   { title: "Promotions", url: "/portal/promos", icon: Megaphone },
   { title: "Goals & Rewards", url: "/portal/goals", icon: Trophy },

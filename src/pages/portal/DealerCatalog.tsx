@@ -7,12 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { useCart } from "@/contexts/CartContext";
+import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 const DealerCatalog = () => {
   const { user } = useAuth();
   const { isClientMode } = useClientMode();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { addItem, totalItems } = useCart();
 
   const { data: client } = useQuery({
     queryKey: ["my-client"],
@@ -56,7 +60,17 @@ const DealerCatalog = () => {
             </p>
           )}
         </div>
-        <Badge variant="outline" className="text-xs">{filtered.length} products</Badge>
+        <div className="flex items-center gap-2">
+          {totalItems > 0 && (
+            <Link to="/portal/cart">
+              <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold text-xs gap-1.5 rounded-lg">
+                <ShoppingCart size={14} />
+                Cart ({totalItems})
+              </Button>
+            </Link>
+          )}
+          <Badge variant="outline" className="text-xs">{filtered.length} products</Badge>
+        </div>
       </div>
 
       {/* Search & Filters */}
@@ -150,6 +164,19 @@ const DealerCatalog = () => {
                         disabled={!inStock}
                         size="sm"
                         className="w-full mt-3 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs"
+                        onClick={() => {
+                          addItem({
+                            productId: p.id,
+                            name: p.name,
+                            sku: p.sku,
+                            unitPrice: Number(p.price),
+                            b2bPrice,
+                            discountPct,
+                            stock: p.stock_quantity ?? 0,
+                            image: p.images?.[0] || null,
+                          });
+                          toast.success(`${p.name} added to cart`);
+                        }}
                       >
                         <ShoppingCart size={14} /> Add to Order
                       </Button>
