@@ -25,6 +25,7 @@ import DealerPromos from "./pages/portal/DealerPromos";
 import DealerGoals from "./pages/portal/DealerGoals";
 import DealerMarketing from "./pages/portal/DealerMarketing";
 import DealerSupport from "./pages/portal/DealerSupport";
+import DealerCart from "./pages/portal/DealerCart";
 
 // Admin Panel
 import AdminDashboard from "./pages/admin/AdminDashboard";
