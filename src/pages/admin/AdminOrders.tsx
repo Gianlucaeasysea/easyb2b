@@ -101,7 +101,7 @@ const AdminOrders = () => {
                 <TableRow
                   key={o.id}
                   className="cursor-pointer hover:bg-secondary/50"
-                  onClick={() => navigate(`/admin/clients/${o.client_id}`)}
+                  onClick={() => navigate(`/admin/orders/${o.id}`)}
                 >
                   <TableCell className="font-mono text-xs">#{o.id.slice(0, 8).toUpperCase()}</TableCell>
                   <TableCell>

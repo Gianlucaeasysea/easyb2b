@@ -144,8 +144,11 @@ const DealerOrders = () => {
                       </TableBody>
                     </Table>
 
-                    <div className="px-4 py-3 border-t border-border flex justify-end">
-                      <div className="text-right">
+                    <div className="px-4 py-3 border-t border-border flex items-end justify-between">
+                      <div className="flex-1">
+                        <OrderDocuments orderId={order.id} readOnly />
+                      </div>
+                      <div className="text-right ml-4">
                         <span className="text-xs text-muted-foreground mr-3">Total</span>
                         <span className="font-heading text-lg font-bold text-foreground">€{Number(order.total_amount || 0).toFixed(2)}</span>
                       </div>
