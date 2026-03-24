@@ -4,14 +4,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Package, Search, Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Package, Search, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { useState } from "react";
 
 const AdminProducts = () => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["admin-products"],
@@ -29,9 +29,42 @@ const AdminProducts = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
-      toast({ title: "Product updated" });
+      toast.success("Prodotto aggiornato");
     },
   });
+
+  const syncShopify = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("shopify-sync");
+      if (error) throw error;
+
+      const variants = data.products || [];
+      let upserted = 0;
+      for (const v of variants) {
+        const { error: upsertErr } = await supabase.from("products").upsert(
+          {
+            shopify_id: v.shopify_variant_id,
+            name: v.variant_title,
+            sku: v.sku,
+            price: v.price,
+            compare_at_price: v.compare_at_price,
+            stock_quantity: v.inventory_quantity,
+            images: v.image ? [v.image] : null,
+            active_b2b: true,
+          } as any,
+          { onConflict: "shopify_id" }
+        );
+        if (!upsertErr) upserted++;
+      }
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      toast.success(`Sincronizzati ${upserted} prodotti da Shopify`);
+    } catch (err: any) {
+      toast.error("Errore sync: " + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const filtered = products?.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -46,7 +79,13 @@ const AdminProducts = () => {
           <h1 className="font-heading text-2xl font-bold text-foreground">Products</h1>
           <p className="text-sm text-muted-foreground">Manage B2B product catalog</p>
         </div>
-        <Badge variant="outline" className="text-xs">{products?.length || 0} products</Badge>
+        <div className="flex items-center gap-2">
+          <Button onClick={syncShopify} disabled={syncing} size="sm" variant="outline">
+            <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Sync..." : "Sync Shopify"}
+          </Button>
+          <Badge variant="outline" className="text-xs">{products?.length || 0} products</Badge>
+        </div>
       </div>
 
       <div className="relative mb-6">
