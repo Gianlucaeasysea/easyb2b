@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Package, ShoppingBag, FileText, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Package, ShoppingBag, FileText, Settings, Upload, Tag } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -12,6 +12,8 @@ const items = [
   { title: "Products", url: "/admin/products", icon: Package },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
   { title: "Dealer Requests", url: "/admin/requests", icon: FileText },
+  { title: "Importa Dati", url: "/admin/import", icon: Upload },
+  { title: "Listini & Sconti", url: "/admin/price-lists", icon: Tag },
   { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
