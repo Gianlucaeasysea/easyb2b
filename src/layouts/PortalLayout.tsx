@@ -50,17 +50,19 @@ const PortalHeader = () => {
 const PortalLayout = () => {
   return (
     <ClientModeProvider>
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full">
-          <DealerSidebar />
-          <div className="flex-1 flex flex-col">
-            <PortalHeader />
-            <main className="flex-1 p-6 overflow-auto">
-              <Outlet />
-            </main>
+      <CartProvider>
+        <SidebarProvider>
+          <div className="min-h-screen flex w-full">
+            <DealerSidebar />
+            <div className="flex-1 flex flex-col">
+              <PortalHeader />
+              <main className="flex-1 p-6 overflow-auto">
+                <Outlet />
+              </main>
+            </div>
           </div>
-        </div>
-      </SidebarProvider>
+        </SidebarProvider>
+      </CartProvider>
     </ClientModeProvider>
   );
 };

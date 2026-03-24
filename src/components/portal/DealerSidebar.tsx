@@ -9,6 +9,7 @@ import {
 const items = [
   { title: "Dashboard", url: "/portal", icon: LayoutDashboard },
   { title: "Catalog", url: "/portal/catalog", icon: Package },
+  { title: "Cart", url: "/portal/cart", icon: ShoppingCart },
   { title: "My Orders", url: "/portal/orders", icon: ShoppingBag },
   { title: "Promotions", url: "/portal/promos", icon: Megaphone },
   { title: "Goals & Rewards", url: "/portal/goals", icon: Trophy },
