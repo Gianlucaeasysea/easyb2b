@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS products_shopify_id_unique ON public.products (shopify_id) WHERE shopify_id IS NOT NULL;
