@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingBag, ExternalLink, Clock, CheckCircle, Truck, Package, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
+import OrderDocuments from "@/components/OrderDocuments";
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   draft: { label: "Draft", color: "text-muted-foreground border-muted", icon: Clock },
