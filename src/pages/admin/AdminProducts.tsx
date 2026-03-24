@@ -4,8 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Package, Search, Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Package, Search, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { useState } from "react";
 
 const AdminProducts = () => {
