@@ -6,6 +6,7 @@ import { LogOut, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ClientModeProvider, useClientMode } from "@/contexts/ClientModeContext";
+import { CartProvider } from "@/contexts/CartContext";
 import logo from "@/assets/easysea-logo.png";
 
 const PortalHeader = () => {
