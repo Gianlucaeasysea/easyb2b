@@ -9,9 +9,9 @@ import { toast } from "sonner";
 import { useState } from "react";
 
 const AdminProducts = () => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["admin-products"],
