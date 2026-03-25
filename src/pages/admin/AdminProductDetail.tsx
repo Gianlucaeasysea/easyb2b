@@ -328,6 +328,20 @@ const AdminProductDetail = () => {
                   />
                   <p className="text-[10px] text-muted-foreground mt-1">{description.length} characters</p>
                 </div>
+                <div>
+                  <label className="text-xs font-heading font-semibold text-foreground mb-1.5 block">
+                    Lead Time (estimated restock)
+                  </label>
+                  <Input
+                    value={leadTime}
+                    onChange={e => setLeadTime(e.target.value)}
+                    className="bg-secondary border-border"
+                    placeholder="e.g. 2-3 weeks, Mid April 2026, 15 days..."
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Shown to dealers when product is out of stock
+                  </p>
+                </div>
               </div>
             </TabsContent>
 
