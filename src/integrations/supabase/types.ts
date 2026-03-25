@@ -557,6 +557,48 @@ export type Database = {
           },
         ]
       }
+      product_details: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          features: Json | null
+          gallery_images: Json | null
+          id: string
+          product_family: string
+          specifications: Json | null
+          technical_sheet_url: string | null
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          features?: Json | null
+          gallery_images?: Json | null
+          id?: string
+          product_family: string
+          specifications?: Json | null
+          technical_sheet_url?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          features?: Json | null
+          gallery_images?: Json | null
+          id?: string
+          product_family?: string
+          specifications?: Json | null
+          technical_sheet_url?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           active_b2b: boolean | null
