@@ -25,7 +25,7 @@ const OrderReceivedAdminEmail = ({ orderCode, companyName, clientName, clientEma
         <Text style={text}><strong>Client:</strong> {companyName || '—'}</Text>
         <Text style={text}><strong>Contact:</strong> {clientName || '—'} ({clientEmail || 'no email'})</Text>
         {itemsHtml && (
-          <Section dangerouslySetInnerHTML={{ __html: itemsHtml }} />
+          <div dangerouslySetInnerHTML={{ __html: itemsHtml }} />
         )}
         {totalAmount && (
           <Text style={{ ...text, fontWeight: 'bold', fontSize: '16px' }}>Total: €{totalAmount}</Text>

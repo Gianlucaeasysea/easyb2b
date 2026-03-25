@@ -25,7 +25,7 @@ const OrderReceivedEmail = ({ clientName, orderCode, itemsHtml, totalAmount, not
           Your order <strong>{orderCode || '—'}</strong> has been received and is being processed.
         </Text>
         {itemsHtml && (
-          <Section dangerouslySetInnerHTML={{ __html: itemsHtml }} />
+          <div dangerouslySetInnerHTML={{ __html: itemsHtml }} />
         )}
         {totalAmount && (
           <Text style={{ ...text, fontWeight: 'bold', fontSize: '16px' }}>
