@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import OrderDocuments from "@/components/OrderDocuments";
 
 const statusOptions = [
-  "draft", "To be prepared", "Ready", "On the road", "Delivered", "Payed", "Returned", "cancelled", "lost"
+  "draft", "confirmed", "processing", "To be prepared", "Ready", "On the road", "Delivered", "Payed", "Returned", "cancelled", "lost"
 ];
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
