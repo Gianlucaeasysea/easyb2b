@@ -146,6 +146,14 @@ export default function DataImporter() {
         for (const [, rows] of clientGroups) {
           const first = rows[0];
           // Upsert client (use first row for client-level data)
+          const rawStatus = first.status ? String(first.status).trim().toLowerCase() : "active";
+          const validStatuses = ["active", "lead", "inactive"];
+          const status = validStatuses.includes(rawStatus) ? rawStatus : "active";
+
+          const rawDiscount = first.discount_class ? String(first.discount_class).trim().toUpperCase() : "D";
+          const validDiscounts = ["A", "B", "C", "D", "custom"];
+          const discount_class = validDiscounts.includes(rawDiscount) ? rawDiscount : "D";
+
           const clientRow = {
             company_name: String(first.company_name || ""),
             business_type: first.business_type ? String(first.business_type) : null,
@@ -154,8 +162,8 @@ export default function DataImporter() {
             country: first.country ? String(first.country) : null,
             zone: first.zone ? String(first.zone) : null,
             website: first.website ? String(first.website) : null,
-            discount_class: first.discount_class ? String(first.discount_class) : "D",
-            status: first.status ? String(first.status) : "active",
+            discount_class,
+            status,
             notes: first.notes ? String(first.notes) : null,
           };
 
