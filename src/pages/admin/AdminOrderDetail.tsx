@@ -27,7 +27,8 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
   Returned: { label: "Returned", color: "bg-destructive/20 text-destructive", icon: Clock },
   cancelled: { label: "Cancelled", color: "bg-destructive/20 text-destructive", icon: Clock },
   lost: { label: "Lost", color: "bg-destructive/20 text-destructive", icon: Clock },
-  confirmed: { label: "Confirmed", color: "bg-chart-4/20 text-chart-4", icon: CheckCircle },
+  confirmed: { label: "Nuovo Ordine", color: "bg-warning/20 text-warning", icon: Clock },
+  processing: { label: "Confermato", color: "bg-chart-4/20 text-chart-4", icon: CheckCircle },
   shipped: { label: "Shipped", color: "bg-primary/20 text-primary", icon: Truck },
   delivered: { label: "Delivered", color: "bg-success/20 text-success", icon: Package },
 };
