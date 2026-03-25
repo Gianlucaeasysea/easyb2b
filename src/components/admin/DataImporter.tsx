@@ -17,14 +17,14 @@ interface FieldMapping {
 }
 
 const CLIENT_FIELDS = [
-  { key: "company_name", label: "Nome Business", required: true },
+  { key: "company_name", label: "Nome Business / Business", required: true },
   { key: "business_type", label: "Type", required: false },
   { key: "status", label: "Status", required: false },
   { key: "country", label: "Country", required: false },
   { key: "address", label: "Address", required: false },
-  { key: "contact_name", label: "Contact Person", required: false },
-  { key: "contact_email", label: "Contact Email", required: false },
-  { key: "contact_phone", label: "Contact Phone", required: false },
+  { key: "contact_name", label: "Contact Person / Name", required: false },
+  { key: "contact_email", label: "Contact Email / Email", required: false },
+  { key: "contact_phone", label: "Contact Phone / Phone", required: false },
   { key: "contact_role", label: "Contact Role", required: false },
   { key: "website", label: "Website", required: false },
   { key: "vat_number", label: "P.IVA", required: false },
@@ -145,7 +145,6 @@ export default function DataImporter() {
         let count = 0;
         for (const [, rows] of clientGroups) {
           const first = rows[0];
-          // Upsert client (use first row for client-level data)
           const rawStatus = first.status ? String(first.status).trim().toLowerCase() : "active";
           const validStatuses = ["active", "lead", "inactive"];
           const status = validStatuses.includes(rawStatus) ? rawStatus : "active";
@@ -176,10 +175,10 @@ export default function DataImporter() {
 
           // Insert all contacts for this client
           const contacts = rows
-            .filter((r) => r.contact_name && String(r.contact_name).trim())
+            .filter((r) => r.contact_name || r.contact_email || r.contact_phone || r.contact_role)
             .map((r) => ({
               client_id: client.id,
-              contact_name: String(r.contact_name),
+              contact_name: String(r.contact_name || r.company_name || "Contatto principale"),
               email: r.contact_email ? String(r.contact_email) : null,
               phone: r.contact_phone ? String(r.contact_phone) : null,
               role: r.contact_role ? String(r.contact_role) : null,
