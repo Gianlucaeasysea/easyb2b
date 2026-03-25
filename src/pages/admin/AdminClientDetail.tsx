@@ -532,6 +532,9 @@ const AdminClientDetail = () => {
             )}
           </div>
 
+          {/* Notification Preferences */}
+          <ClientNotificationPreferences clientId={id!} />
+
           {/* Pricing & Status */}
           <div className="glass-card-solid p-6">
             <h2 className="font-heading font-bold text-foreground mb-4">Pricing & Status</h2>

@@ -1,14 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PackagePlus, Eye, Truck } from "lucide-react";
+import { PackagePlus, Eye, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useState } from "react";
 
 const phaseConfig: Record<string, { label: string; color: string }> = {
   confirmed: { label: "Nuovo Ordine", color: "bg-warning/20 text-warning" },
@@ -18,7 +15,6 @@ const phaseConfig: Record<string, { label: string; color: string }> = {
 const AdminNewOrders = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [shippingEdits, setShippingEdits] = useState<Record<string, string>>({});
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-new-orders"],
@@ -34,22 +30,10 @@ const AdminNewOrders = () => {
     },
   });
 
-  const updateShipping = useMutation({
-    mutationFn: async ({ id, cost }: { id: string; cost: number }) => {
-      const { error } = await supabase.from("orders").update({ shipping_cost_client: cost }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-new-orders"] });
-      toast.success("Shipping cost updated");
-    },
-  });
-
   const confirmOrder = useMutation({
     mutationFn: async ({ id, orderCode }: { id: string; orderCode: string }) => {
       const { error } = await supabase.from("orders").update({ status: "processing" }).eq("id", id);
       if (error) throw error;
-      // Send confirmation email
       try {
         await supabase.functions.invoke('send-order-notification', {
           body: { orderId: id, orderCode, type: 'status_update' },
@@ -62,6 +46,25 @@ const AdminNewOrders = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-new-orders"] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       toast.success("Ordine confermato e cliente notificato");
+    },
+  });
+
+  const rejectOrder = useMutation({
+    mutationFn: async ({ id, orderCode }: { id: string; orderCode: string }) => {
+      const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", id);
+      if (error) throw error;
+      try {
+        await supabase.functions.invoke('send-order-notification', {
+          body: { orderId: id, orderCode, type: 'status_update' },
+        });
+      } catch (e) {
+        console.error("Email failed:", e);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-new-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      toast.success("Ordine rifiutato");
     },
   });
 
@@ -94,7 +97,6 @@ const AdminNewOrders = () => {
             const docs = (o as any).order_documents || [];
             const hasDocs = hasInvoiceOrConfirmation(docs);
             const phase = phaseConfig[o.status || "confirmed"] || phaseConfig.confirmed;
-            const shippingVal = shippingEdits[o.id] ?? String(Number((o as any).shipping_cost_client || 0));
 
             return (
               <div key={o.id} className="glass-card-solid p-5">
@@ -119,30 +121,23 @@ const AdminNewOrders = () => {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-4 flex-wrap">
-                  {/* Shipping cost */}
-                  <div className="flex items-center gap-2">
-                    <Truck size={14} className="text-muted-foreground" />
-                    <label className="text-xs text-muted-foreground">Shipping €</label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={shippingVal}
-                      onChange={e => setShippingEdits(prev => ({ ...prev, [o.id]: e.target.value }))}
-                      className="w-24 h-8 text-sm bg-secondary border-border rounded-lg"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-8 rounded-lg"
-                      onClick={() => updateShipping.mutate({ id: o.id, cost: parseFloat(shippingVal) || 0 })}
-                    >
-                      Save
-                    </Button>
-                  </div>
-
+                <div className="flex items-center gap-3 flex-wrap">
                   <div className="ml-auto flex items-center gap-2">
+                    {o.status === "confirmed" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs gap-1.5 rounded-lg text-destructive border-destructive/30 hover:bg-destructive/10"
+                        disabled={rejectOrder.isPending}
+                        onClick={() => {
+                          if (confirm("Sei sicuro di voler rifiutare questo ordine?"))
+                            rejectOrder.mutate({ id: o.id, orderCode: (o as any).order_code || "" });
+                        }}
+                      >
+                        <XCircle size={12} /> Rifiuta
+                      </Button>
+                    )}
+
                     <Button
                       variant="outline"
                       size="sm"
