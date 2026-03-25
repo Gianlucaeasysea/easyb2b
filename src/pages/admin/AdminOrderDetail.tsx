@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
 import OrderDocuments from "@/components/OrderDocuments";
+import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 
 const statusOptions = [
   "draft", "confirmed", "processing", "To be prepared", "Ready", "On the road", "Delivered", "Payed", "Returned", "cancelled", "lost"
