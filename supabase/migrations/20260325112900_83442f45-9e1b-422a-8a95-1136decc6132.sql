@@ -1,0 +1,202 @@
+
+CREATE TABLE public.product_details (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_family text NOT NULL UNIQUE,
+  display_name text NOT NULL,
+  description text,
+  features jsonb DEFAULT '[]'::jsonb,
+  specifications jsonb DEFAULT '{}'::jsonb,
+  technical_sheet_url text,
+  gallery_images jsonb DEFAULT '[]'::jsonb,
+  website_url text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.product_details ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read product_details" ON public.product_details
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Admins manage product_details" ON public.product_details
+  FOR ALL USING (has_role(auth.uid(), 'admin'::app_role));
+
+-- Populate with scraped data from easysea.org
+
+INSERT INTO public.product_details (product_family, display_name, description, features, specifications, technical_sheet_url, gallery_images, website_url) VALUES
+
+('flipper', 'Flipper™ - Foldable Winch Handle',
+ 'The world''s first foldable winch handle. We have solved the problem of often losing the handle in the sea! Flipper is always ready to use, you no longer have to look for the handle and place it on the winch. Thanks to its innovative folding mechanism, Flipper is the handle you no longer need to detach for every maneuver—simply fold it instead. The first handle with a ratchet function — in this position, we have the maximum lever extension, making it the longest lever arm available on the market.',
+ '["Foldable: compact design that never gets in the way while manoeuvring", "Always on the winch: ready to use, never gets lost overboard", "Ultra-resistant: proven durability, trusted by sailors since 2019", "4 different configurations: Closed, Half Opened, Opened, Extended", "Strong aluminium 6082 structure with 316L stainless steel joints", "Universal star attachment to fit any winch (CNC-milled)", "Ergonomic knob with ABS for quick and difficult maneuvers"]'::jsonb,
+ '{"Recommended boat length": "6 to 11 meters (19ft to 36ft)", "Recommended winch sizes": "6, 7, 16, 30, 40, 45, 46", "Dimensions closed": "142mm (5.59 inches)", "Dimensions open": "204mm (8.03 inches)", "Dimensions ratchet": "314mm (12.36 inches)", "Weight": "522 gr (1.15 lb)", "Max working load": "350 Kg (771 lb)", "Breaking load": "700 Kg (1543 lb)", "Main material": "Aluminum 6082", "Joints": "316L Stainless Steel", "Warranty": "4 years"}'::jsonb,
+ 'https://cdn.shopify.com/s/files/1/0244/3188/6432/files/Technical_Sheet_prod._Flipper.pdf?v=1742566275',
+ '["https://easysea.org/cdn/shop/files/Copertina-FLIPPER-01.jpg?v=1764662996&width=4500", "https://easysea.org/cdn/shop/files/SCHEDE_Flipper-04.jpg?v=1764662996&width=4501", "https://easysea.org/cdn/shop/files/SCHEDE_Flipper-02.jpg?v=1764662996&width=4501", "https://easysea.org/cdn/shop/files/FLIPPER-05.jpg?v=1764662996&width=4500", "https://easysea.org/cdn/shop/files/SCHEDE_Flipper-06.jpg?v=1764662996&width=4501"]'::jsonb,
+ 'https://easysea.org/products/flipper-foldable-winch-handle'),
+
+('flipper-max', 'Flipper™ Max - Foldable Winch Handle',
+ 'The Max version of the world''s first foldable winch handle, designed for larger boats. Same innovative folding mechanism with enhanced lever arm for bigger winches. Flipper Max delivers superior power and precision for boats from 10 to 18 meters.',
+ '["Foldable: compact design that never gets in the way while manoeuvring", "Always on the winch: ready to use, never gets lost overboard", "Ultra-resistant: proven durability, trusted by sailors since 2019", "Extended lever arm for larger boats and winches", "Strong aluminium 6082 structure with 316L stainless steel joints"]'::jsonb,
+ '{"Recommended boat length": "10 to 18 meters (33ft to 59ft)", "Recommended winch sizes": "40, 45, 46, 48, 50, 55, 58, 60, 65, 70", "Main material": "Aluminum 6082", "Joints": "316L Stainless Steel", "Warranty": "4 years"}'::jsonb,
+ 'https://cdn.shopify.com/s/files/1/0244/3188/6432/files/Technical_Sheet_prod._Flipper.pdf?v=1742566275',
+ '["https://easysea.org/cdn/shop/files/GRAFICA-FLIPPER_MAX-01.webp?v=1764792536&width=4500", "https://easysea.org/cdn/shop/files/GRAFICA-FLIPPER_MAX-02.webp?v=1764792536&width=4500"]'::jsonb,
+ 'https://easysea.org/products/flipper-max-foldable-winch-handle'),
+
+('flipper-carbon', 'Flipper™ Max Carbon',
+ 'The premium carbon fiber version of the Flipper winch handle. Ultra-lightweight with maximum strength, designed for performance-oriented sailors who demand the best materials.',
+ '["Carbon fiber construction for maximum strength-to-weight ratio", "Foldable design - stays on the winch", "Premium materials for racing and performance sailing", "Extended lever arm for superior power"]'::jsonb,
+ '{"Main material": "Carbon Fiber", "Joints": "316L Stainless Steel", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/GRAFICA-FLIPPER_MAX_CARBON-01.webp?v=1764792873&width=4500", "https://easysea.org/cdn/shop/files/GRAFICA-FLIPPER_MAX_CARBON-02.webp?v=1764792873&width=4500"]'::jsonb,
+ 'https://easysea.org/products/flipper%E2%84%A2-carbon'),
+
+('olli-block', 'Olli™ - Snatch and Anti-shock Block',
+ 'The Easysea Olli™ Block is an innovative anti-shock snatch block designed to deliver exceptional performance, durability, and versatility for modern sailing. Engineered with aerospace-grade materials, it provides a robust and low-maintenance solution for demanding applications. Single-piece construction eliminates the risk of breaking side plates.',
+ '["Openable: no need to pass the entire line through it", "Shockproof: if it hits the boat, it won''t cause any damage", "Self-lubricating: made from aerospace-grade materials, requires no maintenance", "Anti-Scratch Protection with technopolymer edge protection", "Single-piece construction for enhanced durability", "Completely sealed moving parts require no lubrication"]'::jsonb,
+ '{"Main material": "Aluminum 6082", "Treatment": "Hard anodization matte black", "Edge material": "Scratch-Resistant Reinforced Polymer", "Sheave material": "Solef PVDF + Delrin 100ST", "Surface roughness": "Minimal for ultra-low friction", "Corrosion resistance": "Enhanced through anodization", "Manufacturing": "CNC machining from solid aluminum block", "Available sizes": "S - 40x10 | M - 50x12 | L - 60x14", "Warranty": "4 years"}'::jsonb,
+ 'https://cdn.shopify.com/s/files/1/0244/3188/6432/files/Olli_block_S_M_L_technical_characteristics.pdf?v=1773220435',
+ '["https://easysea.org/cdn/shop/files/GRAFICA-OlliBlock-01.webp?v=1764687846&width=4500", "https://easysea.org/cdn/shop/files/GRAFICA-OLLIBLOCK-02.webp?v=1764687846&width=4500", "https://easysea.org/cdn/shop/files/GRAFICA-OLLIBLOCK-03.webp?v=1764687846&width=4500", "https://easysea.org/cdn/shop/files/GRAFICA-OLLIBLOCK-04.webp?v=1764687846&width=4500", "https://easysea.org/cdn/shop/files/GRAFICA-OLLIBLOCK-05.webp?v=1764687846&width=4500"]'::jsonb,
+ 'https://easysea.org/products/olli%E2%84%A2-block-anti-shock-snatch-block'),
+
+('olli-ring', 'Olli™ - Anti Shock Low Friction Ring',
+ 'The Olli™ Low Friction Ring is an innovative anti-shock ring designed with aerospace-grade materials. Its unique shock-absorbing system protects the boat from impacts while providing ultra-low friction for smooth line handling. Available in multiple sizes to fit different rigging needs.',
+ '["Anti-shock system protects the boat from impacts", "Ultra-low friction for smooth line handling", "Aerospace-grade materials for durability", "Lightweight yet extremely strong", "Maintenance-free operation"]'::jsonb,
+ '{"Main material": "Aluminum 6082", "Treatment": "Hard anodization", "Ring material": "Aerospace-grade technopolymer", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/GRAFICA-OLLI-LOW-FRICTION-RING-01.png?v=1768850397&width=1620", "https://easysea.org/cdn/shop/files/GRAFICA-OLLI-LOW-FRICTION-RING-02.webp?v=1768850397&width=4500"]'::jsonb,
+ 'https://easysea.org/products/olli'),
+
+('olli-solid-ring', 'Olli™ - Anti Shock Solid Ring',
+ 'The Olli™ Solid Ring is the heavy-duty version of the anti-shock ring system. Made from a single piece of aluminum with the signature shock-absorbing polymer edge, it''s designed for high-load applications where maximum strength is required.',
+ '["Solid single-piece aluminum construction", "Anti-shock polymer edge protection", "Designed for high-load applications", "CNC machined from solid aluminum block"]'::jsonb,
+ '{"Main material": "Aluminum 6082", "Treatment": "Hard anodization", "Manufacturing": "CNC machining from solid block", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/GRAFICA-OLLI-SOLID-RING-01.webp?v=1764692660&width=4500", "https://easysea.org/cdn/shop/files/GRAFICA-OLLI-SOLID-RING-02.webp?v=1764692660&width=4500"]'::jsonb,
+ 'https://easysea.org/products/olli%E2%84%A2-solid-ring-anti-shock-system-aluminum'),
+
+('winch-cover', 'Anti-Mould Winch Cover',
+ 'Purpose-built winch covers designed to protect your winch from UV exposure, salt, and moisture while preventing mould growth. Made with breathable, anti-mould treated fabric for long-lasting protection.',
+ '["Anti-mould treated fabric", "UV and salt protection", "Breathable design prevents moisture buildup", "Easy to install and remove", "Available in multiple sizes to fit all winches"]'::jsonb,
+ '{"Material": "Anti-mould treated fabric", "Available sizes": "S - 32 | M - 40 | L - 50 | XL - 70", "Color": "Gray", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/GRAFICA-WINCH-COVER-01.webp?v=1764869850&width=4500", "https://easysea.org/cdn/shop/files/GRAFICA-WINCH-COVER-02.webp?v=1764869850&width=4500"]'::jsonb,
+ 'https://easysea.org/products/flipper%E2%84%A2-anti-mould-winch-cover'),
+
+('jake', 'Jake™ Boat Hook',
+ 'Jake™ is a revolutionary modular boat hook system. One lightweight telescopic pole with interchangeable heads that swap in seconds thanks to the quick-release system. Magnetic Fidlock® storage keeps it always within reach. The pole extends from 107 cm to 193 cm, offering optimal reach while maintaining total control.',
+ '["Instant modularity: swap heads in seconds with quick-release system", "Extended reach: lightweight telescopic pole for precise control", "Easy storage: magnetic Fidlock® mount for quick click-and-stow", "Floating: internal floating structure prevents loss overboard", "Anti-rotation profile for superior control", "Dual quick-release allows two heads at once"]'::jsonb,
+ '{"Pole material": "Aluminum 6082", "Pole length collapsed": "107 cm", "Pole length extended": "193 cm", "Intermediate positions": "3", "Head attachment": "Dual quick-release interface", "Storage": "Magnetic Fidlock® mounts (Ø 6-13mm lifelines, Ø 20-30mm tubes)", "Available heads": "Boat Hook, QuickGrip Linemaster, Line-Passing, Brush", "Warranty": "4 years"}'::jsonb,
+ 'https://cdn.shopify.com/s/files/1/0244/3188/6432/files/Scheda_tecnica_jake_1.pdf?v=1765986135',
+ '["https://easysea.org/cdn/shop/files/pi.png?v=1767816422&width=2160", "https://easysea.org/cdn/shop/files/2_3f1f95a2-97ad-4764-9ac5-68c644989a8e.jpg?v=1767816422&width=4500", "https://easysea.org/cdn/shop/files/3_79fec117-d267-45bc-ad0d-8108498a4af2.jpg?v=1767816422&width=4500", "https://easysea.org/cdn/shop/files/4_a1aa2713-46d1-4bf8-89ef-a37e517206fd.jpg?v=1767816422&width=4500", "https://easysea.org/cdn/shop/files/5.jpg?v=1767816422&width=4500"]'::jsonb,
+ 'https://easysea.org/products/jake-kit'),
+
+('way2', 'Way2 - The Inflatable Reversible Gangway',
+ 'Way2 is an innovative inflatable reversible gangway that provides safe and easy boarding from boat to dock. Lightweight, compact when deflated, and incredibly sturdy when inflated.',
+ '["Inflatable design - compact storage when deflated", "Reversible - works in both directions", "Lightweight yet sturdy", "Easy to inflate and deploy", "Safe anti-slip surface"]'::jsonb,
+ '{"Type": "Inflatable gangway", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/Way2_-_Grafica_1_v2-Copertina.webp?v=1764663282&width=1080", "https://easysea.org/cdn/shop/files/Way2_-_Grafica_2_v2.webp?v=1764663282&width=4500"]'::jsonb,
+ 'https://easysea.org/products/way2'),
+
+('spira', 'Spira – The Twistable Guardrail Cover',
+ 'Spira is an innovative twistable guardrail cover that protects sheets and lines from chafing against guardrails. Its unique spiral design allows easy installation without disconnecting the guardrail.',
+ '["Twistable design - install without disconnecting guardrails", "Protects sheets and lines from chafing", "Easy installation", "Durable marine-grade materials"]'::jsonb,
+ '{"Type": "Guardrail cover", "Design": "Twistable spiral", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/GRAFICA-SPIRA-1.webp?v=1764689989&width=4500", "https://easysea.org/cdn/shop/files/EXP-02-Spira-GuardrailCover.webp?v=1764689989&width=4500"]'::jsonb,
+ 'https://easysea.org/products/spira-twistable-guardrail-cover'),
+
+('sheathed-loop', 'Sheathed Loop Dyneema®',
+ 'High-performance sheathed loops made from Dyneema® fiber. Designed for use with Olli™ rings and blocks, these loops provide exceptional strength with minimal weight.',
+ '["Made from Dyneema® fiber - strongest fiber in the world", "Sheathed for chafe protection", "Designed for Olli™ system compatibility", "Available in multiple sizes"]'::jsonb,
+ '{"Material": "Dyneema® SK78", "Sheath": "Protective polyester", "Available sizes": "S | M | L | XL", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/GRAFICA-texyile-connection-01.webp?v=1764793993&width=4501", "https://easysea.org/cdn/shop/files/GRAFICA-texyile-connection-03.webp?v=1764793993&width=4501"]'::jsonb,
+ 'https://easysea.org/products/sheathed-loop-dyneema%C2%AE-for-olli%E2%84%A2'),
+
+('soft-shackle', 'Soft Shackle in Dyneema®',
+ 'Ultra-strong soft shackles made from Dyneema® fiber. A lightweight, non-marring alternative to traditional metal shackles, ideal for modern rigging setups.',
+ '["Made from Dyneema® fiber", "Non-marring - won''t scratch gel coat or hardware", "Lightweight alternative to metal shackles", "Easy to open and close"]'::jsonb,
+ '{"Material": "Dyneema® SK78", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/texyile-connections-01-6930a2542055a.webp?v=1764795019&width=4501", "https://easysea.org/cdn/shop/files/texyile-connections-03-6930a24fa89c0.webp?v=1764795019&width=4501"]'::jsonb,
+ 'https://easysea.org/products/soft-shackle-in-dyneema%C2%AE-olli%E2%84%A2'),
+
+('covered-loop', 'Covered Loop in Dyneema®',
+ 'Covered loops in Dyneema® designed for the Olli™ system. The protective cover extends the lifespan of the loop while maintaining the exceptional strength of Dyneema® fiber.',
+ '["Dyneema® core for maximum strength", "Protective cover for extended lifespan", "Designed for Olli™ system", "Multiple sizes available"]'::jsonb,
+ '{"Material": "Dyneema® SK78 with protective cover", "Available sizes": "S - 14x10 | M - 20x14 | L - 28x20 | XL - 38x28", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/texyile-connections-11-69309b2b883e0.webp?v=1764793218&width=4501", "https://easysea.org/cdn/shop/files/texyile-connections-12-69309b2fe8ab5.webp?v=1764793218&width=4501"]'::jsonb,
+ 'https://easysea.org/products/covered-loop-in-dyneema%C2%AE-for-olli'),
+
+('dyneema-sheet', 'Dyneema Sheet',
+ 'Premium Dyneema® sheets for high-performance sailing. Available in multiple lengths and diameters, these sheets offer exceptional strength-to-weight ratio with minimal stretch.',
+ '["Dyneema® construction for minimal stretch", "High strength-to-weight ratio", "Available in multiple lengths and diameters", "Color options: Red, Light Blue"]'::jsonb,
+ '{"Material": "Dyneema®", "Available diameters": "8mm | 10mm | 12mm", "Available lengths": "10m | 25m | 50m | 75m | 100m", "Colors": "Red, Light Blue", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/DYNEEMASHEET-01.webp?v=1764870094&width=4500", "https://easysea.org/cdn/shop/files/DYNEEMASHEET-02.webp?v=1764870094&width=4500"]'::jsonb,
+ 'https://easysea.org/products/dyneema-sheet'),
+
+('dyneema-sheet-eye', 'Dyneema Sheet With Eye Splice',
+ 'Premium Dyneema® sheets with professional eye splice. Ready to use with an integrated eye splice for easy attachment to blocks, rings, and other hardware.',
+ '["Pre-spliced eye for easy attachment", "Dyneema® construction for minimal stretch", "Professional splice quality", "Available in multiple lengths and diameters"]'::jsonb,
+ '{"Material": "Dyneema®", "Available diameters": "8mm | 10mm | 12mm", "Available lengths": "10m | 25m | 50m | 75m | 100m", "Colors": "Red, Light Blue", "Splice": "Professional eye splice", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/Progettosenzatitolo_2.jpg?v=1763074510&width=1080", "https://easysea.org/cdn/shop/files/Progetto_senza_titolo_b9b591ee-ceb6-4116-b8a5-82dc928faafd.jpg?v=1763074510&width=1080"]'::jsonb,
+ 'https://easysea.org/products/dyneema-sheet-with-eye-splice'),
+
+('polyester-sheet', 'Polyester Sheet',
+ 'High-quality pre-spliced polyester sheets for cruising and general sailing. Durable, easy to handle, and available in multiple colors and sizes.',
+ '["Pre-spliced for easy installation", "Durable polyester construction", "Easy to handle", "Available in Red and Gray"]'::jsonb,
+ '{"Material": "Polyester", "Colors": "Red, Gray", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/GRAFICA-POLYESTERSHEET-01_4_11zon.webp?v=1764870473&width=4500", "https://easysea.org/cdn/shop/files/GRAFICA-POLYESTERSHEET-02_3_11zon.webp?v=1764870473&width=4500"]'::jsonb,
+ 'https://easysea.org/products/pre-spliced-polyester-sheet'),
+
+('polyester-sheet-eye', 'Polyester Sheet With Eye Splice',
+ 'High-quality polyester sheets with professional eye splice. Ready to rig with integrated eye splice for easy attachment.',
+ '["Pre-spliced eye for easy attachment", "Durable polyester construction", "Available in Red and Gray"]'::jsonb,
+ '{"Material": "Polyester", "Splice": "Professional eye splice", "Colors": "Red, Gray", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/DYNEEMASHEETWITHEYESPLIT-01.webp?v=1764870303&width=4500", "https://easysea.org/cdn/shop/files/DYNEEMASHEETWITHEYESPLIT-03.webp?v=1764870303&width=4500"]'::jsonb,
+ 'https://easysea.org/products/polyester-sheet'),
+
+('kit-easybarber', 'Kit EasyBarber',
+ 'Complete barber hauler kit with Olli™ components. Everything you need to set up a professional barber hauler system on your sailboat.',
+ '["Complete kit - everything included", "Olli™ components for anti-shock performance", "Professional setup for barber hauler systems"]'::jsonb,
+ '{"Type": "Complete barber hauler kit", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/Kitboxpersito-01.webp?v=1764693761&width=4500", "https://easysea.org/cdn/shop/files/Kitboxpersito-02.webp?v=1764693762&width=4500"]'::jsonb,
+ 'https://easysea.org/products/kit-easybarber'),
+
+('kit-easyfurling', 'Kit EasyFurling',
+ 'Complete furling kit with Olli™ components. A ready-to-install kit for setting up an efficient furling line system.',
+ '["Complete kit - everything included", "Olli™ components for anti-shock performance", "Ready-to-install furling line system"]'::jsonb,
+ '{"Type": "Complete furling kit", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/Copertina-EasyFurling-KIT03-FURLING.png?v=1764693897&width=2872", "https://easysea.org/cdn/shop/files/Kit_box_per_sito-10.jpg?v=1764693897&width=4500"]'::jsonb,
+ 'https://easysea.org/products/kit-easyfurling'),
+
+('kit-easypreventer', 'Kit EasyPreventer',
+ 'Complete preventer kit with Olli™ components. Set up a safe and efficient boom preventer system with premium components.',
+ '["Complete kit - everything included", "Olli™ components for anti-shock performance", "Safe boom preventer system"]'::jsonb,
+ '{"Type": "Complete preventer kit", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/Copertina-EasyPreventer-KIT04-PREVENTER.png?v=1764693908&width=2872", "https://easysea.org/cdn/shop/files/21.jpg?v=1764693908&width=1080"]'::jsonb,
+ 'https://easysea.org/products/kit-easypreventer'),
+
+('rope-deflector', 'Rope Deflector – Porthole Fairlead Protection System',
+ 'A practical protection system that prevents ropes from damaging portholes and fairleads. Easy to install, it keeps lines organized and protected.',
+ '["Protects portholes and fairleads from rope damage", "Easy installation", "Keeps lines organized", "Durable marine-grade materials"]'::jsonb,
+ '{"Type": "Fairlead protection", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/1A.jpg?v=1773502967&width=4500", "https://easysea.org/cdn/shop/files/1B.jpg?v=1773502967&width=4500"]'::jsonb,
+ 'https://easysea.org/products/rope-deflector'),
+
+('jake-head', 'Jake™ - Interchangeable Heads & Accessories',
+ 'Interchangeable heads and accessories for the Jake™ modular boat hook system. Each head attaches via the quick-release interface and can be swapped in seconds.',
+ '["Quick-release attachment - swap in seconds", "Compatible with all Jake™ poles", "Multiple function heads available", "Boat Hook, Line-Passing, QuickGrip Linemaster, Brush"]'::jsonb,
+ '{"Attachment": "Quick-release interface", "Available heads": "Boat Hook, Line-Passing, QuickGrip Linemaster, Brush", "Also available": "Short pole, Quick-release with Fidlock mounts", "Warranty": "4 years"}'::jsonb,
+ NULL,
+ '["https://easysea.org/cdn/shop/files/JBH-101_Jake_Brush_head.png?v=1766053488&width=1400", "https://easysea.org/cdn/shop/files/JLH-101_Jake_Line-passing_head.png?v=1766053488&width=1400", "https://easysea.org/cdn/shop/files/JQH-101_Jake_Line-master_head.png?v=1766053488&width=1400"]'::jsonb,
+ 'https://easysea.org/products/jake-kit');

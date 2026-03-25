@@ -10,6 +10,36 @@ import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import ProductDetailModal from "@/components/portal/ProductDetailModal";
+
+// Map product names to product_family slugs
+const getProductFamily = (name: string): string | null => {
+  const n = name.toLowerCase();
+  if (n.includes("kit easybarber")) return "kit-easybarber";
+  if (n.includes("kit easyfurling")) return "kit-easyfurling";
+  if (n.includes("kit easypreventer")) return "kit-easypreventer";
+  if (n.includes("rope deflector")) return "rope-deflector";
+  if (n.includes("way2") || n.includes("gangway")) return "way2";
+  if (n.includes("spira") || n.includes("guardrail cover")) return "spira";
+  if (n.includes("winch cover")) return "winch-cover";
+  if (n.includes("flipper") && n.includes("carbon")) return "flipper-carbon";
+  if (n.includes("flipper") && n.includes("max")) return "flipper-max";
+  if (n.includes("flipper")) return "flipper";
+  if (n.includes("snatch") || (n.includes("olli") && n.includes("block"))) return "olli-block";
+  if (n.includes("solid ring")) return "olli-solid-ring";
+  if (n.includes("low friction ring") || (n.includes("olli") && n.includes("ring"))) return "olli-ring";
+  if (n.includes("sheathed loop")) return "sheathed-loop";
+  if (n.includes("soft shackle")) return "soft-shackle";
+  if (n.includes("covered loop")) return "covered-loop";
+  if (n.includes("dyneema sheet") && n.includes("eye")) return "dyneema-sheet-eye";
+  if (n.includes("dyneema sheet")) return "dyneema-sheet";
+  if (n.includes("polyester sheet") && n.includes("eye")) return "polyester-sheet-eye";
+  if (n.includes("polyester sheet") && n.includes("olli")) return "polyester-sheet-eye";
+  if (n.includes("polyester sheet")) return "polyester-sheet";
+  if (n.includes("boat hook head") || n.includes("brush head") || n.includes("line-passing") || n.includes("linemaster") || n.includes("short pole") || n.includes("quick-release") || n.includes("fidlock")) return "jake-head";
+  if (n.includes("jake")) return "jake";
+  return null;
+};
 
 const DealerCatalog = () => {
   const { user } = useAuth();
@@ -17,6 +47,7 @@ const DealerCatalog = () => {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { addItem, totalItems } = useCart();
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
 
   const { data: client } = useQuery({
     queryKey: ["my-client"],
@@ -31,7 +62,6 @@ const DealerCatalog = () => {
   const { data: myPriceListItems } = useQuery({
     queryKey: ["my-price-list-items", client?.id],
     queryFn: async () => {
-      // Find price lists assigned to this client
       const { data: assignments } = await supabase
         .from("price_list_clients")
         .select("price_list_id")
@@ -51,11 +81,27 @@ const DealerCatalog = () => {
     enabled: !!client?.id,
   });
 
-  // Build product map from price list items - dealer only sees these products
+  // Fetch all product details
+  const { data: productDetails } = useQuery({
+    queryKey: ["product-details"],
+    queryFn: async () => {
+      const { data } = await supabase.from("product_details").select("*");
+      return data || [];
+    },
+  });
+
+  const detailsByFamily = new Map<string, any>();
+  productDetails?.forEach(d => detailsByFamily.set(d.product_family, d));
+
+  const getDetailForProduct = (product: any) => {
+    const family = getProductFamily(product.name);
+    return family ? detailsByFamily.get(family) : null;
+  };
+
+  // Build product map from price list items
   const priceListProductMap = new Map<string, { customPrice: number; product: any }>();
   myPriceListItems?.forEach(item => {
     const existing = priceListProductMap.get(item.product_id);
-    // If multiple price lists, use the lowest price
     if (!existing || item.custom_price < existing.customPrice) {
       priceListProductMap.set(item.product_id, {
         customPrice: item.custom_price,
@@ -69,7 +115,6 @@ const DealerCatalog = () => {
     ? Array.from(priceListProductMap.entries()).map(([id, { product }]) => product).filter(Boolean)
     : [];
 
-  // Macro categories matching easysea.org collections
   const MACRO_CATEGORIES = [
     { label: "Boat Hook", keywords: ["boat hook", "jake"] },
     { label: "Winch Handles", keywords: ["winch handle", "flipper"] },
@@ -95,6 +140,12 @@ const DealerCatalog = () => {
     ...cat,
     count: catalogProducts.filter(p => getProductMacroCategory(p) === cat.label).length,
   })).filter(c => c.count > 0);
+
+  const selectedDetail = selectedProduct ? getDetailForProduct(selectedProduct) : null;
+  const selectedPlEntry = selectedProduct ? priceListProductMap.get(selectedProduct.id) : null;
+  const selectedRetailPrice = selectedProduct ? Number(selectedProduct.compare_at_price || selectedProduct.price) : 0;
+  const selectedB2bPrice = selectedPlEntry?.customPrice ?? Number(selectedProduct?.price || 0);
+  const selectedDiscountPct = selectedRetailPrice > 0 ? Math.round((1 - selectedB2bPrice / Number(selectedProduct?.price || 1)) * 100) : 0;
 
   return (
     <div>
@@ -178,7 +229,11 @@ const DealerCatalog = () => {
                 const inStock = (p.stock_quantity ?? 0) > 0;
 
                 return (
-                  <div key={p.id} className="glass-card-solid overflow-hidden group hover:border-primary/30 transition-colors">
+                  <div
+                    key={p.id}
+                    className="glass-card-solid overflow-hidden group hover:border-primary/30 transition-colors cursor-pointer"
+                    onClick={() => setSelectedProduct(p)}
+                  >
                     <div className="aspect-square bg-secondary flex items-center justify-center relative">
                       {p.images && p.images[0] ? (
                         <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />
@@ -226,7 +281,8 @@ const DealerCatalog = () => {
                             disabled={!inStock}
                             size="sm"
                             className="w-full mt-3 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               addItem({
                                 productId: p.id,
                                 name: p.name,
@@ -251,6 +307,36 @@ const DealerCatalog = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <ProductDetailModal
+          open={!!selectedProduct}
+          onOpenChange={(open) => !open && setSelectedProduct(null)}
+          product={selectedProduct}
+          detail={selectedDetail}
+          b2bPrice={selectedB2bPrice}
+          retailPrice={selectedRetailPrice}
+          discountPct={selectedDiscountPct}
+          isClientMode={isClientMode}
+          onAddToCart={() => {
+            const plEntry = priceListProductMap.get(selectedProduct.id);
+            const b2bPrice = plEntry?.customPrice ?? Number(selectedProduct.price);
+            const discountPct = Number(selectedProduct.price) > 0 ? Math.round((1 - b2bPrice / Number(selectedProduct.price)) * 100) : 0;
+            addItem({
+              productId: selectedProduct.id,
+              name: selectedProduct.name,
+              sku: selectedProduct.sku,
+              unitPrice: Number(selectedProduct.price),
+              b2bPrice,
+              discountPct,
+              stock: selectedProduct.stock_quantity ?? 0,
+              image: selectedProduct.images?.[0] || null,
+            });
+            toast.success(`${selectedProduct.name} added to cart`);
+          }}
+        />
       )}
     </div>
   );
