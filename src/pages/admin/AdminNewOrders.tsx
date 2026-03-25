@@ -34,6 +34,18 @@ const AdminNewOrders = () => {
     mutationFn: async ({ id, orderCode }: { id: string; orderCode: string }) => {
       const { error } = await supabase.from("orders").update({ status: "processing" }).eq("id", id);
       if (error) throw error;
+      await supabase.from("order_events").insert({
+        order_id: id,
+        event_type: "status_change",
+        title: "Ordine confermato",
+        description: "L'ordine è stato confermato e il cliente è stato notificato.",
+      });
+      await supabase.from("order_events").insert({
+        order_id: id,
+        event_type: "email_sent",
+        title: "Email di conferma inviata",
+        description: "Notifica di conferma ordine inviata al cliente.",
+      });
       try {
         await supabase.functions.invoke('send-order-notification', {
           body: { orderId: id, orderCode, type: 'status_update' },
