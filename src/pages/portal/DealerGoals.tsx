@@ -62,7 +62,7 @@ const DealerGoals = () => {
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Your Current Tier</p>
-            <h2 className="font-heading text-2xl font-bold text-foreground">Class {currentTier.name} — {currentTier.label}</h2>
+            <h2 className="font-heading text-2xl font-bold text-foreground">{currentTier.label}</h2>
             <p className="text-sm text-success font-semibold">-{currentTier.discount}% on all products</p>
           </div>
         </div>
