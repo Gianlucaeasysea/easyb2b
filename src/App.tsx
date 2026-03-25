@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import BecomeADealer from "./pages/BecomeADealer";
 import NotFound from "./pages/NotFound";
+import Unsubscribe from "./pages/Unsubscribe";
 
 // Layouts
 import PortalLayout from "./layouts/PortalLayout";
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/become-a-dealer" element={<BecomeADealer />} />
             <Route path="/diventa-distributore" element={<BecomeADealer />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
 
             {/* Dealer Portal */}
             <Route path="/portal" element={

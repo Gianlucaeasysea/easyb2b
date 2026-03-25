@@ -41,7 +41,7 @@ serve(async (req) => {
       });
     }
 
-    // Fetch order items
+    // Fetch order items for the items table
     const { data: orderItems } = await supabase
       .from("order_items")
       .select("*, products(name, sku)")
@@ -52,143 +52,76 @@ serve(async (req) => {
     const clientEmail = client?.email;
     const clientName = client?.contact_name || client?.company_name || "Customer";
     const companyName = client?.company_name || "—";
+    const totalAmount = Number(order.total_amount || 0).toFixed(2);
 
-    // Build items table HTML
-    const itemsHtml = (orderItems || []).map((item: any) => `
-      <tr>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;">${item.products?.name || "—"}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:center;">${item.quantity}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:right;">€${Number(item.unit_price).toFixed(2)}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:right;">€${Number(item.subtotal).toFixed(2)}</td>
-      </tr>
-    `).join("");
+    // Build items table HTML for email
+    const itemsHtml = buildItemsTableHtml(orderItems || []);
 
-    const orderTable = `
-      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-        <thead>
-          <tr style="background:#f5f5f5;">
-            <th style="padding:8px 12px;text-align:left;font-size:12px;color:#666;">Product</th>
-            <th style="padding:8px 12px;text-align:center;font-size:12px;color:#666;">Qty</th>
-            <th style="padding:8px 12px;text-align:right;font-size:12px;color:#666;">Unit Price</th>
-            <th style="padding:8px 12px;text-align:right;font-size:12px;color:#666;">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>${itemsHtml}</tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3" style="padding:10px 12px;font-weight:bold;font-size:14px;">Total</td>
-            <td style="padding:10px 12px;font-weight:bold;font-size:14px;text-align:right;">€${Number(order.total_amount || 0).toFixed(2)}</td>
-          </tr>
-        </tfoot>
-      </table>
-    `;
-
-    const emails: { to: string; subject: string; html: string }[] = [];
+    // Collect all email sends to dispatch
+    const sends: { templateName: string; recipientEmail: string; idempotencyKey: string; templateData: Record<string, any> }[] = [];
 
     if (type === "order_received") {
-      // Email to client: order received
       if (clientEmail) {
-        emails.push({
-          to: clientEmail,
-          subject: `Easysea — Order ${code} received`,
-          html: `
-            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-              <h2 style="color:#0a0a0a;">Thank you, ${clientName}!</h2>
-              <p style="color:#555;font-size:14px;">Your order <strong>${code}</strong> has been received and is being processed.</p>
-              ${orderTable}
-              ${order.notes ? `<p style="color:#555;font-size:13px;"><strong>Notes:</strong> ${order.notes}</p>` : ""}
-              <p style="color:#555;font-size:14px;">You'll receive a confirmation email once we review and confirm your order.</p>
-              <p style="color:#999;font-size:12px;margin-top:24px;">— The Easysea Team</p>
-            </div>
-          `,
+        sends.push({
+          templateName: "order-received",
+          recipientEmail: clientEmail,
+          idempotencyKey: `order-received-client-${orderId}`,
+          templateData: { clientName, orderCode: code, itemsHtml, totalAmount, notes: order.notes },
         });
       }
-
-      // Emails to admin: new order notification
       ADMIN_EMAILS.forEach(email => {
-        emails.push({
-          to: email,
-          subject: `🔔 New Order ${code} from ${companyName}`,
-          html: `
-            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-              <h2 style="color:#0a0a0a;">New B2B Order Received</h2>
-              <p style="color:#555;font-size:14px;"><strong>Order:</strong> ${code}</p>
-              <p style="color:#555;font-size:14px;"><strong>Client:</strong> ${companyName}</p>
-              <p style="color:#555;font-size:14px;"><strong>Contact:</strong> ${clientName} (${clientEmail || "no email"})</p>
-              ${orderTable}
-              ${order.notes ? `<p style="color:#555;font-size:13px;"><strong>Client notes:</strong> ${order.notes}</p>` : ""}
-              <p style="color:#999;font-size:12px;margin-top:24px;">Manage this order in the admin panel.</p>
-            </div>
-          `,
+        sends.push({
+          templateName: "order-received-admin",
+          recipientEmail: email,
+          idempotencyKey: `order-received-admin-${email}-${orderId}`,
+          templateData: { orderCode: code, companyName, clientName, clientEmail: clientEmail || "no email", itemsHtml, totalAmount, notes: order.notes },
         });
       });
     } else if (type === "order_confirmed") {
-      // Email to client: order confirmed by admin
       if (clientEmail) {
-        emails.push({
-          to: clientEmail,
-          subject: `Easysea — Order ${code} confirmed!`,
-          html: `
-            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-              <h2 style="color:#0a0a0a;">Order Confirmed! ✅</h2>
-              <p style="color:#555;font-size:14px;">Hi ${clientName}, your order <strong>${code}</strong> has been confirmed and is being prepared.</p>
-              ${orderTable}
-              <p style="color:#555;font-size:14px;">We'll keep you updated on the progress.</p>
-              <p style="color:#999;font-size:12px;margin-top:24px;">— The Easysea Team</p>
-            </div>
-          `,
+        sends.push({
+          templateName: "order-confirmed",
+          recipientEmail: clientEmail,
+          idempotencyKey: `order-confirmed-${orderId}`,
+          templateData: { clientName, orderCode: code, totalAmount },
         });
       }
     } else if (type === "status_update") {
-      // Generic status update
-      const statusLabel = order.status || "updated";
       if (clientEmail) {
-        emails.push({
-          to: clientEmail,
-          subject: `Easysea — Order ${code} status: ${statusLabel}`,
-          html: `
-            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-              <h2 style="color:#0a0a0a;">Order Update</h2>
-              <p style="color:#555;font-size:14px;">Hi ${clientName}, your order <strong>${code}</strong> status has been updated to: <strong>${statusLabel}</strong></p>
-              ${order.tracking_number ? `<p style="color:#555;font-size:14px;"><strong>Tracking:</strong> ${order.tracking_number}</p>` : ""}
-              ${order.tracking_url ? `<p><a href="${order.tracking_url}" style="color:#3366cc;font-size:14px;">Track your shipment →</a></p>` : ""}
-              <p style="color:#999;font-size:12px;margin-top:24px;">— The Easysea Team</p>
-            </div>
-          `,
+        sends.push({
+          templateName: "order-status-update",
+          recipientEmail: clientEmail,
+          idempotencyKey: `order-status-${orderId}-${order.status}`,
+          templateData: { clientName, orderCode: code, status: order.status, trackingNumber: order.tracking_number, trackingUrl: order.tracking_url },
         });
       }
     } else if (type === "documents_uploaded") {
-      // Notify client of new documents
-      const { documentNames } = await req.json().catch(() => ({ documentNames: [] }));
       if (clientEmail) {
-        emails.push({
-          to: clientEmail,
-          subject: `Easysea — Documents available for order ${code}`,
-          html: `
-            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-              <h2 style="color:#0a0a0a;">New Documents Available 📄</h2>
-              <p style="color:#555;font-size:14px;">Hi ${clientName}, new documents have been uploaded for your order <strong>${code}</strong>.</p>
-              <p style="color:#555;font-size:14px;">You can download them from your dealer portal under <strong>My Orders → ${code} → Documents</strong>.</p>
-              <p style="color:#999;font-size:12px;margin-top:24px;">— The Easysea Team</p>
-            </div>
-          `,
+        sends.push({
+          templateName: "order-documents-ready",
+          recipientEmail: clientEmail,
+          idempotencyKey: `order-docs-${orderId}-${Date.now()}`,
+          templateData: { clientName, orderCode: code },
         });
       }
     }
 
-    // Send all emails using Lovable AI
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
+    // Send all emails via the transactional email system
     const results = [];
-    for (const email of emails) {
+    for (const send of sends) {
       try {
-        // Use Supabase built-in email or a simple SMTP approach
-        // For now, log the emails - email sending will work once email domain is set up
-        console.log(`📧 Email to: ${email.to}, Subject: ${email.subject}`);
-        results.push({ to: email.to, status: "queued" });
-      } catch (emailErr) {
-        console.error(`Failed to send email to ${email.to}:`, emailErr);
-        results.push({ to: email.to, status: "failed", error: String(emailErr) });
+        const { error } = await supabase.functions.invoke("send-transactional-email", {
+          body: send,
+        });
+        if (error) {
+          console.error(`Failed to send ${send.templateName} to ${send.recipientEmail}:`, error);
+          results.push({ to: send.recipientEmail, template: send.templateName, status: "failed", error: String(error) });
+        } else {
+          results.push({ to: send.recipientEmail, template: send.templateName, status: "queued" });
+        }
+      } catch (err) {
+        console.error(`Error sending ${send.templateName}:`, err);
+        results.push({ to: send.recipientEmail, template: send.templateName, status: "failed", error: String(err) });
       }
     }
 
@@ -204,3 +137,29 @@ serve(async (req) => {
     });
   }
 });
+
+function buildItemsTableHtml(items: any[]): string {
+  if (!items.length) return "";
+  const rows = items.map((item: any) => `
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;">${item.products?.name || "—"}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:center;">${item.quantity}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:right;">€${Number(item.unit_price).toFixed(2)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:right;">€${Number(item.subtotal).toFixed(2)}</td>
+    </tr>
+  `).join("");
+
+  return `
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+      <thead>
+        <tr style="background:#f5f5f5;">
+          <th style="padding:8px 12px;text-align:left;font-size:12px;color:#666;">Product</th>
+          <th style="padding:8px 12px;text-align:center;font-size:12px;color:#666;">Qty</th>
+          <th style="padding:8px 12px;text-align:right;font-size:12px;color:#666;">Unit Price</th>
+          <th style="padding:8px 12px;text-align:right;font-size:12px;color:#666;">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
