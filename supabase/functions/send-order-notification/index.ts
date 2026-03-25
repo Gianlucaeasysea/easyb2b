@@ -10,6 +10,7 @@ const corsHeaders = {
 };
 
 const ADMIN_EMAILS = ["business@easysea.org", "gianluca@easysea.org"];
+const BCC_EMAIL = "g.scotto@easysea.org";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
