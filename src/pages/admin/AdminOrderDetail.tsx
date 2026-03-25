@@ -91,7 +91,7 @@ const AdminOrderDetail = () => {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">
-            Order #{order.id.slice(0, 8).toUpperCase()}
+            Order {(order as any).order_code || `#${order.id.slice(0, 8).toUpperCase()}`}
           </h1>
           <p className="text-sm text-muted-foreground">
             {client?.company_name} · {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
