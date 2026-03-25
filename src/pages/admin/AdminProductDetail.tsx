@@ -186,25 +186,94 @@ const AdminProductDetail = () => {
             )}
           </div>
 
-          {/* Variants */}
+          {/* Variants with stock management */}
           {variants && variants.length > 0 && (
             <div className="glass-card-solid p-4 mt-4">
               <h3 className="font-heading text-sm font-semibold mb-3">Linked Variants ({variants.length})</h3>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {variants.map(v => (
-                  <div key={v.id} className="flex items-center justify-between text-xs p-2 rounded bg-secondary/50">
-                    <div>
-                      <p className="font-medium text-foreground">{v.name}</p>
-                      <p className="font-mono text-muted-foreground">{v.sku}</p>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {variants.map(v => {
+                  const isEditing = editingStock[v.id] !== undefined;
+                  return (
+                    <div key={v.id} className="flex items-center justify-between text-xs p-2 rounded bg-secondary/50 gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground truncate">{v.name}</p>
+                        <p className="font-mono text-muted-foreground">{v.sku}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <p className="font-mono">€{Number(v.price || 0).toFixed(2)}</p>
+                        {isEditing ? (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={editingStock[v.id]}
+                              onChange={e => setEditingStock(prev => ({ ...prev, [v.id]: parseInt(e.target.value) || 0 }))}
+                              className="w-16 h-7 text-xs bg-background border-border"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs text-success"
+                              onClick={async () => {
+                                const { error } = await supabase.from("products").update({ stock_quantity: editingStock[v.id] }).eq("id", v.id);
+                                if (error) { toast.error(error.message); return; }
+                                queryClient.invalidateQueries({ queryKey: ["product-variants", family] });
+                                setEditingStock(prev => { const n = { ...prev }; delete n[v.id]; return n; });
+                                toast.success("Stock aggiornato");
+                              }}
+                            >
+                              <Save size={12} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-1 text-xs text-muted-foreground"
+                              onClick={() => setEditingStock(prev => { const n = { ...prev }; delete n[v.id]; return n; })}
+                            >
+                              ✕
+                            </Button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setEditingStock(prev => ({ ...prev, [v.id]: v.stock_quantity ?? 0 }))}
+                            className={`font-semibold cursor-pointer hover:underline ${(v.stock_quantity ?? 0) > 0 ? "text-success" : "text-destructive"}`}
+                          >
+                            {v.stock_quantity ?? 0} stock
+                          </button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-1.5 text-xs text-muted-foreground hover:text-primary"
+                          disabled={syncingVariant === v.id}
+                          title="Resync stock from Shopify"
+                          onClick={async () => {
+                            if (!v.shopify_id) { toast.error("No Shopify ID linked"); return; }
+                            setSyncingVariant(v.id);
+                            try {
+                              const { data, error } = await supabase.functions.invoke("shopify-sync");
+                              if (error) throw error;
+                              const match = (data.products || []).find((sp: any) => String(sp.shopify_variant_id) === String(v.shopify_id));
+                              if (match) {
+                                await supabase.from("products").update({ stock_quantity: match.inventory_quantity }).eq("id", v.id);
+                                queryClient.invalidateQueries({ queryKey: ["product-variants", family] });
+                                toast.success(`Stock resincronizzato: ${match.inventory_quantity}`);
+                              } else {
+                                toast.error("Variante non trovata su Shopify");
+                              }
+                            } catch (err: any) {
+                              toast.error("Errore sync: " + err.message);
+                            } finally {
+                              setSyncingVariant(null);
+                            }
+                          }}
+                        >
+                          <RefreshCw size={12} className={syncingVariant === v.id ? "animate-spin" : ""} />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-mono">€{Number(v.price || 0).toFixed(2)}</p>
-                      <p className={`${(v.stock_quantity ?? 0) > 0 ? "text-success" : "text-destructive"}`}>
-                        {v.stock_quantity ?? 0} stock
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
