@@ -37,12 +37,29 @@ const statusColors: Record<string, string> = {
 };
 
 const AdminDashboard = () => {
+  const queryClient = useQueryClient();
   const [orderDateFrom, setOrderDateFrom] = useState("");
   const [orderDateTo, setOrderDateTo] = useState("");
   const [payedDateFrom, setPayedDateFrom] = useState("");
   const [payedDateTo, setPayedDateTo] = useState("");
   const [deliveryDateFrom, setDeliveryDateFrom] = useState("");
   const [deliveryDateTo, setDeliveryDateTo] = useState("");
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("gsheet-sync");
+      if (error) throw error;
+      toast.success(`Sync completata: ${data.newOrders} nuovi ordini, ${data.updatedOrders} aggiornati`);
+      queryClient.invalidateQueries({ queryKey: ["admin-orders-dash"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+    } catch (err: any) {
+      toast.error("Sync fallita: " + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const { data: clients } = useQuery({
     queryKey: ["admin-clients-dash"],
