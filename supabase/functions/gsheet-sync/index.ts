@@ -14,9 +14,13 @@ type SheetRow = Record<string, string>;
 
 type ExistingOrderRow = {
   id: string;
+  created_at: string;
   order_code: string | null;
   total_amount: number | null;
   order_type: string | null;
+  payed_date: string | null;
+  payment_status: string | null;
+  status: string | null;
   client_id: string;
   clients?: { company_name: string | null } | null;
 };
@@ -136,9 +140,38 @@ function normalizeProductName(name: string): string {
   return normalizeText(name);
 }
 
-function buildFallbackKey(companyName: string, totalAmount: number, orderType: string | null): string | null {
-  if (!companyName || totalAmount <= 0) return null;
-  return `${normalizeCompanyName(companyName)}|${totalAmount.toFixed(2)}|${normalizeText(orderType || "")}`;
+function buildFallbackKey(
+  companyName: string,
+  totalAmount: number,
+  orderType: string | null,
+  referenceDate: string | null,
+  status: string | null,
+  paymentStatus: string | null,
+): string | null {
+  const normalizedCompany = normalizeCompanyName(companyName);
+  if (!normalizedCompany) return null;
+
+  const normalizedOrderType = normalizeText(orderType || "");
+  if (totalAmount > 0) {
+    return `${normalizedCompany}|amount|${totalAmount.toFixed(2)}|${normalizedOrderType}`;
+  }
+
+  const normalizedStatus = normalizeText(status || "");
+  const normalizedPaymentStatus = normalizeText(paymentStatus || "");
+  const normalizedReferenceDate = referenceDate || "";
+
+  if (!normalizedReferenceDate && !normalizedStatus && !normalizedPaymentStatus) return null;
+
+  return `${normalizedCompany}|zero|${normalizedOrderType}|${normalizedReferenceDate}|${normalizedStatus}|${normalizedPaymentStatus}`;
+}
+
+function resolveOrderTimestamp(
+  orderDate: string | null,
+  payedDate: string | null,
+  pickupDate: string | null,
+  deliveryDate: string | null,
+): string | null {
+  return orderDate || payedDate || pickupDate || deliveryDate;
 }
 
 function shouldSkipRow(row: SheetRow): boolean {
@@ -180,7 +213,7 @@ serve(async (req) => {
 
     const { data: existingOrders } = await supabase
       .from("orders")
-      .select("id, order_code, total_amount, order_type, client_id, clients(company_name)");
+      .select("id, created_at, order_code, total_amount, order_type, payed_date, payment_status, status, client_id, clients(company_name)");
 
     const exactOrderMap = new Map<string, string>();
     const normalizedOrderMap = new Map<string, string>();
@@ -198,7 +231,14 @@ serve(async (req) => {
       }
 
       const companyName = order.clients?.company_name || "";
-      const fallbackKey = buildFallbackKey(companyName, Number(order.total_amount || 0), order.order_type);
+      const fallbackKey = buildFallbackKey(
+        companyName,
+        Number(order.total_amount || 0),
+        order.order_type,
+        order.payed_date || order.created_at?.slice(0, 10) || null,
+        order.status,
+        order.payment_status,
+      );
       if (fallbackKey) {
         const ids = fallbackOrderMap.get(fallbackKey) || [];
         ids.push(order.id);
@@ -269,6 +309,7 @@ serve(async (req) => {
       const payedDate = parseDate(firstRow["Payed date"]?.trim() || "");
       const deliveryDate = parseDate(firstRow["Delivery Date"]?.trim() || "");
       const pickupDate = parseDate(firstRow["Pick Up Date"]?.trim() || "");
+      const effectiveOrderDate = resolveOrderTimestamp(orderDate, payedDate, pickupDate, deliveryDate);
       const trackingUrl = firstRow["Tracking"]?.trim() || null;
       const notes = firstRow["Notes"]?.trim() || null;
       const orderType = firstRow["Type order"]?.trim() || null;
@@ -287,7 +328,7 @@ serve(async (req) => {
         tracking_url: trackingUrl,
         notes,
         order_type: orderType,
-        ...(orderDate ? { created_at: new Date(`${orderDate}T12:00:00Z`).toISOString() } : {}),
+        ...(effectiveOrderDate ? { created_at: new Date(`${effectiveOrderDate}T12:00:00Z`).toISOString() } : {}),
       };
 
       let orderId = exactOrderMap.get(orderCode);
@@ -298,7 +339,14 @@ serve(async (req) => {
       }
 
       if (!orderId) {
-        const fallbackKey = buildFallbackKey(business, itemsTotal, orderType);
+        const fallbackKey = buildFallbackKey(
+          business,
+          itemsTotal,
+          orderType,
+          payedDate || effectiveOrderDate,
+          status,
+          paymentStatus,
+        );
         const fallbackIds = fallbackKey ? fallbackOrderMap.get(fallbackKey) || [] : [];
         if (fallbackIds.length === 1) {
           orderId = fallbackIds[0];
@@ -331,7 +379,14 @@ serve(async (req) => {
 
       exactOrderMap.set(orderCode, orderId);
       normalizedOrderMap.set(normalizeOrderCode(orderCode), orderId);
-      const fallbackKey = buildFallbackKey(business, itemsTotal, orderType);
+      const fallbackKey = buildFallbackKey(
+        business,
+        itemsTotal,
+        orderType,
+        payedDate || effectiveOrderDate,
+        status,
+        paymentStatus,
+      );
       if (fallbackKey) {
         fallbackOrderMap.set(fallbackKey, [orderId]);
       }
