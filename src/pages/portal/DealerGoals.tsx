@@ -70,7 +70,7 @@ const DealerGoals = () => {
         {nextTier && (
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground">Progress to Class {nextTier.name} ({nextTier.label})</span>
+              <span className="text-xs text-muted-foreground">Progress to {nextTier.label}</span>
               <span className="text-xs font-semibold text-foreground">€{totalSpent.toLocaleString()} / €{nextTier.minSpend.toLocaleString()}</span>
             </div>
             <div className="w-full bg-secondary rounded-full h-3">
