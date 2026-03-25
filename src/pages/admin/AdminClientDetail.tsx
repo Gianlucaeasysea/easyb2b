@@ -449,8 +449,8 @@ const AdminClientDetail = () => {
                 <Select value={form.discount_class} onValueChange={v => setForm(f => ({ ...f, discount_class: v }))}>
                   <SelectTrigger className="mt-1 bg-secondary border-border rounded-lg"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(discountTiers).map(([key, val]) => (
-                      <SelectItem key={key} value={key}>Class {key} — {val.label} (-{val.pct}%)</SelectItem>
+                    {discountTiers?.map(t => (
+                      <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
