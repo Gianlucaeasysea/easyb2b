@@ -13,12 +13,23 @@ import { useState } from "react";
 import { toast } from "sonner";
 import OrderDocuments from "@/components/OrderDocuments";
 
+const statusOptions = [
+  "draft", "To be prepared", "Ready", "On the road", "Delivered", "Payed", "Returned", "cancelled", "lost"
+];
+
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   draft: { label: "Draft", color: "bg-muted text-muted-foreground", icon: Clock },
+  "To be prepared": { label: "To be prepared", color: "bg-warning/20 text-warning", icon: Clock },
+  Ready: { label: "Ready", color: "bg-chart-4/20 text-chart-4", icon: CheckCircle },
+  "On the road": { label: "On the road", color: "bg-primary/20 text-primary", icon: Truck },
+  Delivered: { label: "Delivered", color: "bg-success/20 text-success", icon: Package },
+  Payed: { label: "Payed", color: "bg-success/20 text-success", icon: CheckCircle },
+  Returned: { label: "Returned", color: "bg-destructive/20 text-destructive", icon: Clock },
+  cancelled: { label: "Cancelled", color: "bg-destructive/20 text-destructive", icon: Clock },
+  lost: { label: "Lost", color: "bg-destructive/20 text-destructive", icon: Clock },
   confirmed: { label: "Confirmed", color: "bg-chart-4/20 text-chart-4", icon: CheckCircle },
   shipped: { label: "Shipped", color: "bg-primary/20 text-primary", icon: Truck },
   delivered: { label: "Delivered", color: "bg-success/20 text-success", icon: Package },
-  cancelled: { label: "Cancelled", color: "bg-destructive/20 text-destructive", icon: Clock },
 };
 
 const AdminOrderDetail = () => {
@@ -81,6 +92,8 @@ const AdminOrderDetail = () => {
 
   const client = order.clients as any;
   const items = (order.order_items || []) as any[];
+  const currentStatus = order.status || "draft";
+  const sc = statusConfig[currentStatus] || statusConfig.draft;
 
   return (
     <div className="max-w-4xl">
@@ -97,8 +110,8 @@ const AdminOrderDetail = () => {
             {client?.company_name} · {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
           </p>
         </div>
-        <Badge className={`border-0 text-xs ${statusConfig[order.status || "draft"]?.color}`}>
-          {statusConfig[order.status || "draft"]?.label}
+        <Badge className={`border-0 text-xs ${sc.color}`}>
+          {sc.label}
         </Badge>
       </div>
 
@@ -113,8 +126,8 @@ const AdminOrderDetail = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(statusConfig).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                {statusOptions.map(s => (
+                  <SelectItem key={s} value={s}>{statusConfig[s]?.label || s}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -137,12 +150,18 @@ const AdminOrderDetail = () => {
         </div>
 
         <div className="glass-card-solid p-5">
-          <h3 className="font-heading font-bold text-foreground text-sm mb-3">Client Info</h3>
+          <h3 className="font-heading font-bold text-foreground text-sm mb-3">Client & Order Info</h3>
           <div className="space-y-2 text-sm">
             <p><span className="text-muted-foreground">Company:</span> {client?.company_name}</p>
             <p><span className="text-muted-foreground">Contact:</span> {client?.contact_name || "—"}</p>
             <p><span className="text-muted-foreground">Email:</span> {client?.email || "—"}</p>
             <p><span className="text-muted-foreground">Country:</span> {client?.country || "—"}</p>
+          </div>
+          <div className="mt-3 pt-3 border-t border-border space-y-2 text-sm">
+            <p><span className="text-muted-foreground">Payment:</span> <Badge className={`border-0 text-[10px] ml-1 ${(order as any).payment_status === 'Payed' ? 'bg-success/20 text-success' : (order as any).payment_status === 'lost' ? 'bg-destructive/20 text-destructive' : 'bg-warning/20 text-warning'}`}>{(order as any).payment_status || "—"}</Badge></p>
+            <p><span className="text-muted-foreground">Shipping (client):</span> €{Number((order as any).shipping_cost_client || 0).toFixed(2)}</p>
+            <p><span className="text-muted-foreground">Payed Date:</span> {(order as any).payed_date || "—"}</p>
+            <p><span className="text-muted-foreground">Delivery Date:</span> {(order as any).delivery_date || "—"}</p>
           </div>
           {order.notes && (
             <div className="mt-4 pt-3 border-t border-border">
@@ -150,8 +169,6 @@ const AdminOrderDetail = () => {
               <p className="text-sm text-foreground">{order.notes}</p>
             </div>
           )}
-
-          {/* Documents section */}
           <div className="mt-4 pt-3 border-t border-border">
             <OrderDocuments orderId={order.id} />
           </div>
@@ -166,12 +183,11 @@ const AdminOrderDetail = () => {
               <TableHead className="text-xs">Product</TableHead>
               <TableHead className="text-xs text-right">Qty</TableHead>
               <TableHead className="text-xs text-right">Unit Price</TableHead>
-              <TableHead className="text-xs text-right">Discount</TableHead>
               <TableHead className="text-xs text-right">Subtotal</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item: any) => (
+            {items.length > 0 ? items.map((item: any) => (
               <TableRow key={item.id}>
                 <TableCell>
                   <p className="text-sm font-heading font-semibold">{item.products?.name || "—"}</p>
@@ -179,16 +195,25 @@ const AdminOrderDetail = () => {
                 </TableCell>
                 <TableCell className="text-right text-sm">{item.quantity}</TableCell>
                 <TableCell className="text-right text-sm">€{Number(item.unit_price).toFixed(2)}</TableCell>
-                <TableCell className="text-right text-sm text-success">{item.discount_pct ? `-${item.discount_pct}%` : "—"}</TableCell>
                 <TableCell className="text-right text-sm font-semibold">€{Number(item.subtotal).toFixed(2)}</TableCell>
               </TableRow>
-            ))}
+            )) : (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">No items linked to this order</TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
-        <div className="px-4 py-3 border-t border-border flex justify-end">
-          <span className="text-xs text-muted-foreground mr-3">Total</span>
+        <div className="px-4 py-3 border-t border-border flex justify-between items-center">
+          <span className="text-xs text-muted-foreground">Products Total</span>
           <span className="font-heading text-lg font-bold text-foreground">€{Number(order.total_amount || 0).toFixed(2)}</span>
         </div>
+        {Number((order as any).shipping_cost_client || 0) > 0 && (
+          <div className="px-4 pb-3 flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">+ Shipping</span>
+            <span className="text-sm text-muted-foreground">€{Number((order as any).shipping_cost_client).toFixed(2)}</span>
+          </div>
+        )}
       </div>
     </div>
   );
