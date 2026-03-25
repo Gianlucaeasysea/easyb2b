@@ -392,6 +392,50 @@ const AdminClientDetail = () => {
             )}
           </div>
 
+          {/* Portal Access */}
+          <div className="glass-card-solid p-6">
+            <h2 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2">
+              <KeyRound size={16} /> Portal Access
+            </h2>
+            {client?.user_id ? (
+              <div className="space-y-3">
+                <div className="p-3 bg-success/10 rounded-lg border border-success/20">
+                  <p className="text-xs text-success font-semibold mb-2">✅ Account Attivo</p>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Email</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-mono text-foreground">{client.email}</p>
+                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => copyToClipboard(client.email || "", "email")}>
+                          {copied === "email" ? <Check size={10} className="text-success" /> : <Copy size={10} />}
+                        </Button>
+                      </div>
+                    </div>
+                    {(client as any).portal_password && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Password</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-mono text-foreground">{(client as any).portal_password}</p>
+                          <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => copyToClipboard((client as any).portal_password, "password")}>
+                            {copied === "password" ? <Check size={10} className="text-success" /> : <Copy size={10} />}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">Nessun account portale creato</p>
+                <Button size="sm" onClick={() => setShowCreateAccount(true)} className="w-full gap-1" disabled={!client?.email}>
+                  <UserPlus size={14} /> Crea Account Dealer
+                </Button>
+                {!client?.email && <p className="text-[10px] text-destructive">⚠️ Inserisci prima un'email al cliente</p>}
+              </div>
+            )}
+          </div>
+
           {/* Pricing & Status */}
           <div className="glass-card-solid p-6">
             <h2 className="font-heading font-bold text-foreground mb-4">Pricing & Status</h2>
