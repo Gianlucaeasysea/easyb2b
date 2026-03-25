@@ -1,0 +1,1 @@
+ALTER TABLE public.product_details ADD COLUMN IF NOT EXISTS lead_time text DEFAULT null;

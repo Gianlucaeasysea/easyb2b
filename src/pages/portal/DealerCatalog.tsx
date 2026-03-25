@@ -227,6 +227,8 @@ const DealerCatalog = () => {
                 const b2bPrice = plEntry?.customPrice ?? Number(p.price);
                 const discountPct = retailPrice > 0 ? Math.round((1 - b2bPrice / Number(p.price)) * 100) : 0;
                 const inStock = (p.stock_quantity ?? 0) > 0;
+                const detail = getDetailForProduct(p);
+                const leadTime = (detail as any)?.lead_time;
 
                 return (
                   <div
@@ -258,8 +260,11 @@ const DealerCatalog = () => {
                             <p className="text-xs text-muted-foreground">Retail price</p>
                           </div>
                           <span className={`text-xs font-heading font-semibold ${inStock ? "text-success" : "text-destructive"}`}>
-                            {inStock ? "Available" : "Out of stock"}
+                            {inStock ? "Available" : "Esaurito"}
                           </span>
+                          {!inStock && leadTime && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Rientro: {leadTime}</p>
+                          )}
                         </div>
                       ) : (
                         <>
@@ -273,8 +278,11 @@ const DealerCatalog = () => {
                                 <Badge variant="outline" className="text-[10px] bg-success/20 text-success border-0 mb-1">-{discountPct}%</Badge>
                               )}
                               <span className={`block text-xs font-heading font-semibold ${inStock ? "text-success" : "text-destructive"}`}>
-                                {inStock ? `${p.stock_quantity} in stock` : "Out of stock"}
+                                {inStock ? `${p.stock_quantity} in stock` : "Esaurito"}
                               </span>
+                              {!inStock && leadTime && (
+                                <span className="block text-[10px] text-muted-foreground">Rientro: {leadTime}</span>
+                              )}
                             </div>
                           </div>
                           <Button
