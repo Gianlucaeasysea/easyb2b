@@ -68,6 +68,44 @@ export type Database = {
           },
         ]
       }
+      client_bank_details: {
+        Row: {
+          account_holder: string | null
+          bank_name: string | null
+          client_id: string
+          created_at: string
+          iban: string | null
+          id: string
+          swift_bic: string | null
+        }
+        Insert: {
+          account_holder?: string | null
+          bank_name?: string | null
+          client_id: string
+          created_at?: string
+          iban?: string | null
+          id?: string
+          swift_bic?: string | null
+        }
+        Update: {
+          account_holder?: string | null
+          bank_name?: string | null
+          client_id?: string
+          created_at?: string
+          iban?: string | null
+          id?: string
+          swift_bic?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_bank_details_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_contacts: {
         Row: {
           client_id: string
@@ -99,6 +137,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_shipping_addresses: {
+        Row: {
+          address_line: string | null
+          city: string | null
+          client_id: string
+          country: string | null
+          created_at: string
+          id: string
+          is_default: boolean | null
+          label: string
+          postal_code: string | null
+          province: string | null
+        }
+        Insert: {
+          address_line?: string | null
+          city?: string | null
+          client_id: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          label?: string
+          postal_code?: string | null
+          province?: string | null
+        }
+        Update: {
+          address_line?: string | null
+          city?: string | null
+          client_id?: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          label?: string
+          postal_code?: string | null
+          province?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_shipping_addresses_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
@@ -370,6 +455,42 @@ export type Database = {
           status?: string | null
           updated_at?: string
           zone?: string | null
+        }
+        Relationships: []
+      }
+      marketing_materials: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          file_name: string
+          file_path: string
+          file_size: string | null
+          id: string
+          title: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_path: string
+          file_size?: string | null
+          id?: string
+          title: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: string | null
+          id?: string
+          title?: string
+          uploaded_by?: string | null
         }
         Relationships: []
       }
