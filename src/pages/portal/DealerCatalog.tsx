@@ -259,12 +259,14 @@ const DealerCatalog = () => {
                             <p className="font-heading text-lg font-bold text-foreground">€{retailPrice.toFixed(2)}</p>
                             <p className="text-xs text-muted-foreground">Retail price</p>
                           </div>
-                          <span className={`text-xs font-heading font-semibold ${inStock ? "text-success" : "text-destructive"}`}>
-                            {inStock ? "Available" : "Esaurito"}
-                          </span>
-                          {!inStock && leadTime && (
-                            <p className="text-[10px] text-muted-foreground mt-0.5">Rientro: {leadTime}</p>
-                          )}
+                          <div className="text-right">
+                            <span className={`text-xs font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
+                              {inStock ? "Available" : "Esaurito"}
+                            </span>
+                            {!inStock && leadTime && (
+                              <p className="text-[10px] font-semibold text-destructive/80">Rientro: {leadTime}</p>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         <>
@@ -277,11 +279,11 @@ const DealerCatalog = () => {
                               {discountPct > 0 && (
                                 <Badge variant="outline" className="text-[10px] bg-success/20 text-success border-0 mb-1">-{discountPct}%</Badge>
                               )}
-                              <span className={`block text-xs font-heading font-semibold ${inStock ? "text-success" : "text-destructive"}`}>
+                              <span className={`block text-xs font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
                                 {inStock ? `${p.stock_quantity} in stock` : "Esaurito"}
                               </span>
                               {!inStock && leadTime && (
-                                <span className="block text-[10px] text-muted-foreground">Rientro: {leadTime}</span>
+                                <span className="block text-[11px] font-semibold text-destructive/80">Rientro: {leadTime}</span>
                               )}
                             </div>
                           </div>
