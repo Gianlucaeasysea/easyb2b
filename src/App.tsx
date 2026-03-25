@@ -35,6 +35,7 @@ import AdminClients from "./pages/admin/AdminClients";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminRequests from "./pages/admin/AdminRequests";
+import AdminNewOrders from "./pages/admin/AdminNewOrders";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminClientDetail from "./pages/admin/AdminClientDetail";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
@@ -98,6 +99,7 @@ const App = () => (
               <Route path="products/:family" element={<AdminProductDetail />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="orders/:id" element={<AdminOrderDetail />} />
+              <Route path="new-orders" element={<AdminNewOrders />} />
               <Route path="requests" element={<AdminRequests />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="import" element={<AdminImport />} />
