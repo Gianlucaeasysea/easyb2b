@@ -5,10 +5,10 @@ import { Trophy, Target, Star, TrendingUp, Award, Zap, Lock } from "lucide-react
 import { Badge } from "@/components/ui/badge";
 
 const tiers = [
-  { name: "D", label: "Starter", discount: 15, minSpend: 0, color: "text-muted-foreground" },
-  { name: "C", label: "Bronze", discount: 20, minSpend: 2000, color: "text-chart-4" },
-  { name: "B", label: "Silver", discount: 25, minSpend: 5000, color: "text-primary" },
-  { name: "A", label: "Gold", discount: 30, minSpend: 10000, color: "text-warning" },
+  { name: "standard", label: "Standard", discount: 10, minSpend: 0, color: "text-muted-foreground" },
+  { name: "bronze", label: "Bronze", discount: 15, minSpend: 2000, color: "text-chart-4" },
+  { name: "silver", label: "Silver", discount: 20, minSpend: 5000, color: "text-primary" },
+  { name: "gold", label: "Gold", discount: 30, minSpend: 10000, color: "text-warning" },
 ];
 
 const achievements = [
