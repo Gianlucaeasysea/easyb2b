@@ -336,10 +336,9 @@ const AdminClients = () => {
                 <Select value={bulkDiscount} onValueChange={setBulkDiscount}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="A">A — Gold (30%)</SelectItem>
-                    <SelectItem value="B">B — Silver (25%)</SelectItem>
-                    <SelectItem value="C">C — Bronze (20%)</SelectItem>
-                    <SelectItem value="D">D — Starter (15%)</SelectItem>
+                    {discountTiers?.map(t => (
+                      <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
