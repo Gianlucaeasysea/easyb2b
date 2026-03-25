@@ -50,6 +50,9 @@ const AdminProductDetail = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [newSpecKey, setNewSpecKey] = useState("");
   const [newSpecValue, setNewSpecValue] = useState("");
+  const [leadTime, setLeadTime] = useState("");
+  const [editingStock, setEditingStock] = useState<Record<string, number>>({});
+  const [syncingVariant, setSyncingVariant] = useState<string | null>(null);
 
   useEffect(() => {
     if (detail) {
