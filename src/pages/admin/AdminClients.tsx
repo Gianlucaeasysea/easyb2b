@@ -276,15 +276,14 @@ const AdminClients = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Classe Sconto</Label>
-                <Select value={newClient.discount_class} onValueChange={v => setNewClient(f => ({ ...f, discount_class: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A">A — Gold (30%)</SelectItem>
-                    <SelectItem value="B">B — Silver (25%)</SelectItem>
-                    <SelectItem value="C">C — Bronze (20%)</SelectItem>
-                    <SelectItem value="D">D — Starter (15%)</SelectItem>
-                  </SelectContent>
-                </Select>
+                 <Select value={newClient.discount_class} onValueChange={v => setNewClient(f => ({ ...f, discount_class: v }))}>
+                   <SelectTrigger><SelectValue /></SelectTrigger>
+                   <SelectContent>
+                     {discountTiers?.map(t => (
+                       <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
               </div>
               <div><Label>P.IVA</Label><Input value={newClient.vat_number} onChange={e => setNewClient(f => ({ ...f, vat_number: e.target.value }))} /></div>
             </div>
