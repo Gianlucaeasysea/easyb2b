@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ShoppingBag, Package, FileText, TrendingUp, Globe } from "lucide-react";
+import { Users, ShoppingBag, Package, FileText, TrendingUp, Globe, Euro, CreditCard, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
 
 const StatCard = ({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string; sub?: string }) => (
   <div className="glass-card-solid p-6">
@@ -23,9 +25,23 @@ const statusColors: Record<string, string> = {
   confirmed: "bg-chart-4/20 text-chart-4",
   shipped: "bg-primary/20 text-primary",
   delivered: "bg-success/20 text-success",
+  Delivered: "bg-success/20 text-success",
+  "To be prepared": "bg-warning/20 text-warning",
+  Ready: "bg-chart-4/20 text-chart-4",
+  "On the road": "bg-primary/20 text-primary",
+  Payed: "bg-success/20 text-success",
+  lost: "bg-destructive/20 text-destructive",
+  Returned: "bg-destructive/20 text-destructive",
 };
 
 const AdminDashboard = () => {
+  const [orderDateFrom, setOrderDateFrom] = useState("");
+  const [orderDateTo, setOrderDateTo] = useState("");
+  const [payedDateFrom, setPayedDateFrom] = useState("");
+  const [payedDateTo, setPayedDateTo] = useState("");
+  const [deliveryDateFrom, setDeliveryDateFrom] = useState("");
+  const [deliveryDateTo, setDeliveryDateTo] = useState("");
+
   const { data: clients } = useQuery({
     queryKey: ["admin-clients-dash"],
     queryFn: async () => {
@@ -33,13 +49,15 @@ const AdminDashboard = () => {
       return data || [];
     },
   });
+
   const { data: orders } = useQuery({
     queryKey: ["admin-orders-dash"],
     queryFn: async () => {
-      const { data } = await supabase.from("orders").select("*, clients(company_name)").order("created_at", { ascending: false }).limit(10);
+      const { data } = await supabase.from("orders").select("*, clients(company_name)").order("created_at", { ascending: false });
       return data || [];
     },
   });
+
   const { data: requestCount } = useQuery({
     queryKey: ["admin-request-count"],
     queryFn: async () => {
@@ -47,6 +65,7 @@ const AdminDashboard = () => {
       return count || 0;
     },
   });
+
   const { data: productCount } = useQuery({
     queryKey: ["admin-product-count"],
     queryFn: async () => {
@@ -55,7 +74,37 @@ const AdminDashboard = () => {
     },
   });
 
-  const totalRevenue = orders?.filter(o => o.status !== "draft").reduce((s, o) => s + Number(o.total_amount || 0), 0) || 0;
+  // Filtered totals
+  const totalOrdered = (orders || [])
+    .filter(o => {
+      if (!o.created_at) return false;
+      const d = o.created_at.slice(0, 10);
+      if (orderDateFrom && d < orderDateFrom) return false;
+      if (orderDateTo && d > orderDateTo) return false;
+      return true;
+    })
+    .reduce((s, o) => s + Number(o.total_amount || 0), 0);
+
+  const totalPayed = (orders || [])
+    .filter(o => {
+      if (!(o as any).payed_date) return false;
+      const d = String((o as any).payed_date).slice(0, 10);
+      if (payedDateFrom && d < payedDateFrom) return false;
+      if (payedDateTo && d > payedDateTo) return false;
+      return true;
+    })
+    .reduce((s, o) => s + Number(o.total_amount || 0), 0);
+
+  const totalDelivered = (orders || [])
+    .filter(o => {
+      if (!(o as any).delivery_date) return false;
+      const d = String((o as any).delivery_date).slice(0, 10);
+      if (deliveryDateFrom && d < deliveryDateFrom) return false;
+      if (deliveryDateTo && d > deliveryDateTo) return false;
+      return true;
+    })
+    .reduce((s, o) => s + Number(o.total_amount || 0), 0);
+
   const activeClients = clients?.filter(c => c.status === "active").length || 0;
   const countries = [...new Set(clients?.map(c => c.country).filter(Boolean))].length;
 
@@ -68,9 +117,60 @@ const AdminDashboard = () => {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard icon={Users} label="Active Clients" value={String(activeClients)} sub={`${clients?.length || 0} total · ${countries} countries`} />
-        <StatCard icon={ShoppingBag} label="Total Orders" value={String(orders?.length || 0)} sub={`€${totalRevenue.toLocaleString()} revenue`} />
+        <StatCard icon={ShoppingBag} label="Total Orders" value={String(orders?.length || 0)} />
         <StatCard icon={FileText} label="New Requests" value={String(requestCount ?? 0)} sub="Awaiting review" />
         <StatCard icon={Package} label="Products" value={String(productCount ?? 0)} sub="Active in B2B catalog" />
+      </div>
+
+      {/* Filtered Revenue Cards */}
+      <div className="grid lg:grid-cols-3 gap-4 mb-8">
+        {/* Total Ordered */}
+        <div className="glass-card-solid p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Euro size={16} className="text-primary" />
+            <h3 className="font-heading font-bold text-foreground text-sm">Totale Ordinato</h3>
+          </div>
+          <p className="font-heading text-2xl font-bold text-foreground mb-3">
+            €{totalOrdered.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+          </p>
+          <div className="flex gap-2">
+            <Input type="date" value={orderDateFrom} onChange={e => setOrderDateFrom(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
+            <Input type="date" value={orderDateTo} onChange={e => setOrderDateTo(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1">Filtro per Order Date</p>
+        </div>
+
+        {/* Total Payed */}
+        <div className="glass-card-solid p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <CreditCard size={16} className="text-success" />
+            <h3 className="font-heading font-bold text-foreground text-sm">Totale Pagato</h3>
+          </div>
+          <p className="font-heading text-2xl font-bold text-success mb-3">
+            €{totalPayed.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+          </p>
+          <div className="flex gap-2">
+            <Input type="date" value={payedDateFrom} onChange={e => setPayedDateFrom(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
+            <Input type="date" value={payedDateTo} onChange={e => setPayedDateTo(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1">Filtro per Payed Date</p>
+        </div>
+
+        {/* Total Delivered */}
+        <div className="glass-card-solid p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Truck size={16} className="text-chart-4" />
+            <h3 className="font-heading font-bold text-foreground text-sm">Totale Consegnato</h3>
+          </div>
+          <p className="font-heading text-2xl font-bold text-chart-4 mb-3">
+            €{totalDelivered.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+          </p>
+          <div className="flex gap-2">
+            <Input type="date" value={deliveryDateFrom} onChange={e => setDeliveryDateFrom(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
+            <Input type="date" value={deliveryDateTo} onChange={e => setDeliveryDateTo(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1">Filtro per Delivery Date</p>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -81,17 +181,17 @@ const AdminDashboard = () => {
             <Link to="/admin/orders" className="text-xs text-primary hover:underline">View all</Link>
           </div>
           <div className="space-y-2">
-            {orders?.slice(0, 6).map(o => (
-              <div key={o.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+            {orders?.slice(0, 8).map(o => (
+              <Link key={o.id} to={`/admin/orders/${o.id}`} className="flex items-center justify-between py-2 border-b border-border last:border-0 hover:bg-secondary/30 px-2 -mx-2 rounded">
                 <div>
                   <p className="text-sm font-heading font-semibold text-foreground">{(o as any).clients?.company_name}</p>
-                  <p className="text-xs text-muted-foreground">{format(new Date(o.created_at), "dd MMM yyyy")}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{(o as any).order_code || o.id.slice(0, 8)}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"]}`}>{o.status}</Badge>
+                  <Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"] || "bg-muted text-muted-foreground"}`}>{o.status}</Badge>
                   <span className="font-mono text-sm font-semibold text-foreground">€{Number(o.total_amount || 0).toFixed(0)}</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
