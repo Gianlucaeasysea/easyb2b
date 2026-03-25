@@ -44,6 +44,10 @@ const AdminClientDetail = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [newContact, setNewContact] = useState({ contact_name: "", email: "", phone: "", role: "" });
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showCreateAccount, setShowCreateAccount] = useState(false);
+  const [accountPassword, setAccountPassword] = useState("dealer2025");
+  const [creatingAccount, setCreatingAccount] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["admin-client", id],
