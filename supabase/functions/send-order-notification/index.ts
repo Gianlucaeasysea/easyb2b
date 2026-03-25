@@ -62,15 +62,17 @@ serve(async (req) => {
     // Collect all email sends to dispatch
     const sends: { templateName: string; recipientEmail: string; idempotencyKey: string; templateData: Record<string, any> }[] = [];
 
-    if (type === "order_received") {
+    // Helper: push a client email + BCC copy to g.scotto
+    const pushClientEmail = (templateName: string, templateData: Record<string, any>, idempotencyKey: string) => {
       if (clientEmail) {
-        sends.push({
-          templateName: "order-received",
-          recipientEmail: clientEmail,
-          idempotencyKey: `order-received-client-${orderId}`,
-          templateData: { clientName, orderCode: code, itemsHtml, totalAmount, notes: order.notes },
-        });
+        sends.push({ templateName, recipientEmail: clientEmail, idempotencyKey, templateData });
+        // BCC copy
+        sends.push({ templateName, recipientEmail: BCC_EMAIL, idempotencyKey: `${idempotencyKey}-bcc`, templateData });
       }
+    };
+
+    if (type === "order_received") {
+      pushClientEmail("order-received", { clientName, orderCode: code, itemsHtml, totalAmount, notes: order.notes }, `order-received-client-${orderId}`);
       ADMIN_EMAILS.forEach(email => {
         sends.push({
           templateName: "order-received-admin",
@@ -80,32 +82,11 @@ serve(async (req) => {
         });
       });
     } else if (type === "order_confirmed") {
-      if (clientEmail) {
-        sends.push({
-          templateName: "order-confirmed",
-          recipientEmail: clientEmail,
-          idempotencyKey: `order-confirmed-${orderId}`,
-          templateData: { clientName, orderCode: code, totalAmount },
-        });
-      }
+      pushClientEmail("order-confirmed", { clientName, orderCode: code, totalAmount }, `order-confirmed-${orderId}`);
     } else if (type === "status_update") {
-      if (clientEmail) {
-        sends.push({
-          templateName: "order-status-update",
-          recipientEmail: clientEmail,
-          idempotencyKey: `order-status-${orderId}-${order.status}`,
-          templateData: { clientName, orderCode: code, status: order.status, trackingNumber: order.tracking_number, trackingUrl: order.tracking_url },
-        });
-      }
+      pushClientEmail("order-status-update", { clientName, orderCode: code, status: order.status, trackingNumber: order.tracking_number, trackingUrl: order.tracking_url }, `order-status-${orderId}-${order.status}`);
     } else if (type === "documents_uploaded") {
-      if (clientEmail) {
-        sends.push({
-          templateName: "order-documents-ready",
-          recipientEmail: clientEmail,
-          idempotencyKey: `order-docs-${orderId}-${Date.now()}`,
-          templateData: { clientName, orderCode: code },
-        });
-      }
+      pushClientEmail("order-documents-ready", { clientName, orderCode: code }, `order-docs-${orderId}-${Date.now()}`);
     }
 
     // Send all emails via the transactional email system using direct fetch
