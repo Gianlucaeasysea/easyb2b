@@ -115,7 +115,7 @@ const AdminClientDetail = () => {
         country: client.country || "",
         zone: client.zone || "",
         status: client.status || "lead",
-        discount_class: client.discount_class || "D",
+        discount_class: client.discount_class || "standard",
         notes: client.notes || "",
         address: client.address || "",
         website: client.website || "",
