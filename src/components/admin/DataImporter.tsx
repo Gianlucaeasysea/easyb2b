@@ -17,16 +17,19 @@ interface FieldMapping {
 }
 
 const CLIENT_FIELDS = [
-  { key: "company_name", label: "Ragione Sociale", required: true },
+  { key: "company_name", label: "Nome Business", required: true },
+  { key: "business_type", label: "Type", required: false },
+  { key: "status", label: "Status", required: false },
+  { key: "country", label: "Country", required: false },
+  { key: "address", label: "Address", required: false },
+  { key: "contact_name", label: "Contact Person", required: false },
+  { key: "contact_email", label: "Contact Email", required: false },
+  { key: "contact_phone", label: "Contact Phone", required: false },
+  { key: "contact_role", label: "Contact Role", required: false },
+  { key: "website", label: "Website", required: false },
   { key: "vat_number", label: "P.IVA", required: false },
-  { key: "contact_name", label: "Nome Contatto", required: false },
-  { key: "email", label: "Email", required: false },
-  { key: "phone", label: "Telefono", required: false },
-  { key: "address", label: "Indirizzo", required: false },
-  { key: "country", label: "Paese", required: false },
   { key: "zone", label: "Zona", required: false },
   { key: "discount_class", label: "Classe Dealer", required: false },
-  { key: "status", label: "Stato", required: false },
   { key: "notes", label: "Note", required: false },
 ];
 
