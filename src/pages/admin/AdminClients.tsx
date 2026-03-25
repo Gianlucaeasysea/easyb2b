@@ -77,7 +77,7 @@ const AdminClients = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-clients"] });
       setShowCreate(false);
-      setNewClient({ company_name: "", contact_name: "", email: "", phone: "", country: "", address: "", business_type: "", status: "active", discount_class: "D", website: "", vat_number: "", zone: "", notes: "" });
+      setNewClient({ company_name: "", contact_name: "", email: "", phone: "", country: "", address: "", business_type: "", status: "active", discount_class: "standard", website: "", vat_number: "", zone: "", notes: "" });
       toast.success("Cliente creato");
     },
     onError: (e: any) => toast.error(e.message),
