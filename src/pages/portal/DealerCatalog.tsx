@@ -36,7 +36,7 @@ const DealerCatalog = () => {
     },
   });
 
-  const discountPct = { A: 30, B: 25, C: 20, D: 15 }[client?.discount_class || "D"] || 15;
+  const discountPct = { gold: 30, silver: 20, bronze: 15, standard: 10 }[client?.discount_class || "standard"] || 10;
 
   // Macro categories matching easysea.org collections
   const MACRO_CATEGORIES = [
