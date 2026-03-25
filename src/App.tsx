@@ -64,6 +64,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/become-a-dealer" element={<BecomeADealer />} />
             <Route path="/diventa-distributore" element={<BecomeADealer />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
 
             {/* Dealer Portal */}
             <Route path="/portal" element={
