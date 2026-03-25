@@ -565,6 +565,7 @@ export type Database = {
           features: Json | null
           gallery_images: Json | null
           id: string
+          lead_time: string | null
           product_family: string
           specifications: Json | null
           technical_sheet_url: string | null
@@ -578,6 +579,7 @@ export type Database = {
           features?: Json | null
           gallery_images?: Json | null
           id?: string
+          lead_time?: string | null
           product_family: string
           specifications?: Json | null
           technical_sheet_url?: string | null
@@ -591,6 +593,7 @@ export type Database = {
           features?: Json | null
           gallery_images?: Json | null
           id?: string
+          lead_time?: string | null
           product_family?: string
           specifications?: Json | null
           technical_sheet_url?: string | null
