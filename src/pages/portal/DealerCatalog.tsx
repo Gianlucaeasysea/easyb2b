@@ -27,16 +27,47 @@ const DealerCatalog = () => {
     enabled: !!user,
   });
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ["products"],
+  // Get price lists assigned to this client via junction table
+  const { data: myPriceListItems } = useQuery({
+    queryKey: ["my-price-list-items", client?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("*").eq("active_b2b", true).order("name");
+      // Find price lists assigned to this client
+      const { data: assignments } = await supabase
+        .from("price_list_clients")
+        .select("price_list_id")
+        .eq("client_id", client!.id);
+      
+      if (!assignments?.length) return [];
+
+      const plIds = assignments.map(a => a.price_list_id);
+      const { data: items, error } = await supabase
+        .from("price_list_items")
+        .select("*, products(*)")
+        .in("price_list_id", plIds);
+      
       if (error) throw error;
-      return data;
+      return items || [];
     },
+    enabled: !!client?.id,
   });
 
-  const discountPct = { gold: 30, silver: 20, bronze: 15, standard: 10 }[client?.discount_class || "standard"] || 10;
+  // Build product map from price list items - dealer only sees these products
+  const priceListProductMap = new Map<string, { customPrice: number; product: any }>();
+  myPriceListItems?.forEach(item => {
+    const existing = priceListProductMap.get(item.product_id);
+    // If multiple price lists, use the lowest price
+    if (!existing || item.custom_price < existing.customPrice) {
+      priceListProductMap.set(item.product_id, {
+        customPrice: item.custom_price,
+        product: (item as any).products,
+      });
+    }
+  });
+
+  const hasPriceList = priceListProductMap.size > 0;
+  const catalogProducts = hasPriceList
+    ? Array.from(priceListProductMap.entries()).map(([id, { product }]) => product).filter(Boolean)
+    : [];
 
   // Macro categories matching easysea.org collections
   const MACRO_CATEGORIES = [
@@ -54,16 +85,15 @@ const DealerCatalog = () => {
     return MACRO_CATEGORIES.find(cat => cat.keywords.some(kw => text.includes(kw)))?.label || null;
   };
 
-  const filtered = products?.filter(p => {
+  const filtered = catalogProducts.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku?.toLowerCase().includes(search.toLowerCase()));
     const matchCat = !selectedCategory || getProductMacroCategory(p) === selectedCategory;
     return matchSearch && matchCat;
-  }) || [];
+  });
 
-  // Count products per macro category
   const categoryCounts = MACRO_CATEGORIES.map(cat => ({
     ...cat,
-    count: products?.filter(p => getProductMacroCategory(p) === cat.label).length || 0,
+    count: catalogProducts.filter(p => getProductMacroCategory(p) === cat.label).length,
   })).filter(c => c.count > 0);
 
   return (
@@ -77,7 +107,9 @@ const DealerCatalog = () => {
             <p className="text-sm text-muted-foreground">Retail prices shown</p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Your B2B pricing: <span className="text-success font-semibold">-{discountPct}%</span> ({(client?.discount_class || "standard").charAt(0).toUpperCase() + (client?.discount_class || "standard").slice(1)})
+              {hasPriceList
+                ? `Your personalized B2B catalog — ${catalogProducts.length} products`
+                : "No price list assigned yet. Contact your sales rep."}
             </p>
           )}
         </div>
@@ -94,120 +126,131 @@ const DealerCatalog = () => {
         </div>
       </div>
 
-      {/* Search & Filters */}
-      <div className="flex gap-3 mb-6 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-          <Input placeholder="Search by name or SKU..." className="pl-10 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          <Button
-            variant={!selectedCategory ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedCategory(null)}
-            className={`rounded-lg text-xs ${!selectedCategory ? "bg-foreground text-background" : ""}`}
-          >
-            All
-          </Button>
-          {categoryCounts.map(cat => (
-            <Button
-              key={cat.label}
-              variant={selectedCategory === cat.label ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory(cat.label)}
-              className={`rounded-lg text-xs ${selectedCategory === cat.label ? "bg-foreground text-background" : ""}`}
-            >
-              {cat.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="text-center py-20 text-muted-foreground">Loading catalog...</div>
-      ) : filtered.length === 0 ? (
+      {!hasPriceList ? (
         <div className="text-center py-20">
           <Package className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">No products found.</p>
+          <p className="text-muted-foreground">No price list has been assigned to your account yet.</p>
+          <p className="text-xs text-muted-foreground mt-1">Please contact your sales representative.</p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map(p => {
-            const retailPrice = Number(p.compare_at_price || p.price);
-            const b2bPrice = Number(p.price) * (1 - discountPct / 100);
-            const inStock = (p.stock_quantity ?? 0) > 0;
+        <>
+          {/* Search & Filters */}
+          <div className="flex gap-3 mb-6 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input placeholder="Search by name or SKU..." className="pl-10 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <div className="flex gap-1.5 flex-wrap">
+              <Button
+                variant={!selectedCategory ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(null)}
+                className={`rounded-lg text-xs ${!selectedCategory ? "bg-foreground text-background" : ""}`}
+              >
+                All
+              </Button>
+              {categoryCounts.map(cat => (
+                <Button
+                  key={cat.label}
+                  variant={selectedCategory === cat.label ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(cat.label)}
+                  className={`rounded-lg text-xs ${selectedCategory === cat.label ? "bg-foreground text-background" : ""}`}
+                >
+                  {cat.label}
+                </Button>
+              ))}
+            </div>
+          </div>
 
-            return (
-              <div key={p.id} className="glass-card-solid overflow-hidden group hover:border-primary/30 transition-colors">
-                <div className="aspect-square bg-secondary flex items-center justify-center relative">
-                  {p.images && p.images[0] ? (
-                    <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Package className="text-muted-foreground" size={40} />
-                  )}
-                  {p.category && (
-                    <Badge className="absolute top-2 left-2 text-[10px] bg-background/80 text-foreground border-0 backdrop-blur-sm">
-                      {p.category}
-                    </Badge>
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3 className="font-heading text-sm font-semibold text-foreground mb-1">{p.name}</h3>
-                  {!isClientMode && p.sku && <p className="text-xs font-mono text-muted-foreground mb-1">{p.sku}</p>}
-                  {p.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{p.description}</p>}
+          {filtered.length === 0 ? (
+            <div className="text-center py-20">
+              <Package className="mx-auto text-muted-foreground mb-4" size={48} />
+              <p className="text-muted-foreground">No products found.</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filtered.map(p => {
+                const plEntry = priceListProductMap.get(p.id);
+                const retailPrice = Number(p.compare_at_price || p.price);
+                const b2bPrice = plEntry?.customPrice ?? Number(p.price);
+                const discountPct = retailPrice > 0 ? Math.round((1 - b2bPrice / Number(p.price)) * 100) : 0;
+                const inStock = (p.stock_quantity ?? 0) > 0;
 
-                  {isClientMode ? (
-                    /* CLIENT MODE: show only retail price */
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="font-heading text-lg font-bold text-foreground">€{retailPrice.toFixed(2)}</p>
-                        <p className="text-xs text-muted-foreground">Retail price</p>
-                      </div>
-                      <span className={`text-xs font-heading font-semibold ${inStock ? "text-success" : "text-destructive"}`}>
-                        {inStock ? "Available" : "Out of stock"}
-                      </span>
+                return (
+                  <div key={p.id} className="glass-card-solid overflow-hidden group hover:border-primary/30 transition-colors">
+                    <div className="aspect-square bg-secondary flex items-center justify-center relative">
+                      {p.images && p.images[0] ? (
+                        <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Package className="text-muted-foreground" size={40} />
+                      )}
+                      {p.category && (
+                        <Badge className="absolute top-2 left-2 text-[10px] bg-background/80 text-foreground border-0 backdrop-blur-sm">
+                          {p.category}
+                        </Badge>
+                      )}
                     </div>
-                  ) : (
-                    /* DEALER MODE: show B2B price with discount */
-                    <>
-                      <div className="flex items-end justify-between">
-                        <div>
-                          <p className="text-xs text-muted-foreground line-through">€{Number(p.price).toFixed(2)}</p>
-                          <p className="font-heading text-lg font-bold text-foreground">€{b2bPrice.toFixed(2)}</p>
-                        </div>
-                        <div className="text-right">
+                    <div className="p-4">
+                      <h3 className="font-heading text-sm font-semibold text-foreground mb-1">{p.name}</h3>
+                      {!isClientMode && p.sku && <p className="text-xs font-mono text-muted-foreground mb-1">{p.sku}</p>}
+                      {p.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{p.description}</p>}
+
+                      {isClientMode ? (
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <p className="font-heading text-lg font-bold text-foreground">€{retailPrice.toFixed(2)}</p>
+                            <p className="text-xs text-muted-foreground">Retail price</p>
+                          </div>
                           <span className={`text-xs font-heading font-semibold ${inStock ? "text-success" : "text-destructive"}`}>
-                            {inStock ? `${p.stock_quantity} in stock` : "Out of stock"}
+                            {inStock ? "Available" : "Out of stock"}
                           </span>
                         </div>
-                      </div>
-                      <Button
-                        disabled={!inStock}
-                        size="sm"
-                        className="w-full mt-3 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs"
-                        onClick={() => {
-                          addItem({
-                            productId: p.id,
-                            name: p.name,
-                            sku: p.sku,
-                            unitPrice: Number(p.price),
-                            b2bPrice,
-                            discountPct,
-                            stock: p.stock_quantity ?? 0,
-                            image: p.images?.[0] || null,
-                          });
-                          toast.success(`${p.name} added to cart`);
-                        }}
-                      >
-                        <ShoppingCart size={14} /> Add to Order
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-end justify-between">
+                            <div>
+                              <p className="text-xs text-muted-foreground line-through">€{Number(p.price).toFixed(2)}</p>
+                              <p className="font-heading text-lg font-bold text-foreground">€{b2bPrice.toFixed(2)}</p>
+                            </div>
+                            <div className="text-right">
+                              {discountPct > 0 && (
+                                <Badge variant="outline" className="text-[10px] bg-success/20 text-success border-0 mb-1">-{discountPct}%</Badge>
+                              )}
+                              <span className={`block text-xs font-heading font-semibold ${inStock ? "text-success" : "text-destructive"}`}>
+                                {inStock ? `${p.stock_quantity} in stock` : "Out of stock"}
+                              </span>
+                            </div>
+                          </div>
+                          <Button
+                            disabled={!inStock}
+                            size="sm"
+                            className="w-full mt-3 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs"
+                            onClick={() => {
+                              addItem({
+                                productId: p.id,
+                                name: p.name,
+                                sku: p.sku,
+                                unitPrice: Number(p.price),
+                                b2bPrice,
+                                discountPct,
+                                stock: p.stock_quantity ?? 0,
+                                image: p.images?.[0] || null,
+                              });
+                              toast.success(`${p.name} added to cart`);
+                            }}
+                          >
+                            <ShoppingCart size={14} /> Add to Order
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
