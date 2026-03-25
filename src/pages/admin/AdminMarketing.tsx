@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Trash2, FileText, Download, Image, Video, FolderOpen, Globe, Pencil, Check, X, ChevronDown, ChevronRight, Package, Palette } from "lucide-react";
+import { Upload, Trash2, FileText, Download, Image, Video, FolderOpen, Globe, Pencil, Check, X, ChevronDown, ChevronRight, Package, Palette, Eye, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 const categories = [
