@@ -103,6 +103,7 @@ const App = () => (
               <Route path="import" element={<AdminImport />} />
               <Route path="price-lists" element={<AdminPriceLists />} />
               <Route path="system-map" element={<AdminSystemMap />} />
+              <Route path="marketing" element={<AdminMarketing />} />
             </Route>
 
             {/* CRM */}
