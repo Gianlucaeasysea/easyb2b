@@ -70,6 +70,7 @@ const AdminOrderDetail = () => {
     if (!id) return;
     setSaving(true);
     try {
+      const previousStatus = order?.status;
       const { error } = await supabase.from("orders").update({
         status,
         tracking_number: trackingNumber || null,
@@ -80,6 +81,21 @@ const AdminOrderDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       toast.success("Order updated");
+
+      // Send email notification on status change
+      if (previousStatus !== status) {
+        try {
+          await supabase.functions.invoke('send-order-notification', {
+            body: {
+              orderId: id,
+              orderCode: (order as any)?.order_code,
+              type: 'status_update',
+            },
+          });
+        } catch (emailErr) {
+          console.error("Email notification failed:", emailErr);
+        }
+      }
     } catch (err: any) {
       toast.error("Failed: " + err.message);
     } finally {

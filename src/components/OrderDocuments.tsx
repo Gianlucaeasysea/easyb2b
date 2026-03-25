@@ -66,6 +66,18 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
 
       queryClient.invalidateQueries({ queryKey: ["order-documents", orderId] });
       toast.success("Document uploaded successfully");
+
+      // Send email notification to client about new document
+      try {
+        await supabase.functions.invoke('send-order-notification', {
+          body: {
+            orderId,
+            type: 'documents_uploaded',
+          },
+        });
+      } catch (emailErr) {
+        console.error("Document notification email failed:", emailErr);
+      }
     } catch (err: any) {
       toast.error("Upload failed: " + err.message);
     } finally {

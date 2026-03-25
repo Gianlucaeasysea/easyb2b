@@ -5,10 +5,42 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingCart, Trash2, Minus, Plus, CheckCircle, ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ShoppingCart, Trash2, Minus, Plus, CheckCircle, ArrowLeft, AlertTriangle, Clock } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+
+const MIN_ORDER_AMOUNT = 100; // Minimum order €100
+
+// Same mapping as DealerCatalog
+const getProductFamily = (name: string): string | null => {
+  const n = name.toLowerCase();
+  if (n.includes("kit easybarber")) return "kit-easybarber";
+  if (n.includes("kit easyfurling")) return "kit-easyfurling";
+  if (n.includes("kit easypreventer")) return "kit-easypreventer";
+  if (n.includes("rope deflector")) return "rope-deflector";
+  if (n.includes("way2") || n.includes("gangway")) return "way2";
+  if (n.includes("spira") || n.includes("guardrail cover")) return "spira";
+  if (n.includes("winch cover")) return "winch-cover";
+  if (n.includes("flipper") && n.includes("carbon")) return "flipper-carbon";
+  if (n.includes("flipper") && n.includes("max")) return "flipper-max";
+  if (n.includes("flipper")) return "flipper";
+  if (n.includes("snatch") || (n.includes("olli") && n.includes("block"))) return "olli-block";
+  if (n.includes("solid ring")) return "olli-solid-ring";
+  if (n.includes("low friction ring") || (n.includes("olli") && n.includes("ring"))) return "olli-ring";
+  if (n.includes("sheathed loop")) return "sheathed-loop";
+  if (n.includes("soft shackle")) return "soft-shackle";
+  if (n.includes("covered loop")) return "covered-loop";
+  if (n.includes("dyneema sheet") && n.includes("eye")) return "dyneema-sheet-eye";
+  if (n.includes("dyneema sheet")) return "dyneema-sheet";
+  if (n.includes("polyester sheet") && n.includes("eye")) return "polyester-sheet-eye";
+  if (n.includes("polyester sheet") && n.includes("olli")) return "polyester-sheet-eye";
+  if (n.includes("polyester sheet")) return "polyester-sheet";
+  if (n.includes("boat hook head") || n.includes("brush head") || n.includes("line-passing") || n.includes("linemaster") || n.includes("short pole") || n.includes("quick-release") || n.includes("fidlock")) return "jake-head";
+  if (n.includes("jake")) return "jake";
+  return null;
+};
 
 const DealerCart = () => {
   const { items, updateQuantity, removeItem, clearCart, totalAmount, totalItems } = useCart();
@@ -17,7 +49,7 @@ const DealerCart = () => {
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [orderConfirmed, setOrderConfirmed] = useState<string | null>(null);
+  const [orderConfirmed, setOrderConfirmed] = useState<{ id: string; code: string } | null>(null);
 
   const { data: client } = useQuery({
     queryKey: ["my-client"],
@@ -28,12 +60,32 @@ const DealerCart = () => {
     enabled: !!user,
   });
 
+  // Fetch product details for lead times
+  const { data: productDetails } = useQuery({
+    queryKey: ["product-details-cart"],
+    queryFn: async () => {
+      const { data } = await supabase.from("product_details").select("product_family, lead_time");
+      return data || [];
+    },
+  });
+
+  const detailsByFamily = new Map<string, string>();
+  productDetails?.forEach(d => {
+    if (d.lead_time) detailsByFamily.set(d.product_family, d.lead_time);
+  });
+
+  const getLeadTime = (productName: string): string | null => {
+    const family = getProductFamily(productName);
+    return family ? detailsByFamily.get(family) || null : null;
+  };
+
+  const belowMinimum = totalAmount < MIN_ORDER_AMOUNT;
+
   const handleSubmitOrder = async () => {
-    if (!client || items.length === 0) return;
+    if (!client || items.length === 0 || belowMinimum) return;
     setSubmitting(true);
 
     try {
-      // Create order
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -47,7 +99,6 @@ const DealerCart = () => {
 
       if (orderError) throw orderError;
 
-      // Create order items
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.productId,
@@ -60,7 +111,20 @@ const DealerCart = () => {
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
       if (itemsError) throw itemsError;
 
-      setOrderConfirmed(order.id);
+      // Send confirmation email to client
+      try {
+        await supabase.functions.invoke('send-order-notification', {
+          body: {
+            orderId: order.id,
+            orderCode: (order as any).order_code || `ES-${order.id.slice(0, 4).toUpperCase()}`,
+            type: 'order_received',
+          },
+        });
+      } catch (emailErr) {
+        console.error("Email notification failed:", emailErr);
+      }
+
+      setOrderConfirmed({ id: order.id, code: (order as any).order_code || `#${order.id.slice(0, 8).toUpperCase()}` });
       clearCart();
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
       toast.success("Order placed successfully!");
@@ -78,7 +142,10 @@ const DealerCart = () => {
         <CheckCircle className="mx-auto text-success mb-6" size={64} />
         <h1 className="font-heading text-3xl font-bold text-foreground mb-3">Order Confirmed!</h1>
         <p className="text-muted-foreground mb-2">
-          Your order <span className="font-mono font-semibold">#{orderConfirmed.slice(0, 8).toUpperCase()}</span> has been placed.
+          Your order <span className="font-mono font-semibold text-foreground">{orderConfirmed.code}</span> has been placed.
+        </p>
+        <p className="text-sm text-muted-foreground mb-2">
+          A confirmation email has been sent to your registered email address.
         </p>
         <p className="text-sm text-muted-foreground mb-8">
           We'll process it shortly. You can track it in your orders page.
@@ -125,48 +192,81 @@ const DealerCart = () => {
         </Link>
       </div>
 
+      {/* Minimum order warning */}
+      {belowMinimum && (
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-warning/10 border border-warning/30 mb-6">
+          <AlertTriangle className="text-warning shrink-0" size={20} />
+          <div>
+            <p className="text-sm font-heading font-semibold text-warning">Minimum order not reached</p>
+            <p className="text-xs text-muted-foreground">
+              The minimum order amount is <span className="font-semibold text-foreground">€{MIN_ORDER_AMOUNT.toFixed(2)}</span>. 
+              You need <span className="font-semibold text-foreground">€{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)}</span> more to place your order.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Cart items */}
       <div className="space-y-3 mb-8">
-        {items.map(item => (
-          <div key={item.productId} className="glass-card-solid p-4 flex items-center gap-4">
-            <div className="w-16 h-16 bg-secondary rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-              {item.image ? (
-                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-              ) : (
-                <ShoppingCart className="text-muted-foreground" size={20} />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-heading text-sm font-semibold text-foreground truncate">{item.name}</p>
-              {item.sku && <p className="text-xs font-mono text-muted-foreground">{item.sku}</p>}
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-muted-foreground line-through">€{item.unitPrice.toFixed(2)}</span>
-                <span className="text-sm font-semibold text-foreground">€{item.b2bPrice.toFixed(2)}</span>
-                <span className="text-xs text-success">-{item.discountPct}%</span>
+        {items.map(item => {
+          const leadTime = getLeadTime(item.name);
+          const outOfStock = item.stock <= 0;
+
+          return (
+            <div key={item.productId} className="glass-card-solid p-4 flex items-center gap-4">
+              <div className="w-16 h-16 bg-secondary rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                {item.image ? (
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                ) : (
+                  <ShoppingCart className="text-muted-foreground" size={20} />
+                )}
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity - 1)}>
-                <Minus size={14} />
+              <div className="flex-1 min-w-0">
+                <p className="font-heading text-sm font-semibold text-foreground truncate">{item.name}</p>
+                {item.sku && <p className="text-xs font-mono text-muted-foreground">{item.sku}</p>}
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-muted-foreground line-through">€{item.unitPrice.toFixed(2)}</span>
+                  <span className="text-sm font-semibold text-foreground">€{item.b2bPrice.toFixed(2)}</span>
+                  <span className="text-xs text-success">-{item.discountPct}%</span>
+                </div>
+                {/* Lead time info */}
+                {leadTime && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <Clock size={10} className="text-muted-foreground" />
+                    <span className="text-[11px] text-muted-foreground">
+                      Lead time: <span className="font-semibold text-foreground">{leadTime}</span>
+                    </span>
+                  </div>
+                )}
+                {outOfStock && (
+                  <Badge variant="outline" className="mt-1 text-[10px] text-destructive border-destructive/30">
+                    Out of stock
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity - 1)}>
+                  <Minus size={14} />
+                </Button>
+                <Input
+                  type="number"
+                  min={1}
+                  max={item.stock}
+                  value={item.quantity}
+                  onChange={e => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
+                  className="w-16 text-center h-8 text-sm"
+                />
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock}>
+                  <Plus size={14} />
+                </Button>
+              </div>
+              <p className="font-heading font-bold text-foreground w-24 text-right">€{(item.b2bPrice * item.quantity).toFixed(2)}</p>
+              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => removeItem(item.productId)}>
+                <Trash2 size={14} />
               </Button>
-              <Input
-                type="number"
-                min={1}
-                max={item.stock}
-                value={item.quantity}
-                onChange={e => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
-                className="w-16 text-center h-8 text-sm"
-              />
-              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock}>
-                <Plus size={14} />
-              </Button>
             </div>
-            <p className="font-heading font-bold text-foreground w-24 text-right">€{(item.b2bPrice * item.quantity).toFixed(2)}</p>
-            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => removeItem(item.productId)}>
-              <Trash2 size={14} />
-            </Button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Notes & Summary */}
@@ -191,16 +291,21 @@ const DealerCart = () => {
               </div>
             ))}
           </div>
-          <div className="border-t border-border pt-3 flex justify-between items-center mb-6">
+          <div className="border-t border-border pt-3 flex justify-between items-center mb-2">
             <span className="font-heading font-bold text-foreground">Total</span>
             <span className="font-heading text-2xl font-bold text-foreground">€{totalAmount.toFixed(2)}</span>
           </div>
+          {belowMinimum && (
+            <p className="text-xs text-warning mb-4">
+              Minimum order: €{MIN_ORDER_AMOUNT.toFixed(2)} — add €{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)} more
+            </p>
+          )}
           <Button
             onClick={handleSubmitOrder}
-            disabled={submitting}
-            className="w-full bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6 text-base"
+            disabled={submitting || belowMinimum}
+            className="w-full bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6 text-base disabled:opacity-50"
           >
-            {submitting ? "Placing Order..." : "Confirm & Place Order"}
+            {submitting ? "Placing Order..." : belowMinimum ? `Minimum €${MIN_ORDER_AMOUNT} required` : "Confirm & Place Order"}
           </Button>
         </div>
       </div>

@@ -12,8 +12,16 @@ import OrderDocuments from "@/components/OrderDocuments";
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   draft: { label: "Draft", color: "text-muted-foreground border-muted", icon: Clock },
   confirmed: { label: "Confirmed", color: "text-chart-4 border-chart-4", icon: CheckCircle },
+  "To be prepared": { label: "Being Prepared", color: "text-warning border-warning", icon: Clock },
+  Ready: { label: "Ready", color: "text-chart-4 border-chart-4", icon: CheckCircle },
+  "On the road": { label: "On the Road", color: "text-primary border-primary", icon: Truck },
   shipped: { label: "Shipped", color: "text-primary border-primary", icon: Truck },
   delivered: { label: "Delivered", color: "text-success border-success", icon: Package },
+  Delivered: { label: "Delivered", color: "text-success border-success", icon: Package },
+  Payed: { label: "Payed", color: "text-success border-success", icon: CheckCircle },
+  Returned: { label: "Returned", color: "text-destructive border-destructive", icon: Clock },
+  cancelled: { label: "Cancelled", color: "text-destructive border-destructive", icon: Clock },
+  lost: { label: "Lost", color: "text-destructive border-destructive", icon: Clock },
 };
 
 const DealerOrders = () => {
@@ -79,7 +87,7 @@ const DealerOrders = () => {
                     <Icon size={20} className={cfg?.color?.split(" ")[0]} />
                     <div>
                       <p className="font-heading font-semibold text-foreground">
-                        Order #{order.id.slice(0, 8).toUpperCase()}
+                        {(order as any).order_code || `Order #${order.id.slice(0, 8).toUpperCase()}`}
                       </p>
                       <p className="text-xs text-muted-foreground">{format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}</p>
                     </div>
