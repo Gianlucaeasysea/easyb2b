@@ -109,15 +109,15 @@ const DealerCatalog = () => {
           >
             All
           </Button>
-          {categories.map(cat => (
+          {categoryCounts.map(cat => (
             <Button
-              key={cat}
-              variant={selectedCategory === cat ? "default" : "outline"}
+              key={cat.label}
+              variant={selectedCategory === cat.label ? "default" : "outline"}
               size="sm"
-              onClick={() => setSelectedCategory(cat)}
-              className={`rounded-lg text-xs ${selectedCategory === cat ? "bg-foreground text-background" : ""}`}
+              onClick={() => setSelectedCategory(cat.label)}
+              className={`rounded-lg text-xs ${selectedCategory === cat.label ? "bg-foreground text-background" : ""}`}
             >
-              {cat}
+              {cat.label}
             </Button>
           ))}
         </div>
