@@ -10,64 +10,141 @@ const SHEET_ID = "1S_Si86x7GdKAuRdRkx5wFK231lGnujChZtFXwo9tMzg";
 const GID = "724823086";
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
 
-function parseCSV(text: string): Record<string, string>[] {
-  const lines = text.split("\n");
-  if (lines.length < 2) return [];
-  
-  // Parse header - handle quoted fields
-  const parseRow = (line: string): string[] => {
-    const result: string[] = [];
-    let current = "";
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        inQuotes = !inQuotes;
-      } else if (ch === "," && !inQuotes) {
-        result.push(current.trim());
-        current = "";
-      } else {
-        current += ch;
-      }
-    }
-    result.push(current.trim());
-    return result;
-  };
+type SheetRow = Record<string, string>;
 
-  const headers = parseRow(lines[0]);
-  const rows: Record<string, string>[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const values = parseRow(line);
-    const row: Record<string, string> = {};
-    headers.forEach((h, idx) => {
-      row[h] = values[idx] || "";
-    });
-    rows.push(row);
+type ExistingOrderRow = {
+  id: string;
+  order_code: string | null;
+  total_amount: number | null;
+  order_type: string | null;
+  client_id: string;
+  clients?: { company_name: string | null } | null;
+};
+
+function decodeCsv(buffer: ArrayBuffer): string {
+  return new TextDecoder("utf-8").decode(buffer).replace(/^\uFEFF/, "");
+}
+
+function parseCSV(text: string): SheetRow[] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i + 1];
+
+    if (ch === '"') {
+      if (inQuotes && next === '"') {
+        field += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (ch === "," && !inQuotes) {
+      row.push(field.trim());
+      field = "";
+      continue;
+    }
+
+    if ((ch === "\n" || ch === "\r") && !inQuotes) {
+      if (ch === "\r" && next === "\n") i++;
+      row.push(field.trim());
+      field = "";
+      if (row.some((value) => value.length > 0)) {
+        rows.push(row);
+      }
+      row = [];
+      continue;
+    }
+
+    field += ch;
   }
-  return rows;
+
+  if (field.length > 0 || row.length > 0) {
+    row.push(field.trim());
+    if (row.some((value) => value.length > 0)) {
+      rows.push(row);
+    }
+  }
+
+  if (rows.length < 2) return [];
+
+  const headers = rows[0].map((header) => header.replace(/^\uFEFF/, ""));
+  return rows.slice(1).map((values) => {
+    const record: SheetRow = {};
+    headers.forEach((header, index) => {
+      record[header] = values[index] ?? "";
+    });
+    return record;
+  });
 }
 
 function parseEuroPrice(val: string): number {
   if (!val) return 0;
-  const cleaned = val.replace(/€/g, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+  const cleaned = val.replace(/€/g, "").replace(/\s/g, "").replace(/\./g, "").replace(/,/g, ".");
   const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
+  return isNaN(num) ? 0 : Math.round(num * 100) / 100;
 }
 
 function parseDate(val: string): string | null {
   if (!val || val === "-" || val === "—") return null;
-  // Try DD/MM/YYYY
-  const dmy = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
-  // Try YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  const trimmed = val.trim();
+
+  const dmy = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmy) {
+    return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
   return null;
 }
 
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[™®]/g, "")
+    .replace(/\u200b/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeCompanyName(value: string): string {
+  return normalizeText(value)
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeOrderCode(value: string): string {
+  return normalizeCompanyName(value)
+    .replace(/\bno\b/g, "")
+    .replace(/\bn\b/g, "")
+    .replace(/\bof\b/g, "")
+    .replace(/\bdel\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalizeProductName(name: string): string {
-  return name.replace(/™/g, "").replace(/®/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+  return normalizeText(name);
+}
+
+function buildFallbackKey(companyName: string, totalAmount: number, orderType: string | null): string | null {
+  if (!companyName || totalAmount <= 0) return null;
+  return `${normalizeCompanyName(companyName)}|${totalAmount.toFixed(2)}|${normalizeText(orderType || "")}`;
+}
+
+function shouldSkipRow(row: SheetRow): boolean {
+  const type = (row["Type"] || "").trim().toUpperCase();
+  const typeOrder = (row["Type order"] || "").trim().toUpperCase();
+  return type === "B2C" || type === "CUSTOM" || typeOrder.includes("B2C") || typeOrder === "CUSTOM";
 }
 
 serve(async (req) => {
@@ -80,37 +157,56 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Fetch CSV from Google Sheet
     const csvResp = await fetch(CSV_URL);
     if (!csvResp.ok) throw new Error(`Failed to fetch sheet: ${csvResp.status}`);
-    const csvText = await csvResp.text();
-    const rows = parseCSV(csvText);
 
-    console.log(`Fetched ${rows.length} rows from Google Sheet`);
+    const csvBuffer = await csvResp.arrayBuffer();
+    const csvText = decodeCsv(csvBuffer);
+    const rows = parseCSV(csvText).filter((row) => !shouldSkipRow(row));
 
-    // Get existing clients
+    console.log(`Fetched ${rows.length} valid rows from Google Sheet`);
+
     const { data: existingClients } = await supabase.from("clients").select("id, company_name");
     const clientMap = new Map<string, string>();
-    (existingClients || []).forEach((c: any) => {
-      clientMap.set(c.company_name.toLowerCase().trim(), c.id);
+    (existingClients || []).forEach((client: any) => {
+      clientMap.set(normalizeCompanyName(client.company_name || ""), client.id);
     });
 
-    // Get existing products
     const { data: existingProducts } = await supabase.from("products").select("id, name");
     const productMap = new Map<string, string>();
-    (existingProducts || []).forEach((p: any) => {
-      productMap.set(normalizeProductName(p.name), p.id);
+    (existingProducts || []).forEach((product: any) => {
+      productMap.set(normalizeProductName(product.name || ""), product.id);
     });
 
-    // Get existing orders
-    const { data: existingOrders } = await supabase.from("orders").select("id, order_code");
-    const orderMap = new Map<string, string>();
-    (existingOrders || []).forEach((o: any) => {
-      if (o.order_code) orderMap.set(o.order_code, o.id);
+    const { data: existingOrders } = await supabase
+      .from("orders")
+      .select("id, order_code, total_amount, order_type, client_id, clients(company_name)");
+
+    const exactOrderMap = new Map<string, string>();
+    const normalizedOrderMap = new Map<string, string>();
+    const fallbackOrderMap = new Map<string, string[]>();
+
+    (existingOrders as ExistingOrderRow[] | null)?.forEach((order) => {
+      if (!order.order_code) return;
+
+      const exactCode = order.order_code.trim();
+      exactOrderMap.set(exactCode, order.id);
+
+      const normalizedCode = normalizeOrderCode(exactCode);
+      if (normalizedCode && !normalizedOrderMap.has(normalizedCode)) {
+        normalizedOrderMap.set(normalizedCode, order.id);
+      }
+
+      const companyName = order.clients?.company_name || "";
+      const fallbackKey = buildFallbackKey(companyName, Number(order.total_amount || 0), order.order_type);
+      if (fallbackKey) {
+        const ids = fallbackOrderMap.get(fallbackKey) || [];
+        ids.push(order.id);
+        fallbackOrderMap.set(fallbackKey, ids);
+      }
     });
 
-    // Group rows by order code
-    const orderGroups = new Map<string, typeof rows>();
+    const orderGroups = new Map<string, SheetRow[]>();
     for (const row of rows) {
       const code = row["Code"]?.trim();
       const business = row["Business"]?.trim();
@@ -123,14 +219,16 @@ serve(async (req) => {
     let updatedOrders = 0;
     let newProducts = 0;
     let newClients = 0;
+    let normalizedMatches = 0;
+    let fallbackMatches = 0;
 
     for (const [orderCode, orderRows] of orderGroups) {
       const firstRow = orderRows[0];
       const business = firstRow["Business"]?.trim();
       if (!business) continue;
 
-      // Find or create client
-      let clientId = clientMap.get(business.toLowerCase().trim());
+      const normalizedBusiness = normalizeCompanyName(business);
+      let clientId = clientMap.get(normalizedBusiness);
       if (!clientId) {
         const country = firstRow["Country"]?.trim() || null;
         const { data: newClient, error: clientErr } = await supabase
@@ -138,16 +236,17 @@ serve(async (req) => {
           .insert({ company_name: business, country, status: "active" })
           .select("id")
           .single();
+
         if (clientErr || !newClient) {
           console.error(`Failed to create client ${business}:`, clientErr);
           continue;
         }
+
         clientId = newClient.id;
-        clientMap.set(business.toLowerCase().trim(), clientId);
+        clientMap.set(normalizedBusiness, clientId);
         newClients++;
       }
 
-      // Calculate order totals from items
       let itemsTotal = 0;
       const items: { product: string; qty: number; price: number }[] = [];
       for (const row of orderRows) {
@@ -160,6 +259,7 @@ serve(async (req) => {
         items.push({ product, qty, price });
         itemsTotal += price;
       }
+      itemsTotal = Math.round(itemsTotal * 100) / 100;
 
       const shippingClient = parseEuroPrice(firstRow["Client Shipping costs"] || "");
       const shippingEasysea = parseEuroPrice(firstRow["Shipping costs (EASYSEA)"] || "");
@@ -187,40 +287,60 @@ serve(async (req) => {
         tracking_url: trackingUrl,
         notes,
         order_type: orderType,
-        ...(orderDate ? { created_at: new Date(orderDate + "T12:00:00Z").toISOString() } : {}),
+        ...(orderDate ? { created_at: new Date(`${orderDate}T12:00:00Z`).toISOString() } : {}),
       };
 
-      let orderId: string;
+      let orderId = exactOrderMap.get(orderCode);
+      if (!orderId) {
+        const normalizedCode = normalizeOrderCode(orderCode);
+        orderId = normalizedOrderMap.get(normalizedCode);
+        if (orderId) normalizedMatches++;
+      }
 
-      if (orderMap.has(orderCode)) {
-        // Update existing order
-        orderId = orderMap.get(orderCode)!;
-        const { created_at, ...updateData } = orderData as any;
-        await supabase.from("orders").update(updateData).eq("id", orderId);
+      if (!orderId) {
+        const fallbackKey = buildFallbackKey(business, itemsTotal, orderType);
+        const fallbackIds = fallbackKey ? fallbackOrderMap.get(fallbackKey) || [] : [];
+        if (fallbackIds.length === 1) {
+          orderId = fallbackIds[0];
+          fallbackMatches++;
+        }
+      }
+
+      if (orderId) {
+        const { error: updateError } = await supabase.from("orders").update(orderData).eq("id", orderId);
+        if (updateError) {
+          console.error(`Failed to update order ${orderCode}:`, updateError);
+          continue;
+        }
         updatedOrders++;
       } else {
-        // Create new order
         const { data: newOrder, error: orderErr } = await supabase
           .from("orders")
           .insert(orderData)
           .select("id")
           .single();
+
         if (orderErr || !newOrder) {
           console.error(`Failed to create order ${orderCode}:`, orderErr);
           continue;
         }
+
         orderId = newOrder.id;
-        orderMap.set(orderCode, orderId);
         newOrders++;
       }
 
-      // Sync order items - delete existing and recreate
+      exactOrderMap.set(orderCode, orderId);
+      normalizedOrderMap.set(normalizeOrderCode(orderCode), orderId);
+      const fallbackKey = buildFallbackKey(business, itemsTotal, orderType);
+      if (fallbackKey) {
+        fallbackOrderMap.set(fallbackKey, [orderId]);
+      }
+
       await supabase.from("order_items").delete().eq("order_id", orderId);
 
       for (const item of items) {
         if (!item.product || item.qty === 0) continue;
 
-        // Find or create product
         const normName = normalizeProductName(item.product);
         let productId = productMap.get(normName);
         if (!productId) {
@@ -229,10 +349,12 @@ serve(async (req) => {
             .insert({ name: item.product })
             .select("id")
             .single();
+
           if (prodErr || !newProd) {
             console.error(`Failed to create product ${item.product}:`, prodErr);
             continue;
           }
+
           productId = newProd.id;
           productMap.set(normName, productId);
           newProducts++;
@@ -257,6 +379,8 @@ serve(async (req) => {
       updatedOrders,
       newProducts,
       newClients,
+      normalizedMatches,
+      fallbackMatches,
       syncedAt: new Date().toISOString(),
     };
 
@@ -269,7 +393,7 @@ serve(async (req) => {
     console.error("Sync error:", error);
     return new Response(
       JSON.stringify({ success: false, error: (error as Error).message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
