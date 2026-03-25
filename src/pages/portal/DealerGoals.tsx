@@ -42,7 +42,7 @@ const DealerGoals = () => {
   });
 
   const totalSpent = orders?.reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
-  const currentTier = tiers.find(t => t.name === (client?.discount_class || "D")) || tiers[0];
+  const currentTier = tiers.find(t => t.name === (client?.discount_class || "standard")) || tiers[0];
   const currentTierIndex = tiers.indexOf(currentTier);
   const nextTier = currentTierIndex < tiers.length - 1 ? tiers[currentTierIndex + 1] : null;
   const progressToNext = nextTier ? Math.min((totalSpent / nextTier.minSpend) * 100, 100) : 100;

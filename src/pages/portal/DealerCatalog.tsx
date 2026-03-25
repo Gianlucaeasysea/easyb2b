@@ -77,7 +77,7 @@ const DealerCatalog = () => {
             <p className="text-sm text-muted-foreground">Retail prices shown</p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Your B2B pricing: <span className="text-success font-semibold">-{discountPct}%</span> (Class {client?.discount_class || "D"})
+              Your B2B pricing: <span className="text-success font-semibold">-{discountPct}%</span> ({(client?.discount_class || "standard").charAt(0).toUpperCase() + (client?.discount_class || "standard").slice(1)})
             </p>
           )}
         </div>

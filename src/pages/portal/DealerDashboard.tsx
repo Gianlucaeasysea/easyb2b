@@ -47,8 +47,8 @@ const DealerDashboard = () => {
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
   const monthlyTarget = 5000;
   const monthlyProgress = Math.min((totalSpent / monthlyTarget) * 100, 100);
-  const discountClass = client?.discount_class || "D";
-  const discountPct = { A: 30, B: 25, C: 20, D: 15 }[discountClass] || 15;
+  const discountClass = client?.discount_class || "standard";
+  const discountPct = { gold: 30, silver: 20, bronze: 15, standard: 10 }[discountClass] || 10;
 
   return (
     <div>

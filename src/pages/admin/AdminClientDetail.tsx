@@ -14,12 +14,7 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 
-const discountTiers: Record<string, { label: string; pct: number }> = {
-  A: { label: "Gold", pct: 30 },
-  B: { label: "Silver", pct: 25 },
-  C: { label: "Bronze", pct: 20 },
-  D: { label: "Starter", pct: 15 },
-};
+// discount tiers are now fetched dynamically from DB
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",

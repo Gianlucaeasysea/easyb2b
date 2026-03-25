@@ -27,7 +27,7 @@ const AdminClients = () => {
   const [newClient, setNewClient] = useState({
     company_name: "", contact_name: "", email: "", phone: "",
     country: "", address: "", business_type: "", status: "active",
-    discount_class: "D", website: "", vat_number: "", zone: "", notes: "",
+    discount_class: "standard", website: "", vat_number: "", zone: "", notes: "",
   });
 
   const { data: clients, isLoading } = useQuery({
