@@ -223,6 +223,13 @@ const AdminOrderDetail = () => {
           <div className="glass-card-solid p-5">
             <OrderDocuments orderId={order.id} />
           </div>
+
+          <div className="glass-card-solid p-5">
+            <h3 className="font-heading font-bold text-foreground text-sm mb-4 flex items-center gap-2">
+              <Clock size={14} /> Storico Notifiche
+            </h3>
+            <OrderEventsTimeline orderId={order.id} />
+          </div>
         </div>
       </div>
 
