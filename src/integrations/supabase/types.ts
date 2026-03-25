@@ -370,9 +370,17 @@ export type Database = {
         Row: {
           client_id: string
           created_at: string
+          delivery_date: string | null
           id: string
           internal_notes: string | null
           notes: string | null
+          order_code: string | null
+          order_type: string | null
+          payed_date: string | null
+          payment_status: string | null
+          pickup_date: string | null
+          shipping_cost_client: number | null
+          shipping_cost_easysea: number | null
           status: string | null
           total_amount: number | null
           tracking_number: string | null
@@ -382,9 +390,17 @@ export type Database = {
         Insert: {
           client_id: string
           created_at?: string
+          delivery_date?: string | null
           id?: string
           internal_notes?: string | null
           notes?: string | null
+          order_code?: string | null
+          order_type?: string | null
+          payed_date?: string | null
+          payment_status?: string | null
+          pickup_date?: string | null
+          shipping_cost_client?: number | null
+          shipping_cost_easysea?: number | null
           status?: string | null
           total_amount?: number | null
           tracking_number?: string | null
@@ -394,9 +410,17 @@ export type Database = {
         Update: {
           client_id?: string
           created_at?: string
+          delivery_date?: string | null
           id?: string
           internal_notes?: string | null
           notes?: string | null
+          order_code?: string | null
+          order_type?: string | null
+          payed_date?: string | null
+          payment_status?: string | null
+          pickup_date?: string | null
+          shipping_cost_client?: number | null
+          shipping_cost_easysea?: number | null
           status?: string | null
           total_amount?: number | null
           tracking_number?: string | null
