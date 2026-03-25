@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClientMode } from "@/contexts/ClientModeContext";
-import { Package, Search, ShoppingCart } from "lucide-react";
+import { Package, Search, ShoppingCart, Minus, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,8 +46,9 @@ const DealerCatalog = () => {
   const { isClientMode } = useClientMode();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const { addItem, totalItems } = useCart();
+  const { addItem, totalItems, items: cartItems } = useCart();
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   const { data: client } = useQuery({
     queryKey: ["my-client"],
@@ -287,27 +288,71 @@ const DealerCatalog = () => {
                               )}
                             </div>
                           </div>
-                          <Button
-                            disabled={!inStock}
-                            size="sm"
-                            className="w-full mt-3 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              addItem({
-                                productId: p.id,
-                                name: p.name,
-                                sku: p.sku,
-                                unitPrice: Number(p.price),
-                                b2bPrice,
-                                discountPct,
-                                stock: p.stock_quantity ?? 0,
-                                image: p.images?.[0] || null,
-                              });
-                              toast.success(`${p.name} added to cart`);
-                            }}
-                          >
-                            <ShoppingCart size={14} /> Add to Order
-                          </Button>
+                          <div className="flex items-center gap-1.5 mt-3">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              disabled={!inStock}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const curr = quantities[p.id] || 1;
+                                if (curr > 1) setQuantities(prev => ({ ...prev, [p.id]: curr - 1 }));
+                              }}
+                            >
+                              <Minus size={12} />
+                            </Button>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={p.stock_quantity ?? 999}
+                              value={quantities[p.id] || 1}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const val = Math.max(1, Math.min(parseInt(e.target.value) || 1, p.stock_quantity ?? 999));
+                                setQuantities(prev => ({ ...prev, [p.id]: val }));
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-14 text-center h-8 text-sm"
+                            />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              disabled={!inStock || (quantities[p.id] || 1) >= (p.stock_quantity ?? 999)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const curr = quantities[p.id] || 1;
+                                setQuantities(prev => ({ ...prev, [p.id]: Math.min(curr + 1, p.stock_quantity ?? 999) }));
+                              }}
+                            >
+                              <Plus size={12} />
+                            </Button>
+                            <Button
+                              disabled={!inStock}
+                              size="sm"
+                              className="flex-1 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs h-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const qty = quantities[p.id] || 1;
+                                addItem({
+                                  productId: p.id,
+                                  name: p.name,
+                                  sku: p.sku,
+                                  unitPrice: Number(p.price),
+                                  b2bPrice,
+                                  discountPct,
+                                  stock: p.stock_quantity ?? 0,
+                                  image: p.images?.[0] || null,
+                                  quantity: qty,
+                                });
+                                toast.success(`${qty}x ${p.name} added`);
+                                setQuantities(prev => ({ ...prev, [p.id]: 1 }));
+                              }}
+                            >
+                              <ShoppingCart size={12} /> Add
+                            </Button>
+                          </div>
                         </>
                       )}
                     </div>
