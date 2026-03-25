@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Trash2, FileText, Download, Image, Video, FolderOpen, Globe } from "lucide-react";
+import { Upload, Trash2, FileText, Download, Image, Video, FolderOpen, Globe, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 const categories = [
@@ -24,6 +24,9 @@ const AdminMarketing = () => {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("general");
   const [uploading, setUploading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("");
 
   const { data: materials } = useQuery({
     queryKey: ["admin-marketing-materials"],
@@ -45,6 +48,21 @@ const AdminMarketing = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-marketing-materials"] });
       toast.success("File eliminato");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, title, category }: { id: string; title: string; category: string }) => {
+      const { error } = await supabase
+        .from("marketing_materials")
+        .update({ title, category })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-marketing-materials"] });
+      setEditingId(null);
+      toast.success("Materiale aggiornato");
     },
   });
 
@@ -83,6 +101,17 @@ const AdminMarketing = () => {
       setUploading(false);
       e.target.value = "";
     }
+  };
+
+  const startEdit = (item: any) => {
+    setEditingId(item.id);
+    setEditTitle(item.title);
+    setEditCategory(item.category);
+  };
+
+  const saveEdit = () => {
+    if (!editingId || !editTitle.trim()) return;
+    updateMutation.mutate({ id: editingId, title: editTitle.trim(), category: editCategory });
   };
 
   const grouped = categories.map((cat) => ({
@@ -160,29 +189,83 @@ const AdminMarketing = () => {
                 <div className="divide-y divide-border">
                   {group.items.map((item: any) => {
                     const publicUrl = supabase.storage.from("marketing-materials").getPublicUrl(item.file_path).data.publicUrl;
+                    const isEditing = editingId === item.id;
+
                     return (
                       <div key={item.id} className="px-4 py-3 flex items-center justify-between hover:bg-secondary/30 transition-colors">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
                           <FileText size={14} className="text-muted-foreground flex-shrink-0" />
-                          <div>
-                            <p className="text-sm text-foreground">{item.title}</p>
-                            <p className="text-xs text-muted-foreground">{item.file_name} · {item.file_size}</p>
-                          </div>
+                          {isEditing ? (
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <Input
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                className="h-8 text-sm bg-secondary border-border"
+                              />
+                              <Select value={editCategory} onValueChange={setEditCategory}>
+                                <SelectTrigger className="h-8 w-40 text-xs bg-secondary border-border">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {categories.map((c) => (
+                                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            <div className="min-w-0">
+                              <p className="text-sm text-foreground truncate">{item.title}</p>
+                              <p className="text-xs text-muted-foreground">{item.file_name} · {item.file_size}</p>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <a href={publicUrl} target="_blank" rel="noopener noreferrer">
-                            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground gap-1">
-                              <Download size={12} /> Download
-                            </Button>
-                          </a>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs text-destructive hover:text-destructive gap-1"
-                            onClick={() => deleteMutation.mutate(item)}
-                          >
-                            <Trash2 size={12} /> Elimina
-                          </Button>
+                        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                          {isEditing ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-primary hover:text-primary gap-1"
+                                onClick={saveEdit}
+                                disabled={updateMutation.isPending}
+                              >
+                                <Check size={12} /> Salva
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-muted-foreground hover:text-foreground gap-1"
+                                onClick={() => setEditingId(null)}
+                              >
+                                <X size={12} />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-muted-foreground hover:text-foreground gap-1"
+                                onClick={() => startEdit(item)}
+                              >
+                                <Pencil size={12} /> Modifica
+                              </Button>
+                              <a href={publicUrl} target="_blank" rel="noopener noreferrer">
+                                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground gap-1">
+                                  <Download size={12} /> Download
+                                </Button>
+                              </a>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-destructive hover:text-destructive gap-1"
+                                onClick={() => deleteMutation.mutate(item)}
+                              >
+                                <Trash2 size={12} /> Elimina
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
