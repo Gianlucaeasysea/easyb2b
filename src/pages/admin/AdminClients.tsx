@@ -207,7 +207,7 @@ const AdminClients = () => {
                     <span className="text-sm text-muted-foreground">{c.country || "—"}</span>
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)}>
-                    <Badge variant="outline" className="font-mono text-[10px]">Class {c.discount_class}</Badge>
+                    <Badge variant="outline" className="font-mono text-[10px]">{discountTiers?.find(t => t.name === c.discount_class)?.label || c.discount_class}</Badge>
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)}>
                     <Badge className={`border-0 text-[10px] ${
