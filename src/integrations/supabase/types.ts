@@ -467,6 +467,7 @@ export type Database = {
           file_path: string
           file_size: string | null
           id: string
+          is_active: boolean
           title: string
           uploaded_by: string | null
         }
@@ -478,6 +479,7 @@ export type Database = {
           file_path: string
           file_size?: string | null
           id?: string
+          is_active?: boolean
           title: string
           uploaded_by?: string | null
         }
@@ -489,6 +491,7 @@ export type Database = {
           file_path?: string
           file_size?: string | null
           id?: string
+          is_active?: boolean
           title?: string
           uploaded_by?: string | null
         }
