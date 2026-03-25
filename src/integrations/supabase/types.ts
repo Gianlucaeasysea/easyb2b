@@ -68,10 +68,49 @@ export type Database = {
           },
         ]
       }
+      client_contacts: {
+        Row: {
+          client_id: string
+          contact_name: string
+          created_at: string
+          email: string | null
+          id: string
+          phone: string | null
+          role: string | null
+        }
+        Insert: {
+          client_id: string
+          contact_name: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          phone?: string | null
+          role?: string | null
+        }
+        Update: {
+          client_id?: string
+          contact_name?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          phone?: string | null
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
           assigned_sales_id: string | null
+          business_type: string | null
           company_name: string
           contact_name: string | null
           country: string | null
@@ -85,11 +124,13 @@ export type Database = {
           updated_at: string
           user_id: string | null
           vat_number: string | null
+          website: string | null
           zone: string | null
         }
         Insert: {
           address?: string | null
           assigned_sales_id?: string | null
+          business_type?: string | null
           company_name: string
           contact_name?: string | null
           country?: string | null
@@ -103,11 +144,13 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           vat_number?: string | null
+          website?: string | null
           zone?: string | null
         }
         Update: {
           address?: string | null
           assigned_sales_id?: string | null
+          business_type?: string | null
           company_name?: string
           contact_name?: string | null
           country?: string | null
@@ -121,6 +164,7 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           vat_number?: string | null
+          website?: string | null
           zone?: string | null
         }
         Relationships: []
