@@ -12,6 +12,7 @@ const items = [
   { title: "Clients", url: "/admin/clients", icon: Users },
   { title: "Products", url: "/admin/products", icon: Package },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag, badge: true },
+  { title: "Nuovi Ordini", url: "/admin/new-orders", icon: PackagePlus },
   { title: "Dealer Requests", url: "/admin/requests", icon: FileText },
   { title: "Marketing Materials", url: "/admin/marketing", icon: FileImage },
   { title: "Importa Dati", url: "/admin/import", icon: Upload },

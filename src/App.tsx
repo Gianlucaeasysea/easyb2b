@@ -99,6 +99,7 @@ const App = () => (
               <Route path="products/:family" element={<AdminProductDetail />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="orders/:id" element={<AdminOrderDetail />} />
+              <Route path="new-orders" element={<AdminNewOrders />} />
               <Route path="requests" element={<AdminRequests />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="import" element={<AdminImport />} />
