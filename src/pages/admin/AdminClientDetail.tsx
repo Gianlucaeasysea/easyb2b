@@ -620,6 +620,26 @@ const AdminClientDetail = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create Account Dialog */}
+      <Dialog open={showCreateAccount} onOpenChange={setShowCreateAccount}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Crea Account Dealer</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <Input value={client?.email || ""} disabled className="mt-1 bg-secondary border-border rounded-lg" />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Password</Label>
+              <Input value={accountPassword} onChange={e => setAccountPassword(e.target.value)} className="mt-1 bg-secondary border-border rounded-lg font-mono" />
+            </div>
+            <Button onClick={createDealerAccount} disabled={creatingAccount} className="w-full gap-1">
+              <UserPlus size={14} /> {creatingAccount ? "Creazione..." : "Crea Account"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
