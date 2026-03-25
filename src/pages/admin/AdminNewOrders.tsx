@@ -65,6 +65,12 @@ const AdminNewOrders = () => {
     mutationFn: async ({ id, orderCode }: { id: string; orderCode: string }) => {
       const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", id);
       if (error) throw error;
+      await supabase.from("order_events").insert({
+        order_id: id,
+        event_type: "order_rejected",
+        title: "Ordine rifiutato",
+        description: "L'ordine è stato rifiutato dall'amministratore.",
+      });
       try {
         await supabase.functions.invoke('send-order-notification', {
           body: { orderId: id, orderCode, type: 'status_update' },
