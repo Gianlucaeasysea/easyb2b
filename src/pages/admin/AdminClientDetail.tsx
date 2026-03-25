@@ -9,12 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check } from "lucide-react";
+import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check, CreditCard, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-
-// discount tiers are now fetched dynamically from DB
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -43,6 +41,8 @@ const AdminClientDetail = () => {
   const [accountPassword, setAccountPassword] = useState("dealer2025");
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [showAddAddress, setShowAddAddress] = useState(false);
+  const [newAddr, setNewAddr] = useState({ label: "", address_line: "", city: "", province: "", postal_code: "", country: "" });
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["admin-client", id],
@@ -89,41 +89,61 @@ const AdminClientDetail = () => {
     enabled: !!id,
   });
 
-  const [form, setForm] = useState({
-    company_name: "",
-    contact_name: "",
-    email: "",
-    phone: "",
-    country: "",
-    zone: "",
-    status: "",
-    discount_class: "",
-    notes: "",
-    address: "",
-    website: "",
-    business_type: "",
-    vat_number: "",
+  const { data: addresses } = useQuery({
+    queryKey: ["admin-client-addresses", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("client_shipping_addresses")
+        .select("*")
+        .eq("client_id", id!)
+        .order("created_at", { ascending: true });
+      return (data as any[]) || [];
+    },
+    enabled: !!id,
   });
+
+  const { data: bankDetails } = useQuery({
+    queryKey: ["admin-client-bank", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("client_bank_details")
+        .select("*")
+        .eq("client_id", id!)
+        .maybeSingle();
+      return data as any;
+    },
+    enabled: !!id,
+  });
+
+  const [form, setForm] = useState({
+    company_name: "", contact_name: "", email: "", phone: "", country: "", zone: "",
+    status: "", discount_class: "", notes: "", address: "", website: "", business_type: "", vat_number: "",
+  });
+
+  const [bank, setBank] = useState({ bank_name: "", iban: "", swift_bic: "", account_holder: "" });
+  const [bankInitialized, setBankInitialized] = useState(false);
 
   useEffect(() => {
     if (client) {
       setForm({
-        company_name: client.company_name || "",
-        contact_name: client.contact_name || "",
-        email: client.email || "",
-        phone: client.phone || "",
-        country: client.country || "",
-        zone: client.zone || "",
-        status: client.status || "lead",
-        discount_class: client.discount_class || "standard",
-        notes: client.notes || "",
-        address: client.address || "",
-        website: client.website || "",
-        business_type: client.business_type || "",
-        vat_number: client.vat_number || "",
+        company_name: client.company_name || "", contact_name: client.contact_name || "",
+        email: client.email || "", phone: client.phone || "", country: client.country || "",
+        zone: client.zone || "", status: client.status || "lead", discount_class: client.discount_class || "standard",
+        notes: client.notes || "", address: client.address || "", website: client.website || "",
+        business_type: client.business_type || "", vat_number: client.vat_number || "",
       });
     }
   }, [client]);
+
+  useEffect(() => {
+    if (bankDetails && !bankInitialized) {
+      setBank({
+        bank_name: bankDetails.bank_name || "", iban: bankDetails.iban || "",
+        swift_bic: bankDetails.swift_bic || "", account_holder: bankDetails.account_holder || "",
+      });
+      setBankInitialized(true);
+    }
+  }, [bankDetails, bankInitialized]);
 
   const updateClient = useMutation({
     mutationFn: async () => {
@@ -154,10 +174,7 @@ const AdminClientDetail = () => {
   const addContact = useMutation({
     mutationFn: async () => {
       if (!newContact.contact_name) throw new Error("Name is required");
-      const { error } = await supabase.from("client_contacts").insert({
-        client_id: id!,
-        ...newContact,
-      });
+      const { error } = await supabase.from("client_contacts").insert({ client_id: id!, ...newContact });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -181,6 +198,50 @@ const AdminClientDetail = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const addAddress = useMutation({
+    mutationFn: async () => {
+      if (!newAddr.address_line) throw new Error("Address is required");
+      const { error } = await supabase.from("client_shipping_addresses").insert({ client_id: id!, ...newAddr } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-client-addresses", id] });
+      setNewAddr({ label: "", address_line: "", city: "", province: "", postal_code: "", country: "" });
+      setShowAddAddress(false);
+      toast.success("Address added");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const removeAddress = useMutation({
+    mutationFn: async (addrId: string) => {
+      const { error } = await supabase.from("client_shipping_addresses").delete().eq("id", addrId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-client-addresses", id] });
+      toast.success("Address removed");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const saveBank = useMutation({
+    mutationFn: async () => {
+      if (bankDetails?.id) {
+        const { error } = await supabase.from("client_bank_details").update(bank as any).eq("id", bankDetails.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("client_bank_details").insert({ ...bank, client_id: id! } as any);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-client-bank", id] });
+      toast.success("Bank details saved");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   const createDealerAccount = async () => {
     if (!client?.email) { toast.error("Il cliente deve avere un'email"); return; }
     setCreatingAccount(true);
@@ -188,26 +249,15 @@ const AdminClientDetail = () => {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({
-          client_id: id,
-          email: client.email,
-          password: accountPassword,
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ client_id: id, email: client.email, password: accountPassword }),
       });
       const result = await res.json();
       if (result.error) throw new Error(result.error);
       toast.success("Account dealer creato!");
       queryClient.invalidateQueries({ queryKey: ["admin-client", id] });
       setShowCreateAccount(false);
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setCreatingAccount(false);
-    }
+    } catch (e: any) { toast.error(e.message); } finally { setCreatingAccount(false); }
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -243,16 +293,7 @@ const AdminClientDetail = () => {
           <Badge className={form.status === "active" ? "bg-success/20 text-success border-0" : form.status === "inactive" ? "bg-destructive/20 text-destructive border-0" : "bg-warning/20 text-warning border-0"}>
             {form.status}
           </Badge>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => {
-              if (confirm("Are you sure you want to delete this client? This action cannot be undone.")) {
-                deleteClient.mutate();
-              }
-            }}
-            className="gap-1"
-          >
+          <Button variant="destructive" size="sm" onClick={() => { if (confirm("Are you sure you want to delete this client?")) deleteClient.mutate(); }} className="gap-1">
             <Trash2 size={14} /> Delete
           </Button>
         </div>
@@ -285,12 +326,11 @@ const AdminClientDetail = () => {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left: Form + Contacts */}
+        {/* Left: Form + Contacts + Addresses + Bank */}
         <div className="lg:col-span-1 space-y-6">
+          {/* Company Details */}
           <div className="glass-card-solid p-6">
-            <h2 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2">
-              <Building2 size={16} /> Company Details
-            </h2>
+            <h2 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2"><Building2 size={16} /> Company Details</h2>
             <div className="space-y-3">
               <div>
                 <Label className="text-xs text-muted-foreground">Company Name</Label>
@@ -312,9 +352,7 @@ const AdminClientDetail = () => {
                 {(form.business_type && !["Reseller","Distributor","Rigger","Dropshipper","Boat Builder"].includes(form.business_type)) && (
                   <Input value={form.business_type} onChange={e => setForm(f => ({ ...f, business_type: e.target.value }))} placeholder="Enter custom type..." className="mt-2 bg-secondary border-border rounded-lg" />
                 )}
-                {form.business_type && (
-                  <Badge className="mt-2 bg-primary/15 text-primary border-0">{form.business_type}</Badge>
-                )}
+                {form.business_type && <Badge className="mt-2 bg-primary/15 text-primary border-0">{form.business_type}</Badge>}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -344,15 +382,9 @@ const AdminClientDetail = () => {
           {/* Contacts */}
           <div className="glass-card-solid p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-heading font-bold text-foreground flex items-center gap-2">
-                <Phone size={16} /> Contacts
-              </h2>
-              <Button size="sm" variant="outline" onClick={() => setShowAddContact(true)} className="gap-1 text-xs">
-                <UserPlus size={12} /> Add
-              </Button>
+              <h2 className="font-heading font-bold text-foreground flex items-center gap-2"><Phone size={16} /> Contacts</h2>
+              <Button size="sm" variant="outline" onClick={() => setShowAddContact(true)} className="gap-1 text-xs"><UserPlus size={12} /> Add</Button>
             </div>
-
-            {/* Legacy main contact */}
             {form.contact_name && (
               <div className="p-3 bg-secondary/50 rounded-lg mb-3 text-sm space-y-1">
                 <p className="font-semibold text-foreground">{form.contact_name} <span className="text-muted-foreground font-normal text-xs">· Main</span></p>
@@ -360,8 +392,6 @@ const AdminClientDetail = () => {
                 {form.phone && <p className="text-xs text-muted-foreground flex items-center gap-1"><Phone size={10} /> {form.phone}</p>}
               </div>
             )}
-
-            {/* Additional contacts */}
             {contacts?.map(c => (
               <div key={c.id} className="p-3 bg-secondary/50 rounded-lg mb-2 text-sm">
                 <div className="flex items-start justify-between">
@@ -370,18 +400,14 @@ const AdminClientDetail = () => {
                     {c.email && <p className="text-xs text-muted-foreground flex items-center gap-1"><Mail size={10} /> {c.email}</p>}
                     {c.phone && <p className="text-xs text-muted-foreground flex items-center gap-1"><Phone size={10} /> {c.phone}</p>}
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => removeContact.mutate(c.id)} className="text-destructive h-6 w-6 p-0">
-                    <X size={12} />
-                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => removeContact.mutate(c.id)} className="text-destructive h-6 w-6 p-0"><X size={12} /></Button>
                 </div>
               </div>
             ))}
-
-            {/* Add contact form */}
             {showAddContact && (
               <div className="p-3 border border-border rounded-lg space-y-2 mt-3">
                 <Input placeholder="Name *" value={newContact.contact_name} onChange={e => setNewContact(c => ({ ...c, contact_name: e.target.value }))} className="bg-secondary border-border rounded-lg h-8 text-sm" />
-                <Input placeholder="Role (e.g. Sales Manager)" value={newContact.role} onChange={e => setNewContact(c => ({ ...c, role: e.target.value }))} className="bg-secondary border-border rounded-lg h-8 text-sm" />
+                <Input placeholder="Role" value={newContact.role} onChange={e => setNewContact(c => ({ ...c, role: e.target.value }))} className="bg-secondary border-border rounded-lg h-8 text-sm" />
                 <Input placeholder="Email" value={newContact.email} onChange={e => setNewContact(c => ({ ...c, email: e.target.value }))} className="bg-secondary border-border rounded-lg h-8 text-sm" />
                 <Input placeholder="Phone" value={newContact.phone} onChange={e => setNewContact(c => ({ ...c, phone: e.target.value }))} className="bg-secondary border-border rounded-lg h-8 text-sm" />
                 <div className="flex gap-2">
@@ -390,17 +416,83 @@ const AdminClientDetail = () => {
                 </div>
               </div>
             )}
-
             {!contacts?.length && !form.contact_name && !showAddContact && (
               <p className="text-xs text-muted-foreground">No contacts added yet</p>
             )}
           </div>
 
+          {/* Shipping Addresses */}
+          <div className="glass-card-solid p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-heading font-bold text-foreground flex items-center gap-2"><MapPin size={16} /> Shipping Addresses</h2>
+              <Button size="sm" variant="outline" onClick={() => setShowAddAddress(true)} className="gap-1 text-xs"><Plus size={12} /> Add</Button>
+            </div>
+            {addresses?.map((a: any) => (
+              <div key={a.id} className="p-3 bg-secondary/50 rounded-lg mb-2 text-sm">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="font-semibold text-foreground">
+                      {a.label || "Address"}
+                      {a.is_default && <Badge className="ml-2 text-[10px] bg-primary/20 text-primary border-0">Default</Badge>}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{[a.address_line, a.city, a.province, a.postal_code, a.country].filter(Boolean).join(", ")}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => removeAddress.mutate(a.id)} className="text-destructive h-6 w-6 p-0"><X size={12} /></Button>
+                </div>
+              </div>
+            ))}
+            {showAddAddress && (
+              <div className="p-3 border border-border rounded-lg space-y-2 mt-3">
+                <Input placeholder="Label (e.g. Main)" value={newAddr.label} onChange={e => setNewAddr(a => ({ ...a, label: e.target.value }))} className="bg-secondary border-border rounded-lg h-8 text-sm" />
+                <Input placeholder="Address *" value={newAddr.address_line} onChange={e => setNewAddr(a => ({ ...a, address_line: e.target.value }))} className="bg-secondary border-border rounded-lg h-8 text-sm" />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="City" value={newAddr.city} onChange={e => setNewAddr(a => ({ ...a, city: e.target.value }))} className="bg-secondary border-border rounded-lg h-8 text-sm" />
+                  <Input placeholder="Province" value={newAddr.province} onChange={e => setNewAddr(a => ({ ...a, province: e.target.value }))} className="bg-secondary border-border rounded-lg h-8 text-sm" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Postal Code" value={newAddr.postal_code} onChange={e => setNewAddr(a => ({ ...a, postal_code: e.target.value }))} className="bg-secondary border-border rounded-lg h-8 text-sm" />
+                  <Input placeholder="Country" value={newAddr.country} onChange={e => setNewAddr(a => ({ ...a, country: e.target.value }))} className="bg-secondary border-border rounded-lg h-8 text-sm" />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => addAddress.mutate()} disabled={addAddress.isPending} className="bg-foreground text-background text-xs flex-1">Save</Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowAddAddress(false)} className="text-xs">Cancel</Button>
+                </div>
+              </div>
+            )}
+            {!addresses?.length && !showAddAddress && (
+              <p className="text-xs text-muted-foreground">No shipping addresses</p>
+            )}
+          </div>
+
+          {/* Bank Details */}
+          <div className="glass-card-solid p-6">
+            <h2 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2"><CreditCard size={16} /> Bank Details</h2>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Account Holder</Label>
+                <Input value={bank.account_holder} onChange={e => setBank(b => ({ ...b, account_holder: e.target.value }))} className="mt-1 bg-secondary border-border rounded-lg" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Bank Name</Label>
+                <Input value={bank.bank_name} onChange={e => setBank(b => ({ ...b, bank_name: e.target.value }))} className="mt-1 bg-secondary border-border rounded-lg" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">IBAN</Label>
+                <Input value={bank.iban} onChange={e => setBank(b => ({ ...b, iban: e.target.value }))} className="mt-1 bg-secondary border-border rounded-lg" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">SWIFT / BIC</Label>
+                <Input value={bank.swift_bic} onChange={e => setBank(b => ({ ...b, swift_bic: e.target.value }))} className="mt-1 bg-secondary border-border rounded-lg" />
+              </div>
+              <Button size="sm" onClick={() => saveBank.mutate()} disabled={saveBank.isPending} className="w-full bg-foreground text-background hover:bg-foreground/90 gap-1 font-heading font-semibold">
+                <Save size={14} /> Save Bank Details
+              </Button>
+            </div>
+          </div>
+
           {/* Portal Access */}
           <div className="glass-card-solid p-6">
-            <h2 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2">
-              <KeyRound size={16} /> Portal Access
-            </h2>
+            <h2 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2"><KeyRound size={16} /> Portal Access</h2>
             {client?.user_id ? (
               <div className="space-y-3">
                 <div className="p-3 bg-success/10 rounded-lg border border-success/20">
@@ -449,9 +541,7 @@ const AdminClientDetail = () => {
                 <Select value={form.discount_class} onValueChange={v => setForm(f => ({ ...f, discount_class: v }))}>
                   <SelectTrigger className="mt-1 bg-secondary border-border rounded-lg"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {discountTiers?.map(t => (
-                      <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
-                    ))}
+                    {discountTiers?.map(t => <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -475,11 +565,7 @@ const AdminClientDetail = () => {
             </div>
           </div>
 
-          <Button
-            onClick={() => updateClient.mutate()}
-            disabled={updateClient.isPending}
-            className="w-full bg-foreground text-background hover:bg-foreground/90 rounded-lg font-heading font-semibold gap-2"
-          >
+          <Button onClick={() => updateClient.mutate()} disabled={updateClient.isPending} className="w-full bg-foreground text-background hover:bg-foreground/90 rounded-lg font-heading font-semibold gap-2">
             <Save size={16} /> Save Changes
           </Button>
         </div>
@@ -488,9 +574,7 @@ const AdminClientDetail = () => {
         <div className="lg:col-span-2">
           <div className="glass-card-solid overflow-hidden">
             <div className="p-4 border-b border-border flex items-center justify-between">
-              <h2 className="font-heading font-bold text-foreground flex items-center gap-2">
-                <ShoppingBag size={16} /> Order History
-              </h2>
+              <h2 className="font-heading font-bold text-foreground flex items-center gap-2"><ShoppingBag size={16} /> Order History</h2>
               <Badge variant="outline" className="text-xs">{totalOrders} orders</Badge>
             </div>
             {!orders?.length ? (
@@ -513,21 +597,15 @@ const AdminClientDetail = () => {
                     <TableRow key={o.id} className="cursor-pointer hover:bg-secondary/50" onClick={() => setSelectedOrder(o)}>
                       <TableCell className="font-mono text-xs font-semibold">{(o as any).order_code || `#${o.id.slice(0, 8)}`}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{fmtDate(o.created_at)}</TableCell>
-                      <TableCell>
-                        <Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"] || "bg-muted text-muted-foreground"}`}>{o.status || "draft"}</Badge>
-                      </TableCell>
+                      <TableCell><Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"] || "bg-muted text-muted-foreground"}`}>{o.status || "draft"}</Badge></TableCell>
                       <TableCell>
                         {(o as any).payment_status ? (
-                          <Badge className={`border-0 text-[10px] ${(o as any).payment_status === 'Payed' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
-                            {(o as any).payment_status}
-                          </Badge>
+                          <Badge className={`border-0 text-[10px] ${(o as any).payment_status === 'Payed' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>{(o as any).payment_status}</Badge>
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{(o.order_items as any[])?.length || 0}</TableCell>
                       <TableCell className="text-right font-mono text-sm font-semibold">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
-                      <TableCell>
-                        <Eye size={14} className="text-muted-foreground" />
-                      </TableCell>
+                      <TableCell><Eye size={14} className="text-muted-foreground" /></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -543,40 +621,23 @@ const AdminClientDetail = () => {
           {selectedOrder && (
             <>
               <DialogHeader>
-                <DialogTitle className="font-heading text-lg">
-                  Order {(selectedOrder as any).order_code || `#${selectedOrder.id.slice(0, 8)}`}
-                </DialogTitle>
+                <DialogTitle className="font-heading text-lg">Order {(selectedOrder as any).order_code || `#${selectedOrder.id.slice(0, 8)}`}</DialogTitle>
                 <p className="text-sm text-muted-foreground">
                   {fmtDate(selectedOrder.created_at)} · <Badge className={`border-0 text-[10px] ${statusColors[selectedOrder.status || "draft"] || "bg-muted text-muted-foreground"}`}>{selectedOrder.status || "draft"}</Badge>
                 </p>
               </DialogHeader>
-
               <div className="grid grid-cols-2 gap-4 text-sm my-4">
-                <div>
-                  <p className="text-muted-foreground text-xs">Payment</p>
-                  <p className="font-semibold">{(selectedOrder as any).payment_status || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Shipping</p>
-                  <p className="font-semibold">€{Number((selectedOrder as any).shipping_cost_client || 0).toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Payed Date</p>
-                  <p className="font-semibold">{fmtDate((selectedOrder as any).payed_date)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Delivery Date</p>
-                  <p className="font-semibold">{fmtDate((selectedOrder as any).delivery_date)}</p>
-                </div>
+                <div><p className="text-muted-foreground text-xs">Payment</p><p className="font-semibold">{(selectedOrder as any).payment_status || "—"}</p></div>
+                <div><p className="text-muted-foreground text-xs">Shipping</p><p className="font-semibold">€{Number((selectedOrder as any).shipping_cost_client || 0).toFixed(2)}</p></div>
+                <div><p className="text-muted-foreground text-xs">Payed Date</p><p className="font-semibold">{fmtDate((selectedOrder as any).payed_date)}</p></div>
+                <div><p className="text-muted-foreground text-xs">Delivery Date</p><p className="font-semibold">{fmtDate((selectedOrder as any).delivery_date)}</p></div>
               </div>
-
               {selectedOrder.notes && (
                 <div className="mb-4 p-3 bg-secondary/50 rounded-lg">
                   <p className="text-xs text-muted-foreground mb-1">Notes</p>
                   <p className="text-sm">{selectedOrder.notes}</p>
                 </div>
               )}
-
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -600,7 +661,6 @@ const AdminClientDetail = () => {
                   ))}
                 </TableBody>
               </Table>
-
               <div className="flex justify-between items-center pt-3 border-t border-border mt-2">
                 <span className="text-sm text-muted-foreground">Products Total</span>
                 <span className="font-heading text-lg font-bold">€{Number(selectedOrder.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</span>
@@ -611,12 +671,8 @@ const AdminClientDetail = () => {
                   <span className="text-sm text-muted-foreground">€{Number((selectedOrder as any).shipping_cost_client).toFixed(2)}</span>
                 </div>
               )}
-
               <div className="flex justify-end mt-4">
-                <Button variant="outline" size="sm" onClick={() => {
-                  setSelectedOrder(null);
-                  navigate(`/admin/orders/${selectedOrder.id}`);
-                }}>
+                <Button variant="outline" size="sm" onClick={() => { setSelectedOrder(null); navigate(`/admin/orders/${selectedOrder.id}`); }}>
                   Open Full Detail
                 </Button>
               </div>
