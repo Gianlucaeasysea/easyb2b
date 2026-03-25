@@ -79,7 +79,7 @@ const DealerOrders = () => {
                     <Icon size={20} className={cfg?.color?.split(" ")[0]} />
                     <div>
                       <p className="font-heading font-semibold text-foreground">
-                        Order #{order.id.slice(0, 8).toUpperCase()}
+                        {(order as any).order_code || `Order #${order.id.slice(0, 8).toUpperCase()}`}
                       </p>
                       <p className="text-xs text-muted-foreground">{format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}</p>
                     </div>
