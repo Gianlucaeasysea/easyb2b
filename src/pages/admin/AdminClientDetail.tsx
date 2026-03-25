@@ -265,8 +265,8 @@ const AdminClientDetail = () => {
             <TrendingUp size={16} className="text-primary" />
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading">Discount Tier</span>
           </div>
-          <p className="font-heading text-xl font-bold text-foreground">Class {form.discount_class} — {tier.label}</p>
-          <p className="text-xs text-success">-{tier.pct}% on all products</p>
+          <p className="font-heading text-xl font-bold text-foreground">{tier.label}</p>
+          <p className="text-xs text-success">-{tier.discount_pct}% on all products</p>
         </div>
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-2">
