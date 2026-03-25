@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, ShoppingBag, TrendingUp, Trophy, ArrowUpRight, Clock, CheckCircle, Truck } from "lucide-react";
+import { Package, ShoppingBag, TrendingUp, Trophy, ArrowUpRight, Clock, CheckCircle, Truck, CreditCard, FileText, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -43,12 +43,31 @@ const DealerDashboard = () => {
     },
   });
 
+  // Assigned price list
+  const { data: priceList } = useQuery({
+    queryKey: ["my-price-list", client?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("price_lists")
+        .select("*, discount_tiers(label, discount_pct)")
+        .eq("client_id", client!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!client,
+  });
+
   const activeOrders = orders?.filter(o => o.status !== "delivered" && o.status !== "draft") || [];
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
+
+  // Open invoices = orders that are delivered or confirmed but NOT payed
+  const openInvoices = orders?.filter(o => o.status !== "draft" && o.payment_status !== "paid" && o.payment_status !== "Payed") || [];
+  const openInvoiceTotal = openInvoices.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+
   const monthlyTarget = 5000;
   const monthlyProgress = Math.min((totalSpent / monthlyTarget) * 100, 100);
   const discountClass = client?.discount_class || "standard";
-  const discountPct = { gold: 30, silver: 20, bronze: 15, standard: 10 }[discountClass] || 10;
+  const discountPct = { gold: 30, silver: 20, bronze: 15, standard: 10, A: 35, B: 25, C: 20, D: 10 }[discountClass] || 10;
 
   return (
     <div>
@@ -83,6 +102,17 @@ const DealerDashboard = () => {
         <div className="glass-card-solid p-6">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl gradient-blue flex items-center justify-center">
+              <FileText className="text-primary-foreground" size={18} />
+            </div>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading">Open Invoices</span>
+          </div>
+          <p className="font-heading text-2xl font-bold text-foreground">{openInvoices.length}</p>
+          <p className="text-xs text-muted-foreground mt-1">€{openInvoiceTotal.toLocaleString()} outstanding</p>
+        </div>
+
+        <div className="glass-card-solid p-6">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl gradient-blue flex items-center justify-center">
               <Package className="text-primary-foreground" size={18} />
             </div>
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading">Catalog</span>
@@ -90,16 +120,45 @@ const DealerDashboard = () => {
           <p className="font-heading text-2xl font-bold text-foreground">{productCount}</p>
           <p className="text-xs text-muted-foreground mt-1">Products available</p>
         </div>
+      </div>
+
+      {/* Assigned Price List & Financial Summary */}
+      <div className="grid lg:grid-cols-2 gap-4 mb-8">
+        <div className="glass-card-solid p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Tag size={16} className="text-primary" />
+            <h2 className="font-heading font-bold text-foreground text-sm">Assigned Price List</h2>
+          </div>
+          {priceList ? (
+            <div>
+              <p className="text-foreground font-heading font-semibold">{priceList.name}</p>
+              {priceList.description && <p className="text-xs text-muted-foreground mt-1">{priceList.description}</p>}
+              {(priceList as any).discount_tiers && (
+                <Badge variant="outline" className="mt-2 text-xs">
+                  {(priceList as any).discount_tiers.label} — {(priceList as any).discount_tiers.discount_pct}% discount
+                </Badge>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Standard pricing applied (Class {discountClass})</p>
+          )}
+        </div>
 
         <div className="glass-card-solid p-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl gradient-blue flex items-center justify-center">
-              <Trophy className="text-primary-foreground" size={18} />
-            </div>
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading">Monthly Goal</span>
+          <div className="flex items-center gap-2 mb-3">
+            <CreditCard size={16} className="text-primary" />
+            <h2 className="font-heading font-bold text-foreground text-sm">Financial Summary</h2>
           </div>
-          <p className="font-heading text-2xl font-bold text-foreground">{Math.round(monthlyProgress)}%</p>
-          <p className="text-xs text-muted-foreground mt-1">€{totalSpent.toLocaleString()} / €{monthlyTarget.toLocaleString()}</p>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Total Ordered</p>
+              <p className="font-heading font-bold text-foreground">€{totalSpent.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Outstanding</p>
+              <p className="font-heading font-bold text-warning">€{openInvoiceTotal.toLocaleString()}</p>
+            </div>
+          </div>
         </div>
       </div>
 

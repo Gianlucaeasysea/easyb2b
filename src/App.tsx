@@ -27,6 +27,7 @@ import DealerGoals from "./pages/portal/DealerGoals";
 import DealerMarketing from "./pages/portal/DealerMarketing";
 import DealerSupport from "./pages/portal/DealerSupport";
 import DealerCart from "./pages/portal/DealerCart";
+import DealerProfile from "./pages/portal/DealerProfile";
 
 // Admin Panel
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -41,6 +42,7 @@ import AdminImport from "./pages/admin/AdminImport";
 import AdminPriceLists from "./pages/admin/AdminPriceLists";
 import AdminProductDetail from "./pages/admin/AdminProductDetail";
 import AdminSystemMap from "./pages/admin/AdminSystemMap";
+import AdminMarketing from "./pages/admin/AdminMarketing";
 
 // CRM
 import CRMDashboard from "./pages/crm/CRMDashboard";
@@ -79,6 +81,7 @@ const App = () => (
               <Route path="promos" element={<DealerPromos />} />
               <Route path="goals" element={<DealerGoals />} />
               <Route path="marketing" element={<DealerMarketing />} />
+              <Route path="profile" element={<DealerProfile />} />
               <Route path="support" element={<DealerSupport />} />
             </Route>
 
@@ -100,6 +103,7 @@ const App = () => (
               <Route path="import" element={<AdminImport />} />
               <Route path="price-lists" element={<AdminPriceLists />} />
               <Route path="system-map" element={<AdminSystemMap />} />
+              <Route path="marketing" element={<AdminMarketing />} />
             </Route>
 
             {/* CRM */}
