@@ -39,6 +39,15 @@ const AdminClients = () => {
     },
   });
 
+  const { data: discountTiers } = useQuery({
+    queryKey: ["discount-tiers"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("discount_tiers").select("*").order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const filtered = clients?.filter(c =>
     c.company_name.toLowerCase().includes(search.toLowerCase()) ||
     c.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
