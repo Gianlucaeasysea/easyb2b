@@ -14,6 +14,7 @@ const items = [
   { title: "Dealer Requests", url: "/admin/requests", icon: FileText },
   { title: "Importa Dati", url: "/admin/import", icon: Upload },
   { title: "Listini & Sconti", url: "/admin/price-lists", icon: Tag },
+  { title: "System Map", url: "/admin/system-map", icon: Map },
   { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
