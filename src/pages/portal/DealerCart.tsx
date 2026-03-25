@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Trash2, Minus, Plus, CheckCircle, ArrowLeft, AlertTriangle, Clock } from "lucide-react";
+import { ShoppingCart, Trash2, Minus, Plus, CheckCircle, ArrowLeft, AlertTriangle, Clock, Truck } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
