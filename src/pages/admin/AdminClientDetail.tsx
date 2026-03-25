@@ -9,10 +9,88 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check, CreditCard, Plus } from "lucide-react";
+import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check, CreditCard, Plus, Bell } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
+
+const NOTIFICATION_TYPES = [
+  { key: "order_received", label: "Ordine Ricevuto", description: "Conferma ricezione ordine" },
+  { key: "order_confirmed", label: "Ordine Confermato", description: "Notifica conferma ordine con documenti" },
+  { key: "order_status_update", label: "Aggiornamento Stato", description: "Cambio stato dell'ordine" },
+  { key: "order_documents_ready", label: "Documenti Pronti", description: "Nuovi documenti caricati (fattura, DDT)" },
+  { key: "shipping_update", label: "Aggiornamento Spedizione", description: "Tracking e notifiche di spedizione" },
+];
+
+const ClientNotificationPreferences = ({ clientId }: { clientId: string }) => {
+  const queryClient = useQueryClient();
+
+  const { data: prefs, isLoading } = useQuery({
+    queryKey: ["client-notification-prefs", clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_notification_preferences")
+        .select("*")
+        .eq("client_id", clientId);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const togglePref = useMutation({
+    mutationFn: async ({ type, enabled }: { type: string; enabled: boolean }) => {
+      const existing = prefs?.find(p => p.notification_type === type);
+      if (existing) {
+        const { error } = await supabase
+          .from("client_notification_preferences")
+          .update({ enabled })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("client_notification_preferences")
+          .insert({ client_id: clientId, notification_type: type, enabled });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-notification-prefs", clientId] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const isEnabled = (type: string) => {
+    const pref = prefs?.find(p => p.notification_type === type);
+    return pref ? pref.enabled : true; // default enabled
+  };
+
+  return (
+    <div className="glass-card-solid p-6">
+      <h2 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2">
+        <Bell size={16} /> Notifiche
+      </h2>
+      {isLoading ? (
+        <p className="text-xs text-muted-foreground">Caricamento...</p>
+      ) : (
+        <div className="space-y-3">
+          {NOTIFICATION_TYPES.map(nt => (
+            <div key={nt.key} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{nt.label}</p>
+                <p className="text-xs text-muted-foreground">{nt.description}</p>
+              </div>
+              <Switch
+                checked={isEnabled(nt.key)}
+                onCheckedChange={(checked) => togglePref.mutate({ type: nt.key, enabled: checked })}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
