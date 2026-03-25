@@ -37,13 +37,34 @@ const DealerCatalog = () => {
   });
 
   const discountPct = { A: 30, B: 25, C: 20, D: 15 }[client?.discount_class || "D"] || 15;
-  const categories = [...new Set(products?.map(p => p.category).filter(Boolean))] as string[];
+
+  // Macro categories matching easysea.org collections
+  const MACRO_CATEGORIES = [
+    { label: "Boat Hook", keywords: ["boat hook", "jake"] },
+    { label: "Winch Handles", keywords: ["winch handle", "flipper"] },
+    { label: "Rings & Blocks", keywords: ["ring", "block", "olli"] },
+    { label: "Textile", keywords: ["textile", "dyneema", "loop", "shackle", "sheet"] },
+    { label: "Covers & Guards", keywords: ["cover", "guard", "spira"] },
+    { label: "Inflatable", keywords: ["inflatable", "way2", "gangway"] },
+    { label: "Kits", keywords: ["kit"] },
+  ];
+
+  const getProductMacroCategory = (p: { name: string; category?: string | null }) => {
+    const text = `${p.name} ${p.category || ""}`.toLowerCase();
+    return MACRO_CATEGORIES.find(cat => cat.keywords.some(kw => text.includes(kw)))?.label || null;
+  };
 
   const filtered = products?.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku?.toLowerCase().includes(search.toLowerCase()));
-    const matchCat = !selectedCategory || p.category === selectedCategory;
+    const matchCat = !selectedCategory || getProductMacroCategory(p) === selectedCategory;
     return matchSearch && matchCat;
   }) || [];
+
+  // Count products per macro category
+  const categoryCounts = MACRO_CATEGORIES.map(cat => ({
+    ...cat,
+    count: products?.filter(p => getProductMacroCategory(p) === cat.label).length || 0,
+  })).filter(c => c.count > 0);
 
   return (
     <div>
