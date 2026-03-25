@@ -82,17 +82,20 @@ export default function DataImporter() {
       setFileColumns(cols);
       setRawData(json);
 
-      // Auto-map by similarity
+      // Auto-map by aliases (exact match on normalized column name)
       const autoMap: Record<string, string> = {};
+      const usedCols = new Set<string>();
       fields.forEach((f) => {
+        const aliases: string[] = (f as any).aliases || [f.label.toLowerCase()];
         const match = cols.find(
-          (c) =>
-            c.toLowerCase().replace(/[_\s]/g, "") ===
-            f.key.toLowerCase().replace(/[_\s]/g, "") ||
-            c.toLowerCase().includes(f.label.toLowerCase()) ||
-            f.label.toLowerCase().includes(c.toLowerCase())
+          (c) => !usedCols.has(c) && aliases.some(
+            (a) => c.toLowerCase().trim() === a.toLowerCase().trim()
+          )
         );
-        if (match) autoMap[f.key] = match;
+        if (match) {
+          autoMap[f.key] = match;
+          usedCols.add(match);
+        }
       });
       setMappings(autoMap);
       setStep("mapping");
