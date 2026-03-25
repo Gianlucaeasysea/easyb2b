@@ -41,13 +41,13 @@ Deno.serve(async (req) => {
   // In-code auth: require a valid Authorization header
   const authHeader = req.headers.get('Authorization') || req.headers.get('apikey') || ''
   const token = authHeader.replace('Bearer ', '')
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
   if (!token || (token !== supabaseAnonKey && token !== supabaseServiceKey)) {
     // Try to validate as a user JWT
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const tmpClient = createClient(supabaseUrl, supabaseAnonKey!, {
+    const tmpClient = createClient(supabaseUrl!, supabaseAnonKey!, {
       global: { headers: { Authorization: `Bearer ${token}` } },
     })
     const { error: claimsError } = await tmpClient.auth.getUser(token)
@@ -58,9 +58,6 @@ Deno.serve(async (req) => {
       )
     }
   }
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
   if (!supabaseUrl || !supabaseServiceKey) {
     console.error('Missing required environment variables')
