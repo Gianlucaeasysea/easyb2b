@@ -54,6 +54,15 @@ const AdminClientDetail = () => {
     enabled: !!id,
   });
 
+  const { data: discountTiers } = useQuery({
+    queryKey: ["discount-tiers"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("discount_tiers").select("*").order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: orders } = useQuery({
     queryKey: ["admin-client-orders", id],
     queryFn: async () => {
