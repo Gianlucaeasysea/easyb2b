@@ -16,7 +16,7 @@ const AdminNewOrders = () => {
         .from("orders")
         .select("*, clients(company_name, country)")
         .in("status", ["draft", "confirmed"])
-        .not("order_type", "in", '("MANUAL B2C","B2C","CUSTOM")')
+        .or('order_type.is.null,order_type.not.in.("MANUAL B2C","B2C","CUSTOM")')
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
