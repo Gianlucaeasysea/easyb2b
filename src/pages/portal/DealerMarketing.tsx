@@ -43,6 +43,7 @@ const DealerMarketing = () => {
       const { data } = await supabase
         .from("marketing_materials")
         .select("*")
+        .eq("is_active", true)
         .order("created_at", { ascending: false });
       return data || [];
     },

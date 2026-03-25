@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Trash2, FileText, Download, Image, Video, FolderOpen, Globe, Pencil, Check, X, ChevronDown, ChevronRight, Package, Palette } from "lucide-react";
+import { Upload, Trash2, FileText, Download, Image, Video, FolderOpen, Globe, Pencil, Check, X, ChevronDown, ChevronRight, Package, Palette, Eye, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 const categories = [
@@ -92,6 +93,16 @@ const AdminMarketing = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-marketing-materials"] });
       setEditingId(null);
       toast.success("Materiale aggiornato");
+    },
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase.from("marketing_materials").update({ is_active }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-marketing-materials"] });
     },
   });
 
@@ -198,7 +209,15 @@ const AdminMarketing = () => {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+          <div className="flex items-center gap-1.5 mr-2" title={item.is_active !== false ? "Visibile ai dealer" : "Nascosto ai dealer"}>
+            <Switch
+              checked={item.is_active !== false}
+              onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: item.id, is_active: checked })}
+              className="scale-75"
+            />
+            {item.is_active !== false ? <Eye size={12} className="text-success" /> : <EyeOff size={12} className="text-muted-foreground" />}
+          </div>
           {isEditing ? (
             <>
               <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-primary gap-1" onClick={saveEdit} disabled={updateMutation.isPending}>
