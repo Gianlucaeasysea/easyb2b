@@ -42,6 +42,7 @@ import AdminImport from "./pages/admin/AdminImport";
 import AdminPriceLists from "./pages/admin/AdminPriceLists";
 import AdminProductDetail from "./pages/admin/AdminProductDetail";
 import AdminSystemMap from "./pages/admin/AdminSystemMap";
+import AdminMarketing from "./pages/admin/AdminMarketing";
 
 // CRM
 import CRMDashboard from "./pages/crm/CRMDashboard";
