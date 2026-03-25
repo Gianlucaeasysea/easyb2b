@@ -14,12 +14,7 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 
-const discountTiers: Record<string, { label: string; pct: number }> = {
-  A: { label: "Gold", pct: 30 },
-  B: { label: "Silver", pct: 25 },
-  C: { label: "Bronze", pct: 20 },
-  D: { label: "Starter", pct: 15 },
-};
+// discount tiers are now fetched dynamically from DB
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -57,6 +52,15 @@ const AdminClientDetail = () => {
       return data;
     },
     enabled: !!id,
+  });
+
+  const { data: discountTiers } = useQuery({
+    queryKey: ["discount-tiers"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("discount_tiers").select("*").order("sort_order");
+      if (error) throw error;
+      return data;
+    },
   });
 
   const { data: orders } = useQuery({
@@ -111,7 +115,7 @@ const AdminClientDetail = () => {
         country: client.country || "",
         zone: client.zone || "",
         status: client.status || "lead",
-        discount_class: client.discount_class || "D",
+        discount_class: client.discount_class || "standard",
         notes: client.notes || "",
         address: client.address || "",
         website: client.website || "",
@@ -214,7 +218,7 @@ const AdminClientDetail = () => {
 
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
   const totalOrders = orders?.length || 0;
-  const tier = discountTiers[form.discount_class] || discountTiers.D;
+  const tier = discountTiers?.find(t => t.name === form.discount_class) || { label: form.discount_class, discount_pct: 0 };
 
   const fmtDate = (d: string | null | undefined) => {
     if (!d) return "—";
@@ -261,8 +265,8 @@ const AdminClientDetail = () => {
             <TrendingUp size={16} className="text-primary" />
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading">Discount Tier</span>
           </div>
-          <p className="font-heading text-xl font-bold text-foreground">Class {form.discount_class} — {tier.label}</p>
-          <p className="text-xs text-success">-{tier.pct}% on all products</p>
+          <p className="font-heading text-xl font-bold text-foreground">{tier.label}</p>
+          <p className="text-xs text-success">-{tier.discount_pct}% on all products</p>
         </div>
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-2">
@@ -445,8 +449,8 @@ const AdminClientDetail = () => {
                 <Select value={form.discount_class} onValueChange={v => setForm(f => ({ ...f, discount_class: v }))}>
                   <SelectTrigger className="mt-1 bg-secondary border-border rounded-lg"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(discountTiers).map(([key, val]) => (
-                      <SelectItem key={key} value={key}>Class {key} — {val.label} (-{val.pct}%)</SelectItem>
+                    {discountTiers?.map(t => (
+                      <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

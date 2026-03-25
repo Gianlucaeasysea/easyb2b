@@ -5,10 +5,10 @@ import { Trophy, Target, Star, TrendingUp, Award, Zap, Lock } from "lucide-react
 import { Badge } from "@/components/ui/badge";
 
 const tiers = [
-  { name: "D", label: "Starter", discount: 15, minSpend: 0, color: "text-muted-foreground" },
-  { name: "C", label: "Bronze", discount: 20, minSpend: 2000, color: "text-chart-4" },
-  { name: "B", label: "Silver", discount: 25, minSpend: 5000, color: "text-primary" },
-  { name: "A", label: "Gold", discount: 30, minSpend: 10000, color: "text-warning" },
+  { name: "standard", label: "Standard", discount: 10, minSpend: 0, color: "text-muted-foreground" },
+  { name: "bronze", label: "Bronze", discount: 15, minSpend: 2000, color: "text-chart-4" },
+  { name: "silver", label: "Silver", discount: 20, minSpend: 5000, color: "text-primary" },
+  { name: "gold", label: "Gold", discount: 30, minSpend: 10000, color: "text-warning" },
 ];
 
 const achievements = [
@@ -42,7 +42,7 @@ const DealerGoals = () => {
   });
 
   const totalSpent = orders?.reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
-  const currentTier = tiers.find(t => t.name === (client?.discount_class || "D")) || tiers[0];
+  const currentTier = tiers.find(t => t.name === (client?.discount_class || "standard")) || tiers[0];
   const currentTierIndex = tiers.indexOf(currentTier);
   const nextTier = currentTierIndex < tiers.length - 1 ? tiers[currentTierIndex + 1] : null;
   const progressToNext = nextTier ? Math.min((totalSpent / nextTier.minSpend) * 100, 100) : 100;
@@ -62,7 +62,7 @@ const DealerGoals = () => {
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Your Current Tier</p>
-            <h2 className="font-heading text-2xl font-bold text-foreground">Class {currentTier.name} — {currentTier.label}</h2>
+            <h2 className="font-heading text-2xl font-bold text-foreground">{currentTier.label}</h2>
             <p className="text-sm text-success font-semibold">-{currentTier.discount}% on all products</p>
           </div>
         </div>
@@ -70,7 +70,7 @@ const DealerGoals = () => {
         {nextTier && (
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground">Progress to Class {nextTier.name} ({nextTier.label})</span>
+              <span className="text-xs text-muted-foreground">Progress to {nextTier.label}</span>
               <span className="text-xs font-semibold text-foreground">€{totalSpent.toLocaleString()} / €{nextTier.minSpend.toLocaleString()}</span>
             </div>
             <div className="w-full bg-secondary rounded-full h-3">
