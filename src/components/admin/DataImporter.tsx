@@ -17,16 +17,19 @@ interface FieldMapping {
 }
 
 const CLIENT_FIELDS = [
-  { key: "company_name", label: "Ragione Sociale", required: true },
+  { key: "company_name", label: "Nome Business", required: true },
+  { key: "business_type", label: "Type", required: false },
+  { key: "status", label: "Status", required: false },
+  { key: "country", label: "Country", required: false },
+  { key: "address", label: "Address", required: false },
+  { key: "contact_name", label: "Contact Person", required: false },
+  { key: "contact_email", label: "Contact Email", required: false },
+  { key: "contact_phone", label: "Contact Phone", required: false },
+  { key: "contact_role", label: "Contact Role", required: false },
+  { key: "website", label: "Website", required: false },
   { key: "vat_number", label: "P.IVA", required: false },
-  { key: "contact_name", label: "Nome Contatto", required: false },
-  { key: "email", label: "Email", required: false },
-  { key: "phone", label: "Telefono", required: false },
-  { key: "address", label: "Indirizzo", required: false },
-  { key: "country", label: "Paese", required: false },
   { key: "zone", label: "Zona", required: false },
   { key: "discount_class", label: "Classe Dealer", required: false },
-  { key: "status", label: "Stato", required: false },
   { key: "notes", label: "Note", required: false },
 ];
 
@@ -130,27 +133,55 @@ export default function DataImporter() {
 
     try {
       if (importType === "clients") {
-        const clientRows = mapped.map((r) => ({
-          company_name: String(r.company_name || ""),
-          vat_number: r.vat_number ? String(r.vat_number) : null,
-          contact_name: r.contact_name ? String(r.contact_name) : null,
-          email: r.email ? String(r.email) : null,
-          phone: r.phone ? String(r.phone) : null,
-          address: r.address ? String(r.address) : null,
-          country: r.country ? String(r.country) : null,
-          zone: r.zone ? String(r.zone) : null,
-          discount_class: r.discount_class ? String(r.discount_class) : "D",
-          status: r.status ? String(r.status) : "active",
-          notes: r.notes ? String(r.notes) : null,
-        }));
+        // Group rows by company_name to support multiple contacts per client
+        const clientGroups = new Map<string, Record<string, any>[]>();
+        mapped.forEach((r) => {
+          const key = String(r.company_name || "").trim().toLowerCase();
+          if (!key) return;
+          if (!clientGroups.has(key)) clientGroups.set(key, []);
+          clientGroups.get(key)!.push(r);
+        });
 
-        // Batch insert in chunks of 100
         let count = 0;
-        for (let i = 0; i < clientRows.length; i += 100) {
-          const chunk = clientRows.slice(i, i + 100);
-          const { error } = await supabase.from("clients").insert(chunk as any);
+        for (const [, rows] of clientGroups) {
+          const first = rows[0];
+          // Upsert client (use first row for client-level data)
+          const clientRow = {
+            company_name: String(first.company_name || ""),
+            business_type: first.business_type ? String(first.business_type) : null,
+            vat_number: first.vat_number ? String(first.vat_number) : null,
+            address: first.address ? String(first.address) : null,
+            country: first.country ? String(first.country) : null,
+            zone: first.zone ? String(first.zone) : null,
+            website: first.website ? String(first.website) : null,
+            discount_class: first.discount_class ? String(first.discount_class) : "D",
+            status: first.status ? String(first.status) : "active",
+            notes: first.notes ? String(first.notes) : null,
+          };
+
+          const { data: client, error } = await supabase
+            .from("clients")
+            .insert(clientRow as any)
+            .select("id")
+            .single();
           if (error) throw error;
-          count += chunk.length;
+
+          // Insert all contacts for this client
+          const contacts = rows
+            .filter((r) => r.contact_name && String(r.contact_name).trim())
+            .map((r) => ({
+              client_id: client.id,
+              contact_name: String(r.contact_name),
+              email: r.contact_email ? String(r.contact_email) : null,
+              phone: r.contact_phone ? String(r.contact_phone) : null,
+              role: r.contact_role ? String(r.contact_role) : null,
+            }));
+
+          if (contacts.length) {
+            const { error: cErr } = await supabase.from("client_contacts").insert(contacts as any);
+            if (cErr) throw cErr;
+          }
+          count++;
         }
         setImportedCount(count);
       } else {
