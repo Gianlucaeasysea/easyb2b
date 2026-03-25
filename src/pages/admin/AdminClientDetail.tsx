@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye } from "lucide-react";
+import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
