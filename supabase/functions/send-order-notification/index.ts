@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -14,9 +17,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
     const { orderId, orderCode, type } = await req.json();
 
@@ -106,16 +107,24 @@ serve(async (req) => {
       }
     }
 
-    // Send all emails via the transactional email system
+    // Send all emails via the transactional email system using direct fetch
+    // (supabase.functions.invoke doesn't forward auth correctly for edge-to-edge calls)
     const results = [];
     for (const send of sends) {
       try {
-        const { error } = await supabase.functions.invoke("send-transactional-email", {
-          body: send,
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
+            "apikey": SUPABASE_SERVICE_KEY,
+          },
+          body: JSON.stringify(send),
         });
-        if (error) {
-          console.error(`Failed to send ${send.templateName} to ${send.recipientEmail}:`, error);
-          results.push({ to: send.recipientEmail, template: send.templateName, status: "failed", error: String(error) });
+        const body = await res.text();
+        if (!res.ok) {
+          console.error(`Failed to send ${send.templateName} to ${send.recipientEmail}: ${res.status} ${body}`);
+          results.push({ to: send.recipientEmail, template: send.templateName, status: "failed", error: body });
         } else {
           results.push({ to: send.recipientEmail, template: send.templateName, status: "queued" });
         }
