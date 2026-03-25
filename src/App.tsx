@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import BecomeADealer from "./pages/BecomeADealer";
 import NotFound from "./pages/NotFound";
+import Unsubscribe from "./pages/Unsubscribe";
 
 // Layouts
 import PortalLayout from "./layouts/PortalLayout";
