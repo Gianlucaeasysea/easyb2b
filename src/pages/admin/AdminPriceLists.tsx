@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Tag, Crown, RefreshCw, Search, Package, Save, Upload, FileSpreadsheet, ArrowRight, Check, X } from "lucide-react";
+import { Plus, Trash2, Tag, Crown, RefreshCw, Search, Package, Save, Upload, FileSpreadsheet, ArrowRight, Check, X, Pencil, Users } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
@@ -19,15 +19,19 @@ const AdminPriceLists = () => {
   const qc = useQueryClient();
   const [showNewTier, setShowNewTier] = useState(false);
   const [showNewList, setShowNewList] = useState(false);
+  const [showEditList, setShowEditList] = useState(false);
   const [tierForm, setTierForm] = useState({ name: "", label: "", discount_pct: 0, sort_order: 0 });
   const [listForm, setListForm] = useState({ name: "", description: "", discount_tier_id: "", client_id: "", base_discount_pct: 0 });
+  const [editForm, setEditForm] = useState({ id: "", name: "", description: "", discount_tier_id: "" });
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [shopifySearch, setShopifySearch] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [showManageClients, setShowManageClients] = useState(false);
+  const [clientSearch, setClientSearch] = useState("");
 
   // Import state
-  const [importStep, setImportStep] = useState<"idle" | "mapping" | "preview">("idle");
+  const [importStep, setImportStep] = useState<"idle" | "mapping">("idle");
   const [importData, setImportData] = useState<any[]>([]);
   const [importHeaders, setImportHeaders] = useState<string[]>([]);
   const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({});
@@ -77,6 +81,20 @@ const AdminPriceLists = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("price_list_items")
+        .select("*")
+        .eq("price_list_id", activeListId!);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Price list clients (junction table)
+  const { data: priceListClients } = useQuery({
+    queryKey: ["price-list-clients", activeListId],
+    enabled: !!activeListId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("price_list_clients")
         .select("*")
         .eq("price_list_id", activeListId!);
       if (error) throw error;
@@ -144,13 +162,20 @@ const AdminPriceLists = () => {
       };
       const { data, error } = await supabase.from("price_lists").insert(payload).select().single();
       if (error) throw error;
+
+      // Also add to junction table if client selected
+      if (listForm.client_id) {
+        await supabase.from("price_list_clients").insert({
+          price_list_id: data.id,
+          client_id: listForm.client_id,
+        } as any);
+      }
+
       return data;
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["price-lists"] });
-      setShowNewList(false);
 
-      // If base discount was set, apply it to all products
       if (listForm.base_discount_pct > 0 && products) {
         const discountFraction = 1 - listForm.base_discount_pct / 100;
         const items = products.filter(p => p.active_b2b && p.price).map(p => ({
@@ -169,8 +194,26 @@ const AdminPriceLists = () => {
         }
       }
 
+      setShowNewList(false);
       setListForm({ name: "", description: "", discount_tier_id: "", client_id: "", base_discount_pct: 0 });
       toast.success("Listino prezzi creato");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const updateList = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("price_lists").update({
+        name: editForm.name,
+        description: editForm.description || null,
+        discount_tier_id: editForm.discount_tier_id || null,
+      } as any).eq("id", editForm.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["price-lists"] });
+      setShowEditList(false);
+      toast.success("Listino aggiornato");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -178,6 +221,7 @@ const AdminPriceLists = () => {
   const deleteList = useMutation({
     mutationFn: async (id: string) => {
       await supabase.from("price_list_items").delete().eq("price_list_id", id);
+      await supabase.from("price_list_clients").delete().eq("price_list_id", id);
       const { error } = await supabase.from("price_lists").delete().eq("id", id);
       if (error) throw error;
     },
@@ -188,20 +232,36 @@ const AdminPriceLists = () => {
     },
   });
 
-  // ─── Price list item management ───
-  const addProductToList = async (productId: string, customPrice: number) => {
+  // ─── Client management for price list ───
+  const addClientToList = async (clientId: string) => {
     if (!activeListId) return;
-    const { error } = await supabase.from("price_list_items").upsert(
-      { price_list_id: activeListId, product_id: productId, custom_price: customPrice } as any,
-      { onConflict: "price_list_id,product_id" }
-    );
-    if (error) toast.error(error.message);
-    else {
-      qc.invalidateQueries({ queryKey: ["price-list-items", activeListId] });
-      toast.success("Prodotto aggiunto");
+    const { error } = await supabase.from("price_list_clients").insert({
+      price_list_id: activeListId,
+      client_id: clientId,
+    } as any);
+    if (error) {
+      if (error.code === "23505") toast.info("Cliente già assegnato");
+      else toast.error(error.message);
+    } else {
+      qc.invalidateQueries({ queryKey: ["price-list-clients", activeListId] });
+      toast.success("Cliente aggiunto al listino");
     }
   };
 
+  const removeClientFromList = async (clientId: string) => {
+    if (!activeListId) return;
+    const { error } = await supabase.from("price_list_clients")
+      .delete()
+      .eq("price_list_id", activeListId)
+      .eq("client_id", clientId);
+    if (error) toast.error(error.message);
+    else {
+      qc.invalidateQueries({ queryKey: ["price-list-clients", activeListId] });
+      toast.success("Cliente rimosso dal listino");
+    }
+  };
+
+  // ─── Price list item management ───
   const addSelectedProducts = async () => {
     if (!activeListId || selectedProducts.size === 0) return;
     const tier = tiers?.find(t => t.id === activeList?.discount_tier_id);
@@ -241,14 +301,12 @@ const AdminPriceLists = () => {
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (evt) => {
       const wb = XLSX.read(evt.target?.result, { type: "binary" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json<any>(ws, { defval: "" });
       if (json.length === 0) { toast.error("File vuoto"); return; }
-
       const headers = Object.keys(json[0]);
       setImportHeaders(headers);
       setImportData(json);
@@ -268,32 +326,20 @@ const AdminPriceLists = () => {
     const nameCol = fieldMapping.product_name;
     const skuCol = fieldMapping.sku;
     const priceCol = fieldMapping.price;
-
     if (!priceCol) { toast.error("Mappa almeno il campo Prezzo"); return; }
     if (!nameCol && !skuCol) { toast.error("Mappa almeno Nome Prodotto o SKU"); return; }
 
     let matched = 0;
     const items: any[] = [];
-
     for (const row of importData) {
       const price = parseFloat(String(row[priceCol]).replace(",", "."));
       if (isNaN(price)) continue;
-
       let prod = null;
-      if (skuCol && row[skuCol]) {
-        prod = products?.find(p => p.sku?.toLowerCase() === String(row[skuCol]).toLowerCase().trim());
-      }
-      if (!prod && nameCol && row[nameCol]) {
-        prod = products?.find(p => p.name.toLowerCase().includes(String(row[nameCol]).toLowerCase().trim()));
-      }
-      if (prod) {
-        items.push({ price_list_id: importTargetListId, product_id: prod.id, custom_price: price });
-        matched++;
-      }
+      if (skuCol && row[skuCol]) prod = products?.find(p => p.sku?.toLowerCase() === String(row[skuCol]).toLowerCase().trim());
+      if (!prod && nameCol && row[nameCol]) prod = products?.find(p => p.name.toLowerCase().includes(String(row[nameCol]).toLowerCase().trim()));
+      if (prod) { items.push({ price_list_id: importTargetListId, product_id: prod.id, custom_price: price }); matched++; }
     }
-
-    if (items.length === 0) { toast.error("Nessun prodotto trovato. Controlla il mapping."); return; }
-
+    if (items.length === 0) { toast.error("Nessun prodotto trovato."); return; }
     const { error } = await supabase.from("price_list_items").upsert(items, { onConflict: "price_list_id,product_id" });
     if (error) toast.error(error.message);
     else {
@@ -311,14 +357,14 @@ const AdminPriceLists = () => {
     standard: "bg-muted text-muted-foreground",
   };
 
-  const filteredProducts = products?.filter(
-    (p) =>
-      p.name.toLowerCase().includes(shopifySearch.toLowerCase()) ||
-      p.sku?.toLowerCase().includes(shopifySearch.toLowerCase())
+  const filteredProducts = products?.filter(p =>
+    p.name.toLowerCase().includes(shopifySearch.toLowerCase()) ||
+    p.sku?.toLowerCase().includes(shopifySearch.toLowerCase())
   );
 
-  const activeList = priceLists?.find((pl) => pl.id === activeListId);
-  const itemProductIds = new Set(priceListItems?.map((i) => i.product_id) || []);
+  const activeList = priceLists?.find(pl => pl.id === activeListId);
+  const itemProductIds = new Set(priceListItems?.map(i => i.product_id) || []);
+  const assignedClientIds = new Set(priceListClients?.map(c => c.client_id) || []);
 
   const toggleProductSelection = (id: string) => {
     setSelectedProducts(prev => {
@@ -332,6 +378,20 @@ const AdminPriceLists = () => {
     const available = filteredProducts?.filter(p => !itemProductIds.has(p.id)) || [];
     setSelectedProducts(new Set(available.map(p => p.id)));
   };
+
+  const openEdit = (pl: any) => {
+    setEditForm({
+      id: pl.id,
+      name: pl.name,
+      description: pl.description || "",
+      discount_tier_id: pl.discount_tier_id || "",
+    });
+    setShowEditList(true);
+  };
+
+  const filteredClients = clients?.filter(c =>
+    c.company_name.toLowerCase().includes(clientSearch.toLowerCase())
+  ) || [];
 
   return (
     <div>
@@ -351,9 +411,7 @@ const AdminPriceLists = () => {
           </Button>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {products?.length || 0} prodotti nel database.
-          </p>
+          <p className="text-sm text-muted-foreground">{products?.length || 0} prodotti nel database.</p>
         </CardContent>
       </Card>
 
@@ -371,10 +429,10 @@ const AdminPriceLists = () => {
             <DialogContent>
               <DialogHeader><DialogTitle>Nuova Classe di Sconto</DialogTitle></DialogHeader>
               <div className="space-y-4">
-                <div><Label>Nome (ID)</Label><Input value={tierForm.name} onChange={(e) => setTierForm((f) => ({ ...f, name: e.target.value }))} placeholder="es. platinum" /></div>
-                <div><Label>Etichetta</Label><Input value={tierForm.label} onChange={(e) => setTierForm((f) => ({ ...f, label: e.target.value }))} placeholder="es. Platinum" /></div>
-                <div><Label>Sconto %</Label><Input type="number" value={tierForm.discount_pct} onChange={(e) => setTierForm((f) => ({ ...f, discount_pct: Number(e.target.value) }))} /></div>
-                <div><Label>Ordine</Label><Input type="number" value={tierForm.sort_order} onChange={(e) => setTierForm((f) => ({ ...f, sort_order: Number(e.target.value) }))} /></div>
+                <div><Label>Nome (ID)</Label><Input value={tierForm.name} onChange={e => setTierForm(f => ({ ...f, name: e.target.value }))} placeholder="es. platinum" /></div>
+                <div><Label>Etichetta</Label><Input value={tierForm.label} onChange={e => setTierForm(f => ({ ...f, label: e.target.value }))} placeholder="es. Platinum" /></div>
+                <div><Label>Sconto %</Label><Input type="number" value={tierForm.discount_pct} onChange={e => setTierForm(f => ({ ...f, discount_pct: Number(e.target.value) }))} /></div>
+                <div><Label>Ordine</Label><Input type="number" value={tierForm.sort_order} onChange={e => setTierForm(f => ({ ...f, sort_order: Number(e.target.value) }))} /></div>
                 <Button onClick={() => createTier.mutate()} disabled={!tierForm.name || !tierForm.label}>Crea</Button>
               </div>
             </DialogContent>
@@ -384,7 +442,7 @@ const AdminPriceLists = () => {
           <Table>
             <TableHeader><TableRow><TableHead>Classe</TableHead><TableHead>Sconto</TableHead><TableHead>Ordine</TableHead><TableHead></TableHead></TableRow></TableHeader>
             <TableBody>
-              {tiers?.map((t) => (
+              {tiers?.map(t => (
                 <TableRow key={t.id}>
                   <TableCell><Badge className={tierColors[t.name] || "bg-muted text-muted-foreground"}>{t.label}</Badge></TableCell>
                   <TableCell className="font-mono">{t.discount_pct}%</TableCell>
@@ -416,32 +474,33 @@ const AdminPriceLists = () => {
               <DialogContent>
                 <DialogHeader><DialogTitle>Nuovo Listino Prezzi</DialogTitle></DialogHeader>
                 <div className="space-y-4">
-                  <div><Label>Nome</Label><Input value={listForm.name} onChange={(e) => setListForm((f) => ({ ...f, name: e.target.value }))} placeholder="es. Listino Gold 2024" /></div>
-                  <div><Label>Descrizione</Label><Textarea value={listForm.description} onChange={(e) => setListForm((f) => ({ ...f, description: e.target.value }))} /></div>
+                  <div><Label>Nome</Label><Input value={listForm.name} onChange={e => setListForm(f => ({ ...f, name: e.target.value }))} placeholder="es. Listino Gold 2024" /></div>
+                  <div><Label>Descrizione</Label><Textarea value={listForm.description} onChange={e => setListForm(f => ({ ...f, description: e.target.value }))} /></div>
                   <div>
                     <Label>Classe di Sconto (opzionale)</Label>
-                    <Select value={listForm.discount_tier_id || "__none__"} onValueChange={(v) => setListForm((f) => ({ ...f, discount_tier_id: v === "__none__" ? "" : v }))}>
+                    <Select value={listForm.discount_tier_id || "__none__"} onValueChange={v => setListForm(f => ({ ...f, discount_tier_id: v === "__none__" ? "" : v }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">— Nessuna —</SelectItem>
-                        {tiers?.map((t) => <SelectItem key={t.id} value={t.id}>{t.label} ({t.discount_pct}%)</SelectItem>)}
+                        {tiers?.map(t => <SelectItem key={t.id} value={t.id}>{t.label} ({t.discount_pct}%)</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
                     <Label>Sconto Base % (applicato su tutti i prodotti)</Label>
-                    <Input type="number" min={0} max={100} value={listForm.base_discount_pct} onChange={(e) => setListForm(f => ({ ...f, base_discount_pct: Number(e.target.value) }))} placeholder="es. 20" />
+                    <Input type="number" min={0} max={100} value={listForm.base_discount_pct} onChange={e => setListForm(f => ({ ...f, base_discount_pct: Number(e.target.value) }))} placeholder="es. 20" />
                     <p className="text-xs text-muted-foreground mt-1">Se impostato, applica automaticamente questo sconto a tutti i prodotti B2B attivi</p>
                   </div>
                   <div>
-                    <Label>Cliente specifico (opzionale)</Label>
-                    <Select value={listForm.client_id || "__none__"} onValueChange={(v) => setListForm((f) => ({ ...f, client_id: v === "__none__" ? "" : v }))}>
+                    <Label>Primo cliente da assegnare (opzionale)</Label>
+                    <Select value={listForm.client_id || "__none__"} onValueChange={v => setListForm(f => ({ ...f, client_id: v === "__none__" ? "" : v }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">— Tutti (per classe) —</SelectItem>
-                        {clients?.map((c) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+                        <SelectItem value="__none__">— Nessuno —</SelectItem>
+                        {clients?.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">Potrai aggiungere altri clienti dopo la creazione</p>
                   </div>
                   <Button onClick={() => createList.mutate()} disabled={!listForm.name}>Crea Listino</Button>
                 </div>
@@ -454,25 +513,30 @@ const AdminPriceLists = () => {
             <p className="text-center text-muted-foreground py-8">Nessun listino prezzi ancora creato.</p>
           ) : (
             <Table>
-              <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Classe/Cliente</TableHead><TableHead>Prodotti</TableHead><TableHead>Creato</TableHead><TableHead></TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Classe</TableHead><TableHead>Prodotti</TableHead><TableHead>Creato</TableHead><TableHead></TableHead></TableRow></TableHeader>
               <TableBody>
-                {priceLists.map((pl) => {
-                  const tier = tiers?.find((t) => t.id === pl.discount_tier_id);
-                  const client = clients?.find((c) => c.id === pl.client_id);
+                {priceLists.map(pl => {
+                  const tier = tiers?.find(t => t.id === pl.discount_tier_id);
                   return (
-                    <TableRow key={pl.id} className={`cursor-pointer ${activeListId === pl.id ? "bg-primary/10" : "hover:bg-secondary/50"}`} onClick={() => setActiveListId(activeListId === pl.id ? null : pl.id)}>
-                      <TableCell className="font-medium">{pl.name}</TableCell>
+                    <TableRow key={pl.id} className={`cursor-pointer ${activeListId === pl.id ? "bg-primary/10" : "hover:bg-secondary/50"}`} onClick={() => { setActiveListId(activeListId === pl.id ? null : pl.id); setSelectedProducts(new Set()); }}>
                       <TableCell>
-                        {tier && <Badge className={tierColors[tier.name] || "bg-muted text-muted-foreground"}>{tier.label} (-{tier.discount_pct}%)</Badge>}
-                        {client && <span className="text-sm text-muted-foreground ml-2">{client.company_name}</span>}
-                        {!tier && !client && <span className="text-xs text-muted-foreground">—</span>}
+                        <span className="font-medium">{pl.name}</span>
+                        {pl.description && <p className="text-xs text-muted-foreground">{pl.description}</p>}
+                      </TableCell>
+                      <TableCell>
+                        {tier ? <Badge className={tierColors[tier.name] || "bg-muted text-muted-foreground"}>{tier.label} (-{tier.discount_pct}%)</Badge> : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">—</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{new Date(pl.created_at).toLocaleDateString("it-IT")}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteList.mutate(pl.id); }}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(pl)} title="Modifica">
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteList.mutate(pl.id)} title="Elimina">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -483,8 +547,32 @@ const AdminPriceLists = () => {
         </CardContent>
       </Card>
 
+      {/* Edit List Dialog */}
+      <Dialog open={showEditList} onOpenChange={setShowEditList}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Modifica Listino</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Nome</Label><Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></div>
+            <div><Label>Descrizione</Label><Textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} /></div>
+            <div>
+              <Label>Classe di Sconto</Label>
+              <Select value={editForm.discount_tier_id || "__none__"} onValueChange={v => setEditForm(f => ({ ...f, discount_tier_id: v === "__none__" ? "" : v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Nessuna —</SelectItem>
+                  {tiers?.map(t => <SelectItem key={t.id} value={t.id}>{t.label} ({t.discount_pct}%)</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={() => updateList.mutate()} disabled={!editForm.name}>
+              <Save className="h-4 w-4 mr-1" /> Salva Modifiche
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Import Dialog */}
-      <Dialog open={importStep !== "idle"} onOpenChange={(open) => { if (!open) setImportStep("idle"); }}>
+      <Dialog open={importStep !== "idle"} onOpenChange={open => { if (!open) setImportStep("idle"); }}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -492,12 +580,11 @@ const AdminPriceLists = () => {
               Importa Listino da File
             </DialogTitle>
           </DialogHeader>
-
           {importStep === "mapping" && (
             <div className="space-y-6">
               <div>
                 <Label>Listino di destinazione *</Label>
-                <Select value={importTargetListId || "__none__"} onValueChange={(v) => setImportTargetListId(v === "__none__" ? null : v)}>
+                <Select value={importTargetListId || "__none__"} onValueChange={v => setImportTargetListId(v === "__none__" ? null : v)}>
                   <SelectTrigger><SelectValue placeholder="Seleziona listino..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">— Seleziona —</SelectItem>
@@ -505,18 +592,16 @@ const AdminPriceLists = () => {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm text-foreground">Mappa i campi del file</h3>
                 <p className="text-xs text-muted-foreground">Trovate {importData.length} righe con {importHeaders.length} colonne</p>
-
-                {["product_name", "sku", "price"].map((field) => (
+                {["product_name", "sku", "price"].map(field => (
                   <div key={field} className="flex items-center gap-3">
                     <Label className="w-40 text-sm">
                       {field === "product_name" ? "Nome Prodotto" : field === "sku" ? "SKU" : "Prezzo"} {field === "price" && <span className="text-destructive">*</span>}
                     </Label>
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    <Select value={fieldMapping[field] || "__none__"} onValueChange={(v) => setFieldMapping(m => ({ ...m, [field]: v === "__none__" ? "" : v }))}>
+                    <Select value={fieldMapping[field] || "__none__"} onValueChange={v => setFieldMapping(m => ({ ...m, [field]: v === "__none__" ? "" : v }))}>
                       <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">— Non mappare —</SelectItem>
@@ -526,8 +611,6 @@ const AdminPriceLists = () => {
                   </div>
                 ))}
               </div>
-
-              {/* Preview */}
               <div>
                 <h3 className="font-semibold text-sm text-foreground mb-2">Anteprima dati ({Math.min(5, importData.length)} righe)</h3>
                 <div className="overflow-x-auto border border-border rounded-lg">
@@ -558,7 +641,6 @@ const AdminPriceLists = () => {
                   </Table>
                 </div>
               </div>
-
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setImportStep("idle")}>Annulla</Button>
                 <Button onClick={executeImport} disabled={!importTargetListId || !fieldMapping.price}>
@@ -574,11 +656,33 @@ const AdminPriceLists = () => {
       {activeListId && activeList && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">
-              Gestisci Prodotti — {activeList.name}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">
+                Gestisci — {activeList.name}
+              </CardTitle>
+              <Button size="sm" variant="outline" onClick={() => setShowManageClients(true)} className="gap-1">
+                <Users className="h-4 w-4" /> Clienti assegnati ({assignedClientIds.size})
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Assigned Clients Summary */}
+            {assignedClientIds.size > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {Array.from(assignedClientIds).map(cid => {
+                  const cl = clients?.find(c => c.id === cid);
+                  return cl ? (
+                    <Badge key={cid} variant="outline" className="text-xs gap-1">
+                      {cl.company_name}
+                      <button onClick={() => removeClientFromList(cid)} className="ml-1 hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ) : null;
+                })}
+              </div>
+            )}
+
             {/* Current items */}
             {priceListItems && priceListItems.length > 0 && (
               <div>
@@ -596,8 +700,8 @@ const AdminPriceLists = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {priceListItems.map((item) => {
-                        const prod = products?.find((p) => p.id === item.product_id);
+                      {priceListItems.map(item => {
+                        const prod = products?.find(p => p.id === item.product_id);
                         const shopifyPrice = prod?.price || 0;
                         const discount = shopifyPrice > 0 ? Math.round((1 - item.custom_price / shopifyPrice) * 100) : 0;
                         return (
@@ -606,15 +710,8 @@ const AdminPriceLists = () => {
                             <TableCell className="text-xs font-mono">{prod?.sku || "—"}</TableCell>
                             <TableCell className="text-sm">€{shopifyPrice.toFixed(2)}</TableCell>
                             <TableCell>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                className="w-28 h-8 text-sm"
-                                defaultValue={item.custom_price}
-                                onBlur={(e) => {
-                                  const val = parseFloat(e.target.value);
-                                  if (!isNaN(val) && val !== item.custom_price) updateItemPrice(item.id, val);
-                                }}
+                              <Input type="number" step="0.01" className="w-28 h-8 text-sm" defaultValue={item.custom_price}
+                                onBlur={e => { const val = parseFloat(e.target.value); if (!isNaN(val) && val !== item.custom_price) updateItemPrice(item.id, val); }}
                               />
                             </TableCell>
                             <TableCell>
@@ -636,7 +733,7 @@ const AdminPriceLists = () => {
               </div>
             )}
 
-            {/* Add products - improved grid */}
+            {/* Add products */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-semibold text-foreground">Aggiungi Prodotti al Listino</h4>
@@ -651,20 +748,14 @@ const AdminPriceLists = () => {
               </div>
               <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-                <Input placeholder="Cerca per nome o SKU..." className="pl-9 h-9" value={shopifySearch} onChange={(e) => setShopifySearch(e.target.value)} />
+                <Input placeholder="Cerca per nome o SKU..." className="pl-9 h-9" value={shopifySearch} onChange={e => setShopifySearch(e.target.value)} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1">
-                {filteredProducts?.filter((p) => !itemProductIds.has(p.id)).slice(0, 60).map((p) => {
+                {filteredProducts?.filter(p => !itemProductIds.has(p.id)).slice(0, 60).map(p => {
                   const isSelected = selectedProducts.has(p.id);
                   return (
-                    <div
-                      key={p.id}
-                      onClick={() => toggleProductSelection(p.id)}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                        isSelected
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-secondary/30 hover:bg-secondary/60"
-                      }`}
+                    <div key={p.id} onClick={() => toggleProductSelection(p.id)}
+                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? "border-primary bg-primary/10" : "border-border bg-secondary/30 hover:bg-secondary/60"}`}
                     >
                       <Checkbox checked={isSelected} className="pointer-events-none" />
                       <div className="flex-1 min-w-0">
@@ -686,6 +777,54 @@ const AdminPriceLists = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Manage Clients Dialog */}
+      <Dialog open={showManageClients} onOpenChange={setShowManageClients}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Gestisci Clienti — {activeList?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            {/* Currently assigned */}
+            {assignedClientIds.size > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Clienti assegnati</Label>
+                <div className="space-y-1 mt-2">
+                  {Array.from(assignedClientIds).map(cid => {
+                    const cl = clients?.find(c => c.id === cid);
+                    return cl ? (
+                      <div key={cid} className="flex items-center justify-between p-2 rounded-lg bg-secondary/50">
+                        <span className="text-sm font-medium">{cl.company_name}</span>
+                        <Button variant="ghost" size="sm" onClick={() => removeClientFromList(cid)} className="text-destructive h-7">
+                          <X className="h-3 w-3 mr-1" /> Rimuovi
+                        </Button>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Add clients */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Aggiungi clienti</Label>
+              <div className="relative mt-2 mb-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                <Input placeholder="Cerca cliente..." className="pl-9 h-9" value={clientSearch} onChange={e => setClientSearch(e.target.value)} />
+              </div>
+              <div className="space-y-1 max-h-60 overflow-y-auto">
+                {filteredClients.filter(c => !assignedClientIds.has(c.id)).map(c => (
+                  <div key={c.id} className="flex items-center justify-between p-2 rounded-lg border border-border hover:bg-secondary/50 cursor-pointer" onClick={() => addClientToList(c.id)}>
+                    <div>
+                      <span className="text-sm font-medium">{c.company_name}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{c.discount_class}</span>
+                    </div>
+                    <Plus className="h-4 w-4 text-primary" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
