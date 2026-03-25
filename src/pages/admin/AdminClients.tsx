@@ -22,7 +22,7 @@ const AdminClients = () => {
   const [showBulk, setShowBulk] = useState(false);
   const [bulkAction, setBulkAction] = useState<string>("");
   const [bulkStatus, setBulkStatus] = useState("active");
-  const [bulkDiscount, setBulkDiscount] = useState("D");
+  const [bulkDiscount, setBulkDiscount] = useState("standard");
   const [bulkType, setBulkType] = useState("");
   const [newClient, setNewClient] = useState({
     company_name: "", contact_name: "", email: "", phone: "",
