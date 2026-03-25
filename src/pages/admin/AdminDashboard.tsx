@@ -36,13 +36,15 @@ const statusColors: Record<string, string> = {
   Returned: "bg-destructive/20 text-destructive",
 };
 
+const currentYearStart = `${new Date().getFullYear()}-01-01`;
+
 const AdminDashboard = () => {
   const queryClient = useQueryClient();
-  const [orderDateFrom, setOrderDateFrom] = useState("");
+  const [orderDateFrom, setOrderDateFrom] = useState(currentYearStart);
   const [orderDateTo, setOrderDateTo] = useState("");
-  const [payedDateFrom, setPayedDateFrom] = useState("");
+  const [payedDateFrom, setPayedDateFrom] = useState(currentYearStart);
   const [payedDateTo, setPayedDateTo] = useState("");
-  const [deliveryDateFrom, setDeliveryDateFrom] = useState("");
+  const [deliveryDateFrom, setDeliveryDateFrom] = useState(currentYearStart);
   const [deliveryDateTo, setDeliveryDateTo] = useState("");
   const [syncing, setSyncing] = useState(false);
 
@@ -72,7 +74,11 @@ const AdminDashboard = () => {
   const { data: orders } = useQuery({
     queryKey: ["admin-orders-dash"],
     queryFn: async () => {
-      const { data } = await supabase.from("orders").select("*, clients(company_name)").order("created_at", { ascending: false });
+      const { data } = await supabase
+        .from("orders")
+        .select("*, clients(company_name)")
+        .not("order_type", "in", '("MANUAL B2C","B2C","CUSTOM")')
+        .order("created_at", { ascending: false });
       return data || [];
     },
   });
@@ -127,6 +133,12 @@ const AdminDashboard = () => {
   const activeClients = clients?.filter(c => c.status === "active").length || 0;
   const countries = [...new Set(clients?.map(c => c.country).filter(Boolean))].length;
 
+  // Recent orders: filtered from start of year
+  const recentOrders = (orders || []).filter(o => {
+    const d = o.created_at?.slice(0, 10) || "";
+    return d >= currentYearStart;
+  });
+
   return (
     <div>
       <div className="mb-8 flex items-center justify-between">
@@ -142,14 +154,13 @@ const AdminDashboard = () => {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard icon={Users} label="Active Clients" value={String(activeClients)} sub={`${clients?.length || 0} total · ${countries} countries`} />
-        <StatCard icon={ShoppingBag} label="Total Orders" value={String(orders?.length || 0)} />
+        <StatCard icon={ShoppingBag} label="Orders (YTD)" value={String(recentOrders.length)} sub={`${orders?.length || 0} total`} />
         <StatCard icon={FileText} label="New Requests" value={String(requestCount ?? 0)} sub="Awaiting review" />
         <StatCard icon={Package} label="Products" value={String(productCount ?? 0)} sub="Active in B2B catalog" />
       </div>
 
       {/* Filtered Revenue Cards */}
       <div className="grid lg:grid-cols-3 gap-4 mb-8">
-        {/* Total Ordered */}
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-3">
             <Euro size={16} className="text-primary" />
@@ -165,7 +176,6 @@ const AdminDashboard = () => {
           <p className="text-[10px] text-muted-foreground mt-1">Filtro per Order Date</p>
         </div>
 
-        {/* Total Payed */}
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-3">
             <CreditCard size={16} className="text-success" />
@@ -181,7 +191,6 @@ const AdminDashboard = () => {
           <p className="text-[10px] text-muted-foreground mt-1">Filtro per Payed Date</p>
         </div>
 
-        {/* Total Delivered */}
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-3">
             <Truck size={16} className="text-chart-4" />
@@ -199,14 +208,13 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent Orders */}
         <div className="glass-card-solid p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-heading font-bold text-foreground flex items-center gap-2"><ShoppingBag size={16} /> Recent Orders</h2>
+            <h2 className="font-heading font-bold text-foreground flex items-center gap-2"><ShoppingBag size={16} /> Recent Orders ({new Date().getFullYear()})</h2>
             <Link to="/admin/orders" className="text-xs text-primary hover:underline">View all</Link>
           </div>
           <div className="space-y-2">
-            {orders?.slice(0, 8).map(o => (
+            {recentOrders.slice(0, 8).map(o => (
               <Link key={o.id} to={`/admin/orders/${o.id}`} className="flex items-center justify-between py-2 border-b border-border last:border-0 hover:bg-secondary/30 px-2 -mx-2 rounded">
                 <div>
                   <p className="text-sm font-heading font-semibold text-foreground">{(o as any).clients?.company_name}</p>
@@ -218,10 +226,10 @@ const AdminDashboard = () => {
                 </div>
               </Link>
             ))}
+            {!recentOrders.length && <p className="text-sm text-muted-foreground py-4">No orders this year.</p>}
           </div>
         </div>
 
-        {/* Client Distribution */}
         <div className="glass-card-solid p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-heading font-bold text-foreground flex items-center gap-2"><Globe size={16} /> Clients by Region</h2>

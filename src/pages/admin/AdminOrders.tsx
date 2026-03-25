@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ShoppingBag, Search, Filter } from "lucide-react";
+import { ShoppingBag, Search, Filter, CalendarIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -35,6 +35,8 @@ const AdminOrders = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-orders"],
@@ -42,13 +44,13 @@ const AdminOrders = () => {
       const { data, error } = await supabase
         .from("orders")
         .select("*, clients(company_name, country)")
+        .not("order_type", "in", '("MANUAL B2C","B2C","CUSTOM")')
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
-  // Get unique statuses from data
   const allStatuses = [...new Set(orders?.map(o => o.status).filter(Boolean) || [])];
 
   const filtered = orders?.filter(o => {
@@ -57,7 +59,10 @@ const AdminOrders = () => {
       (o as any).order_code?.toLowerCase().includes(search.toLowerCase()) ||
       o.tracking_number?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || o.status === statusFilter;
-    return matchSearch && matchStatus;
+    const orderDate = o.created_at?.slice(0, 10) || "";
+    const matchDateFrom = !dateFrom || orderDate >= dateFrom;
+    const matchDateTo = !dateTo || orderDate <= dateTo;
+    return matchSearch && matchStatus && matchDateFrom && matchDateTo;
   }) || [];
 
   const totalRevenue = filtered.reduce((s, o) => s + Number(o.total_amount || 0), 0);
@@ -94,6 +99,12 @@ const AdminOrders = () => {
             ))}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-2">
+          <CalendarIcon size={14} className="text-muted-foreground" />
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-[150px] text-xs bg-secondary border-border rounded-lg h-9" placeholder="Da" />
+          <span className="text-muted-foreground text-xs">—</span>
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-[150px] text-xs bg-secondary border-border rounded-lg h-9" placeholder="A" />
+        </div>
       </div>
 
       {isLoading ? (
