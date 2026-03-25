@@ -209,7 +209,15 @@ const AdminMarketing = () => {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+          <div className="flex items-center gap-1.5 mr-2" title={item.is_active !== false ? "Visibile ai dealer" : "Nascosto ai dealer"}>
+            <Switch
+              checked={item.is_active !== false}
+              onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: item.id, is_active: checked })}
+              className="scale-75"
+            />
+            {item.is_active !== false ? <Eye size={12} className="text-success" /> : <EyeOff size={12} className="text-muted-foreground" />}
+          </div>
           {isEditing ? (
             <>
               <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-primary gap-1" onClick={saveEdit} disabled={updateMutation.isPending}>
