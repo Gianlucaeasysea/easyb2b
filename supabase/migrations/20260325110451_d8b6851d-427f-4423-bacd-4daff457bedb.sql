@@ -1,0 +1,1 @@
+ALTER TABLE public.clients ADD COLUMN portal_password text DEFAULT NULL;
