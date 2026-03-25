@@ -129,9 +129,15 @@ const AdminDashboard = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="font-heading text-2xl font-bold text-foreground">Admin Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Easysea B2B Platform Overview</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Easysea B2B Platform Overview</p>
+        </div>
+        <Button onClick={handleSync} disabled={syncing} variant="outline" className="gap-2">
+          <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
+          {syncing ? "Syncing..." : "Sync Google Sheet"}
+        </Button>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
