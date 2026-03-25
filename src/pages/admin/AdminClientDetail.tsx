@@ -255,7 +255,23 @@ const AdminClientDetail = () => {
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Business Type</Label>
-                <Input value={form.business_type} onChange={e => setForm(f => ({ ...f, business_type: e.target.value }))} className="mt-1 bg-secondary border-border rounded-lg" />
+                <Select value={form.business_type || "_custom"} onValueChange={v => { if (v !== "_custom") setForm(f => ({ ...f, business_type: v })); }}>
+                  <SelectTrigger className="mt-1 bg-secondary border-border rounded-lg"><SelectValue placeholder="Select type..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Reseller">Reseller</SelectItem>
+                    <SelectItem value="Distributor">Distributor</SelectItem>
+                    <SelectItem value="Rigger">Rigger</SelectItem>
+                    <SelectItem value="Dropshipper">Dropshipper</SelectItem>
+                    <SelectItem value="Boat Builder">Boat Builder</SelectItem>
+                    <SelectItem value="_custom">Custom...</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(form.business_type && !["Reseller","Distributor","Rigger","Dropshipper","Boat Builder"].includes(form.business_type)) && (
+                  <Input value={form.business_type} onChange={e => setForm(f => ({ ...f, business_type: e.target.value }))} placeholder="Enter custom type..." className="mt-2 bg-secondary border-border rounded-lg" />
+                )}
+                {form.business_type && (
+                  <Badge className="mt-2 bg-primary/15 text-primary border-0">{form.business_type}</Badge>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
