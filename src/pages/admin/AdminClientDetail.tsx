@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye } from "lucide-react";
+import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
@@ -44,6 +44,10 @@ const AdminClientDetail = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [newContact, setNewContact] = useState({ contact_name: "", email: "", phone: "", role: "" });
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showCreateAccount, setShowCreateAccount] = useState(false);
+  const [accountPassword, setAccountPassword] = useState("dealer2025");
+  const [creatingAccount, setCreatingAccount] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["admin-client", id],
@@ -172,6 +176,41 @@ const AdminClientDetail = () => {
     },
     onError: (err: any) => toast.error(err.message),
   });
+
+  const createDealerAccount = async () => {
+    if (!client?.email) { toast.error("Il cliente deve avere un'email"); return; }
+    setCreatingAccount(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          client_id: id,
+          email: client.email,
+          password: accountPassword,
+        }),
+      });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      toast.success("Account dealer creato!");
+      queryClient.invalidateQueries({ queryKey: ["admin-client", id] });
+      setShowCreateAccount(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setCreatingAccount(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(label);
+    setTimeout(() => setCopied(null), 2000);
+  };
 
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
   const totalOrders = orders?.length || 0;
@@ -350,6 +389,50 @@ const AdminClientDetail = () => {
 
             {!contacts?.length && !form.contact_name && !showAddContact && (
               <p className="text-xs text-muted-foreground">No contacts added yet</p>
+            )}
+          </div>
+
+          {/* Portal Access */}
+          <div className="glass-card-solid p-6">
+            <h2 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2">
+              <KeyRound size={16} /> Portal Access
+            </h2>
+            {client?.user_id ? (
+              <div className="space-y-3">
+                <div className="p-3 bg-success/10 rounded-lg border border-success/20">
+                  <p className="text-xs text-success font-semibold mb-2">✅ Account Attivo</p>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Email</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-mono text-foreground">{client.email}</p>
+                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => copyToClipboard(client.email || "", "email")}>
+                          {copied === "email" ? <Check size={10} className="text-success" /> : <Copy size={10} />}
+                        </Button>
+                      </div>
+                    </div>
+                    {(client as any).portal_password && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Password</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-mono text-foreground">{(client as any).portal_password}</p>
+                          <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => copyToClipboard((client as any).portal_password, "password")}>
+                            {copied === "password" ? <Check size={10} className="text-success" /> : <Copy size={10} />}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">Nessun account portale creato</p>
+                <Button size="sm" onClick={() => setShowCreateAccount(true)} className="w-full gap-1" disabled={!client?.email}>
+                  <UserPlus size={14} /> Crea Account Dealer
+                </Button>
+                {!client?.email && <p className="text-[10px] text-destructive">⚠️ Inserisci prima un'email al cliente</p>}
+              </div>
             )}
           </div>
 
@@ -535,6 +618,26 @@ const AdminClientDetail = () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Account Dialog */}
+      <Dialog open={showCreateAccount} onOpenChange={setShowCreateAccount}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Crea Account Dealer</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <Input value={client?.email || ""} disabled className="mt-1 bg-secondary border-border rounded-lg" />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Password</Label>
+              <Input value={accountPassword} onChange={e => setAccountPassword(e.target.value)} className="mt-1 bg-secondary border-border rounded-lg font-mono" />
+            </div>
+            <Button onClick={createDealerAccount} disabled={creatingAccount} className="w-full gap-1">
+              <UserPlus size={14} /> {creatingAccount ? "Creazione..." : "Crea Account"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
