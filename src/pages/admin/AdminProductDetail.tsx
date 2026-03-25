@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Save, Plus, Trash2, ExternalLink, FileDown, Package, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, ExternalLink, FileDown, Package, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 
