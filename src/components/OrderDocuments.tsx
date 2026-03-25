@@ -64,7 +64,16 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
 
       if (dbError) throw dbError;
 
+      // Log event
+      await supabase.from("order_events").insert({
+        order_id: orderId,
+        event_type: "document_uploaded",
+        title: `Documento caricato: ${DOC_TYPES.find(d => d.value === docType)?.label || docType}`,
+        description: file.name,
+      });
+
       queryClient.invalidateQueries({ queryKey: ["order-documents", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["order-events", orderId] });
       toast.success("Document uploaded successfully");
 
       // Send email notification to client about new document

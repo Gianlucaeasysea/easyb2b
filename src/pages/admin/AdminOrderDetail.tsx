@@ -86,7 +86,20 @@ const AdminOrderDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       queryClient.invalidateQueries({ queryKey: ["admin-new-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order-events", id] });
       toast.success("Order updated");
+
+      // Log event on status change
+      if (previousStatus !== status) {
+        const statusLabel = statusConfig[status]?.label || status;
+        await supabase.from("order_events").insert({
+          order_id: id,
+          event_type: "status_change",
+          title: `Stato aggiornato: ${statusLabel}`,
+          description: trackingNumber ? `Tracking: ${trackingNumber}` : undefined,
+        });
+        queryClient.invalidateQueries({ queryKey: ["order-events", id] });
+      }
 
       // Send email notification on status change
       if (previousStatus !== status) {
