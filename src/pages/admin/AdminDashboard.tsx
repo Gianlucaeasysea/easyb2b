@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ShoppingBag, Package, FileText, TrendingUp, Globe, Euro, CreditCard, Truck } from "lucide-react";
+import { Users, ShoppingBag, Package, FileText, TrendingUp, Globe, Euro, CreditCard, Truck, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { toast } from "sonner";
 
 const StatCard = ({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string; sub?: string }) => (
   <div className="glass-card-solid p-6">
@@ -35,12 +37,29 @@ const statusColors: Record<string, string> = {
 };
 
 const AdminDashboard = () => {
+  const queryClient = useQueryClient();
   const [orderDateFrom, setOrderDateFrom] = useState("");
   const [orderDateTo, setOrderDateTo] = useState("");
   const [payedDateFrom, setPayedDateFrom] = useState("");
   const [payedDateTo, setPayedDateTo] = useState("");
   const [deliveryDateFrom, setDeliveryDateFrom] = useState("");
   const [deliveryDateTo, setDeliveryDateTo] = useState("");
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("gsheet-sync");
+      if (error) throw error;
+      toast.success(`Sync completata: ${data.newOrders} nuovi ordini, ${data.updatedOrders} aggiornati`);
+      queryClient.invalidateQueries({ queryKey: ["admin-orders-dash"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+    } catch (err: any) {
+      toast.error("Sync fallita: " + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const { data: clients } = useQuery({
     queryKey: ["admin-clients-dash"],
@@ -110,9 +129,15 @@ const AdminDashboard = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="font-heading text-2xl font-bold text-foreground">Admin Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Easysea B2B Platform Overview</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Easysea B2B Platform Overview</p>
+        </div>
+        <Button onClick={handleSync} disabled={syncing} variant="outline" className="gap-2">
+          <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
+          {syncing ? "Syncing..." : "Sync Google Sheet"}
+        </Button>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
