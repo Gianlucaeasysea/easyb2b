@@ -17,20 +17,20 @@ interface FieldMapping {
 }
 
 const CLIENT_FIELDS = [
-  { key: "company_name", label: "Nome Business / Business", required: true },
-  { key: "business_type", label: "Type", required: false },
-  { key: "status", label: "Status", required: false },
-  { key: "country", label: "Country", required: false },
-  { key: "address", label: "Address", required: false },
-  { key: "contact_name", label: "Contact Person / Name", required: false },
-  { key: "contact_email", label: "Contact Email / Email", required: false },
-  { key: "contact_phone", label: "Contact Phone / Phone", required: false },
-  { key: "contact_role", label: "Contact Role", required: false },
-  { key: "website", label: "Website", required: false },
-  { key: "vat_number", label: "P.IVA", required: false },
-  { key: "zone", label: "Zona", required: false },
-  { key: "discount_class", label: "Classe Dealer", required: false },
-  { key: "notes", label: "Note", required: false },
+  { key: "company_name", label: "Nome Business", required: true, aliases: ["business", "ragione sociale", "company", "azienda"] },
+  { key: "business_type", label: "Type", required: false, aliases: ["type", "tipo", "business type"] },
+  { key: "status", label: "Status", required: false, aliases: ["status", "stato"] },
+  { key: "country", label: "Country", required: false, aliases: ["country", "paese", "nazione"] },
+  { key: "address", label: "Address", required: false, aliases: ["address", "indirizzo"] },
+  { key: "contact_name", label: "Contact Person", required: false, aliases: ["name", "contact person", "nome contatto", "contact name", "nome"] },
+  { key: "contact_email", label: "Contact Email", required: false, aliases: ["email", "e-mail", "contact email", "mail"] },
+  { key: "contact_phone", label: "Contact Phone", required: false, aliases: ["phone", "telefono", "contact phone", "tel"] },
+  { key: "contact_role", label: "Contact Role", required: false, aliases: ["role", "ruolo", "contact role"] },
+  { key: "website", label: "Website", required: false, aliases: ["website", "sito", "sito web", "url"] },
+  { key: "vat_number", label: "P.IVA", required: false, aliases: ["p.iva", "vat", "vat number", "partita iva"] },
+  { key: "zone", label: "Zona", required: false, aliases: ["zone", "zona", "area"] },
+  { key: "discount_class", label: "Classe Dealer", required: false, aliases: ["discount class", "classe", "classe dealer"] },
+  { key: "notes", label: "Note", required: false, aliases: ["notes", "note", "commenti"] },
 ];
 
 const ORDER_FIELDS = [
@@ -82,17 +82,20 @@ export default function DataImporter() {
       setFileColumns(cols);
       setRawData(json);
 
-      // Auto-map by similarity
+      // Auto-map by aliases (exact match on normalized column name)
       const autoMap: Record<string, string> = {};
+      const usedCols = new Set<string>();
       fields.forEach((f) => {
+        const aliases: string[] = (f as any).aliases || [f.label.toLowerCase()];
         const match = cols.find(
-          (c) =>
-            c.toLowerCase().replace(/[_\s]/g, "") ===
-            f.key.toLowerCase().replace(/[_\s]/g, "") ||
-            c.toLowerCase().includes(f.label.toLowerCase()) ||
-            f.label.toLowerCase().includes(c.toLowerCase())
+          (c) => !usedCols.has(c) && aliases.some(
+            (a) => c.toLowerCase().trim() === a.toLowerCase().trim()
+          )
         );
-        if (match) autoMap[f.key] = match;
+        if (match) {
+          autoMap[f.key] = match;
+          usedCols.add(match);
+        }
       });
       setMappings(autoMap);
       setStep("mapping");
