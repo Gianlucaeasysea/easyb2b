@@ -177,6 +177,41 @@ const AdminClientDetail = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const createDealerAccount = async () => {
+    if (!client?.email) { toast.error("Il cliente deve avere un'email"); return; }
+    setCreatingAccount(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          client_id: id,
+          email: client.email,
+          password: accountPassword,
+        }),
+      });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      toast.success("Account dealer creato!");
+      queryClient.invalidateQueries({ queryKey: ["admin-client", id] });
+      setShowCreateAccount(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setCreatingAccount(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(label);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
   const totalOrders = orders?.length || 0;
   const tier = discountTiers[form.discount_class] || discountTiers.D;
