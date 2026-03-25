@@ -440,6 +440,42 @@ export type Database = {
           },
         ]
       }
+      price_list_clients: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          price_list_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          price_list_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          price_list_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_list_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_clients_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_list_items: {
         Row: {
           custom_price: number
