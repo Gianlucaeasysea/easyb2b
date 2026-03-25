@@ -83,8 +83,9 @@ const AdminProductDetail = () => {
           technical_sheet_url: techSheetUrl || null,
           website_url: websiteUrl || null,
           gallery_images: galleryImages.filter(g => g.trim()),
+          lead_time: leadTime || null,
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq("id", detail!.id);
       if (error) throw error;
     },
