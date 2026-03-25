@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
+import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 
 const ORDER_PHASES = [
   { key: "confirmed", label: "Ordine Ricevuto", icon: CheckCircle },
@@ -331,6 +332,14 @@ const DealerOrders = () => {
                           ))}
                         </div>
                       )}
+                    </div>
+
+                    {/* Notification History */}
+                    <div className="px-5 py-4 border-t border-border bg-secondary/10">
+                      <h4 className="font-heading text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+                        <Bell size={14} /> Storico Notifiche
+                      </h4>
+                      <OrderEventsTimeline orderId={order.id} />
                     </div>
                   </div>
                 )}
