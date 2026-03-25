@@ -122,8 +122,11 @@ const ProductDetailModal = ({
                   </Badge>
                 )}
                 <p className={`text-sm font-heading font-semibold ${inStock ? "text-success" : "text-destructive"}`}>
-                  {inStock ? `${product.stock_quantity} in stock` : "Out of stock"}
+                  {inStock ? `${product.stock_quantity} in stock` : "Esaurito"}
                 </p>
+                {!inStock && detail?.lead_time && (
+                  <p className="text-xs text-muted-foreground mt-0.5">Rientro: {detail.lead_time}</p>
+                )}
               </div>
             </div>
 
