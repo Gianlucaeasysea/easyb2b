@@ -373,10 +373,11 @@ const AdminClientDetail = () => {
                 <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
                   <SelectTrigger className="mt-1 bg-secondary border-border rounded-lg"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="lead">Lead</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
+                    <SelectItem value="active">✅ Attivo</SelectItem>
+                    <SelectItem value="inactive">❌ Non Attivo</SelectItem>
+                    <SelectItem value="onboarding">🔄 In Attivazione</SelectItem>
+                    <SelectItem value="lead">📋 Lead</SelectItem>
+                    <SelectItem value="suspended">⛔ Sospeso</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
