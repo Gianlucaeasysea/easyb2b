@@ -218,7 +218,7 @@ const AdminClientDetail = () => {
 
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
   const totalOrders = orders?.length || 0;
-  const tier = discountTiers[form.discount_class] || discountTiers.D;
+  const tier = discountTiers?.find(t => t.name === form.discount_class) || { label: form.discount_class, discount_pct: 0 };
 
   const fmtDate = (d: string | null | undefined) => {
     if (!d) return "—";
