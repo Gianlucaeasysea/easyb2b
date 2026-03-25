@@ -144,6 +144,41 @@ export type Database = {
           },
         ]
       }
+      client_notification_preferences: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          enabled: boolean
+          id: string
+          notification_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          enabled?: boolean
+          id?: string
+          notification_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          enabled?: boolean
+          id?: string
+          notification_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_notification_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_shipping_addresses: {
         Row: {
           address_line: string | null

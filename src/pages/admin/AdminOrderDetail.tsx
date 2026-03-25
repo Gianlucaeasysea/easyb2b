@@ -57,6 +57,7 @@ const AdminOrderDetail = () => {
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
+  const [shippingCost, setShippingCost] = useState("");
 
   // Sync state when order loads
   const orderLoaded = order && !status;
@@ -65,6 +66,7 @@ const AdminOrderDetail = () => {
     setTrackingNumber(order.tracking_number || "");
     setTrackingUrl(order.tracking_url || "");
     setInternalNotes(order.internal_notes || "");
+    setShippingCost(String(Number((order as any).shipping_cost_client || 0)));
   }
 
   const handleSave = async () => {
@@ -77,10 +79,12 @@ const AdminOrderDetail = () => {
         tracking_number: trackingNumber || null,
         tracking_url: trackingUrl || null,
         internal_notes: internalNotes || null,
+        shipping_cost_client: parseFloat(shippingCost) || 0,
       }).eq("id", id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-new-orders"] });
       toast.success("Order updated");
 
       // Send email notification on status change
@@ -111,11 +115,13 @@ const AdminOrderDetail = () => {
   const items = (order.order_items || []) as any[];
   const currentStatus = order.status || "draft";
   const sc = statusConfig[currentStatus] || statusConfig.draft;
+  const productsTotal = Number(order.total_amount || 0);
+  const shippingVal = parseFloat(shippingCost) || 0;
 
   return (
     <div className="max-w-4xl">
-      <Button variant="ghost" size="sm" onClick={() => navigate("/admin/orders")} className="mb-4 text-muted-foreground gap-1.5">
-        <ArrowLeft size={14} /> Back to Orders
+      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-4 text-muted-foreground gap-1.5">
+        <ArrowLeft size={14} /> Indietro
       </Button>
 
       <div className="flex items-start justify-between mb-6">
@@ -135,7 +141,7 @@ const AdminOrderDetail = () => {
       {/* Order management */}
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         <div className="glass-card-solid p-5 space-y-4">
-          <h3 className="font-heading font-bold text-foreground text-sm">Order Management</h3>
+          <h3 className="font-heading font-bold text-foreground text-sm">Gestione Ordine</h3>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Status</label>
             <Select value={status} onValueChange={setStatus}>
@@ -150,6 +156,18 @@ const AdminOrderDetail = () => {
             </Select>
           </div>
           <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Costo Spedizione (€) — visibile al cliente</label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={shippingCost}
+              onChange={e => setShippingCost(e.target.value)}
+              className="bg-secondary border-border rounded-lg"
+              placeholder="0.00"
+            />
+          </div>
+          <div>
             <label className="text-xs text-muted-foreground mb-1 block">Tracking Number</label>
             <Input value={trackingNumber} onChange={e => setTrackingNumber(e.target.value)} className="bg-secondary border-border rounded-lg" placeholder="e.g. 1Z999AA10123456784" />
           </div>
@@ -158,35 +176,37 @@ const AdminOrderDetail = () => {
             <Input value={trackingUrl} onChange={e => setTrackingUrl(e.target.value)} className="bg-secondary border-border rounded-lg" placeholder="https://..." />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Internal Notes</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Note Interne</label>
             <Textarea value={internalNotes} onChange={e => setInternalNotes(e.target.value)} className="bg-secondary border-border rounded-lg resize-none" rows={3} />
           </div>
           <Button onClick={handleSave} disabled={saving} className="w-full bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "Salvataggio..." : "Salva Modifiche"}
           </Button>
         </div>
 
-        <div className="glass-card-solid p-5">
-          <h3 className="font-heading font-bold text-foreground text-sm mb-3">Client & Order Info</h3>
-          <div className="space-y-2 text-sm">
-            <p><span className="text-muted-foreground">Company:</span> {client?.company_name}</p>
-            <p><span className="text-muted-foreground">Contact:</span> {client?.contact_name || "—"}</p>
-            <p><span className="text-muted-foreground">Email:</span> {client?.email || "—"}</p>
-            <p><span className="text-muted-foreground">Country:</span> {client?.country || "—"}</p>
-          </div>
-          <div className="mt-3 pt-3 border-t border-border space-y-2 text-sm">
-            <p><span className="text-muted-foreground">Payment:</span> <Badge className={`border-0 text-[10px] ml-1 ${(order as any).payment_status === 'Payed' ? 'bg-success/20 text-success' : (order as any).payment_status === 'lost' ? 'bg-destructive/20 text-destructive' : 'bg-warning/20 text-warning'}`}>{(order as any).payment_status || "—"}</Badge></p>
-            <p><span className="text-muted-foreground">Shipping (client):</span> €{Number((order as any).shipping_cost_client || 0).toFixed(2)}</p>
-            <p><span className="text-muted-foreground">Payed Date:</span> {(order as any).payed_date || "—"}</p>
-            <p><span className="text-muted-foreground">Delivery Date:</span> {(order as any).delivery_date || "—"}</p>
-          </div>
-          {order.notes && (
-            <div className="mt-4 pt-3 border-t border-border">
-              <p className="text-xs text-muted-foreground mb-1">Customer Notes:</p>
-              <p className="text-sm text-foreground">{order.notes}</p>
+        <div className="space-y-6">
+          <div className="glass-card-solid p-5">
+            <h3 className="font-heading font-bold text-foreground text-sm mb-3">Info Cliente & Ordine</h3>
+            <div className="space-y-2 text-sm">
+              <p><span className="text-muted-foreground">Company:</span> {client?.company_name}</p>
+              <p><span className="text-muted-foreground">Contact:</span> {client?.contact_name || "—"}</p>
+              <p><span className="text-muted-foreground">Email:</span> {client?.email || "—"}</p>
+              <p><span className="text-muted-foreground">Country:</span> {client?.country || "—"}</p>
             </div>
-          )}
-          <div className="mt-4 pt-3 border-t border-border">
+            <div className="mt-3 pt-3 border-t border-border space-y-2 text-sm">
+              <p><span className="text-muted-foreground">Payment:</span> <Badge className={`border-0 text-[10px] ml-1 ${(order as any).payment_status === 'Payed' ? 'bg-success/20 text-success' : (order as any).payment_status === 'lost' ? 'bg-destructive/20 text-destructive' : 'bg-warning/20 text-warning'}`}>{(order as any).payment_status || "—"}</Badge></p>
+              <p><span className="text-muted-foreground">Payed Date:</span> {(order as any).payed_date || "—"}</p>
+              <p><span className="text-muted-foreground">Delivery Date:</span> {(order as any).delivery_date || "—"}</p>
+            </div>
+            {order.notes && (
+              <div className="mt-4 pt-3 border-t border-border">
+                <p className="text-xs text-muted-foreground mb-1">Note del Cliente:</p>
+                <p className="text-sm text-foreground">{order.notes}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="glass-card-solid p-5">
             <OrderDocuments orderId={order.id} />
           </div>
         </div>
@@ -221,16 +241,20 @@ const AdminOrderDetail = () => {
             )}
           </TableBody>
         </Table>
-        <div className="px-4 py-3 border-t border-border flex justify-between items-center">
-          <span className="text-xs text-muted-foreground">Products Total</span>
-          <span className="font-heading text-lg font-bold text-foreground">€{Number(order.total_amount || 0).toFixed(2)}</span>
-        </div>
-        {Number((order as any).shipping_cost_client || 0) > 0 && (
-          <div className="px-4 pb-3 flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">+ Shipping</span>
-            <span className="text-sm text-muted-foreground">€{Number((order as any).shipping_cost_client).toFixed(2)}</span>
+        <div className="px-4 py-3 border-t border-border space-y-1">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">Prodotti</span>
+            <span className="text-sm text-foreground">€{productsTotal.toFixed(2)}</span>
           </div>
-        )}
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">Spedizione</span>
+            <span className="text-sm text-foreground">{shippingVal > 0 ? `€${shippingVal.toFixed(2)}` : "Da calcolare"}</span>
+          </div>
+          <div className="flex justify-between items-center pt-2 border-t border-border">
+            <span className="text-sm font-heading font-bold text-foreground">Totale</span>
+            <span className="font-heading text-lg font-bold text-foreground">€{(productsTotal + shippingVal).toFixed(2)}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
