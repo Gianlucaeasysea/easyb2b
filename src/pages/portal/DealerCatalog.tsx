@@ -227,6 +227,8 @@ const DealerCatalog = () => {
                 const b2bPrice = plEntry?.customPrice ?? Number(p.price);
                 const discountPct = retailPrice > 0 ? Math.round((1 - b2bPrice / Number(p.price)) * 100) : 0;
                 const inStock = (p.stock_quantity ?? 0) > 0;
+                const detail = getDetailForProduct(p);
+                const leadTime = (detail as any)?.lead_time;
 
                 return (
                   <div
