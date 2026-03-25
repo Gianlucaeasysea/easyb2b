@@ -64,6 +64,7 @@ const AdminProductDetail = () => {
       setTechSheetUrl(detail.technical_sheet_url || "");
       setWebsiteUrl(detail.website_url || "");
       setGalleryImages((detail.gallery_images as string[]) || []);
+      setLeadTime((detail as any).lead_time || "");
     }
   }, [detail]);
 
