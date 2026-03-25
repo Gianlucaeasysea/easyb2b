@@ -107,16 +107,24 @@ serve(async (req) => {
       }
     }
 
-    // Send all emails via the transactional email system
+    // Send all emails via the transactional email system using direct fetch
+    // (supabase.functions.invoke doesn't forward auth correctly for edge-to-edge calls)
     const results = [];
     for (const send of sends) {
       try {
-        const { error } = await supabase.functions.invoke("send-transactional-email", {
-          body: send,
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
+            "apikey": SUPABASE_SERVICE_KEY,
+          },
+          body: JSON.stringify(send),
         });
-        if (error) {
-          console.error(`Failed to send ${send.templateName} to ${send.recipientEmail}:`, error);
-          results.push({ to: send.recipientEmail, template: send.templateName, status: "failed", error: String(error) });
+        const body = await res.text();
+        if (!res.ok) {
+          console.error(`Failed to send ${send.templateName} to ${send.recipientEmail}: ${res.status} ${body}`);
+          results.push({ to: send.recipientEmail, template: send.templateName, status: "failed", error: body });
         } else {
           results.push({ to: send.recipientEmail, template: send.templateName, status: "queued" });
         }
