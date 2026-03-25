@@ -260,8 +260,11 @@ const DealerCatalog = () => {
                             <p className="text-xs text-muted-foreground">Retail price</p>
                           </div>
                           <span className={`text-xs font-heading font-semibold ${inStock ? "text-success" : "text-destructive"}`}>
-                            {inStock ? "Available" : "Out of stock"}
+                            {inStock ? "Available" : "Esaurito"}
                           </span>
+                          {!inStock && leadTime && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Rientro: {leadTime}</p>
+                          )}
                         </div>
                       ) : (
                         <>
