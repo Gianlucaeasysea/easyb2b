@@ -54,6 +54,20 @@ const DealerProfile = () => {
     enabled: !!client,
   });
 
+  // Communications
+  const { data: communications } = useQuery({
+    queryKey: ["my-communications", client?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("client_communications")
+        .select("*")
+        .eq("client_id", client!.id)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+    enabled: !!client,
+  });
+
   // --- Contacts CRUD ---
   const [newContact, setNewContact] = useState({ contact_name: "", email: "", phone: "", role: "" });
 
