@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, MessageCircle, Search, Building2 } from "lucide-react";
+import { Phone, Mail, MessageCircle, Search, Building2, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
 const CRMContacts = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
 
   const { data: leads } = useQuery({
@@ -85,7 +87,9 @@ const CRMContacts = () => {
             </TableHeader>
             <TableBody>
               {allContacts.map(c => (
-                <TableRow key={`${c.type}-${c.id}`}>
+                <TableRow key={`${c.type}-${c.id}`} className="cursor-pointer hover:bg-secondary/50" onClick={() => {
+                    if (c.type === "client") navigate(`/crm/contacts/${c.id}`);
+                  }}>
                   <TableCell className="font-heading font-semibold">{c.company_name}</TableCell>
                   <TableCell>{c.contact_name}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">{c.email}</TableCell>
@@ -97,7 +101,7 @@ const CRMContacts = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                       {c.phone && (
                         <>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-success" onClick={() => openWhatsApp(c.phone!, c.contact_name || c.company_name)} title="WhatsApp">
@@ -113,6 +117,7 @@ const CRMContacts = () => {
                           <Mail size={16} />
                         </Button>
                       )}
+                      {c.type === "client" && <ChevronRight size={16} className="text-muted-foreground ml-1" />}
                     </div>
                   </TableCell>
                 </TableRow>
