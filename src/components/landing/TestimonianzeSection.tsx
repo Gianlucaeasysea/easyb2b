@@ -40,8 +40,8 @@ const VideoTestimonial = ({ url, type, vertical }: { url: string; type: string; 
   };
 
   const containerClass = vertical
-    ? "aspect-[9/16] h-[400px] md:h-[480px]"
-    : "aspect-video h-[250px] md:h-[300px]";
+    ? "aspect-[9/16] h-[380px] md:h-[440px]"
+    : "aspect-video h-[220px] md:h-[280px]";
 
   return (
     <div className={`relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 flex-shrink-0 ${containerClass}`}>
