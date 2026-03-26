@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Target, Activity, Phone } from "lucide-react";
+import { LayoutDashboard, Users, Target, Activity, Phone, HelpCircle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
