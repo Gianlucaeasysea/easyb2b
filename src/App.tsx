@@ -10,6 +10,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import BecomeADealer from "./pages/BecomeADealer";
+import GmailOAuthPopup from "./pages/GmailOAuthPopup";
 import NotFound from "./pages/NotFound";
 import Unsubscribe from "./pages/Unsubscribe";
 
@@ -68,6 +69,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/become-a-dealer" element={<BecomeADealer />} />
             <Route path="/diventa-distributore" element={<BecomeADealer />} />
+            <Route path="/oauth/gmail-popup" element={<GmailOAuthPopup />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
 
             {/* Dealer Portal */}

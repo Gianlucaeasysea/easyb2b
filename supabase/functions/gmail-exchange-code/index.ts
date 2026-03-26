@@ -23,6 +23,8 @@ function toOrigin(value: string | null) {
   }
 }
 
+const DEFAULT_APP_URL = 'https://easyb2b.lovable.app'
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -67,8 +69,14 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Missing redirect URI origin' }, 400)
   }
 
-  if (requestOrigin && requestOrigin !== redirectUri) {
-    return jsonResponse({ error: 'Redirect URI origin mismatch' }, 400)
+  const allowedOrigins = new Set(
+    [requestOrigin, toOrigin(Deno.env.get('APP_URL')), toOrigin(DEFAULT_APP_URL)].filter(
+      (value): value is string => Boolean(value)
+    )
+  )
+
+  if (!allowedOrigins.has(redirectUri)) {
+    return jsonResponse({ error: 'Redirect URI origin not allowed' }, 400)
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey)
