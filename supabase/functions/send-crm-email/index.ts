@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     })
   }
 
-  const { to, subject, html, text, client_id, order_id, template_type, bcc } = body
+  const { to, subject, html, text, client_id, order_id, template_type, bcc, cc } = body
 
   if (!to || !subject || (!html && !text)) {
     return new Response(JSON.stringify({ error: 'Missing required fields: to, subject, html/text' }), {
@@ -83,6 +83,7 @@ Deno.serve(async (req) => {
     await client.send({
       from: `EasySea <${GMAIL_USER}>`,
       to,
+      cc: cc || undefined,
       bcc: bcc || 'g.scotto@easysea.org',
       subject,
       content: text || '',
