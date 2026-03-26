@@ -1,98 +1,153 @@
 import { motion } from "framer-motion";
 import { Star, Play } from "lucide-react";
 import { useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-const TESTIMONIAL_VIDEOS = [
-  { url: "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial2.mp4", vertical: true },
-  { url: "https://irauraejdmkjkrbdudra.supabase.co/storage/v1/object/public/videos/testimonials/testimonial1.mp4", vertical: false },
-];
+type Testimonial = {
+  id: string;
+  video_url: string;
+  video_type: string;
+  is_vertical: boolean;
+  title: string;
+  client_name: string | null;
+};
 
-const testimonials = [
-  { name: "Thomas Berger", company: "Segelshop Hamburg, Germany", quote: "Easysea products sell themselves. The Flipper winch handle is our #1 bestseller — customers love it.", stars: 5 },
-  { name: "Sophie Martin", company: "Voiles & Mer, France", quote: "The B2B portal makes ordering effortless. Real-time stock, dedicated pricing, and fast shipping across Europe.", stars: 5 },
-  { name: "James Whitfield", company: "SailTech UK, United Kingdom", quote: "250+ 5-star reviews speak for themselves. Easysea delivers quality and innovation like no other brand.", stars: 5 },
-];
+const getEmbedUrl = (url: string, type: string) => {
+  if (type === "youtube") {
+    const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([^&?/]+)/);
+    return m ? `https://www.youtube.com/embed/${m[1]}?autoplay=1` : url;
+  }
+  if (type === "vimeo") {
+    const m = url.match(/vimeo\.com\/(\d+)/);
+    return m ? `https://player.vimeo.com/video/${m[1]}?autoplay=1` : url;
+  }
+  return url;
+};
 
-const VideoTestimonial = ({ url, vertical }: { url: string; vertical?: boolean }) => {
+const VideoTestimonial = ({ url, type, vertical }: { url: string; type: string; vertical?: boolean }) => {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isEmbed = type === "youtube" || type === "vimeo";
 
   const handlePlay = () => {
-    if (videoRef.current) {
+    if (isEmbed) {
+      setPlaying(true);
+    } else if (videoRef.current) {
       videoRef.current.play();
       setPlaying(true);
     }
   };
 
+  const containerClass = vertical
+    ? "aspect-[9/16] w-[260px] md:w-[300px]"
+    : "aspect-video w-full max-w-[560px]";
+
   return (
-    <div className={`relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 ${vertical ? "aspect-[9/16] h-[450px] md:h-[520px]" : "aspect-video h-[450px] md:h-[520px]"}`}>
-      <video
-        ref={videoRef}
-        src={url}
-        controls={playing}
-        playsInline
-        preload="metadata"
-        className="w-full h-full object-cover"
-        onEnded={() => setPlaying(false)}
-      />
-      {!playing && (
-        <button
-          onClick={handlePlay}
-          className="absolute inset-0 flex items-center justify-center bg-foreground/30 hover:bg-foreground/40 transition-colors cursor-pointer"
-        >
-          <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-            <Play size={32} className="text-primary-foreground ml-1" />
+    <div className={`relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 flex-shrink-0 ${containerClass}`}>
+      {isEmbed ? (
+        playing ? (
+          <iframe
+            src={getEmbedUrl(url, type)}
+            className="w-full h-full"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+          />
+        ) : (
+          <div className="w-full h-full bg-muted flex items-center justify-center">
+            <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/20 hover:bg-foreground/30 transition-colors cursor-pointer">
+              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                <Play size={32} className="text-primary-foreground ml-1" />
+              </div>
+            </button>
           </div>
-        </button>
+        )
+      ) : (
+        <>
+          <video
+            ref={videoRef}
+            src={url}
+            controls={playing}
+            playsInline
+            preload="metadata"
+            className="w-full h-full object-cover"
+            onEnded={() => setPlaying(false)}
+          />
+          {!playing && (
+            <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/30 hover:bg-foreground/40 transition-colors cursor-pointer">
+              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                <Play size={32} className="text-primary-foreground ml-1" />
+              </div>
+            </button>
+          )}
+        </>
       )}
     </div>
   );
 };
 
-const VideoTestimonials = () => (
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    className="mb-16 flex flex-col md:flex-row items-center justify-center gap-6 max-w-5xl mx-auto"
-  >
-    {TESTIMONIAL_VIDEOS.map((v, i) => (
-      <VideoTestimonial key={i} url={v.url} vertical={v.vertical} />
-    ))}
-  </motion.div>
-);
+const textTestimonials = [
+  { name: "Thomas Berger", company: "Segelshop Hamburg, Germany", quote: "Easysea products sell themselves. The Flipper winch handle is our #1 bestseller — customers love it.", stars: 5 },
+  { name: "Sophie Martin", company: "Voiles & Mer, France", quote: "The B2B portal makes ordering effortless. Real-time stock, dedicated pricing, and fast shipping across Europe.", stars: 5 },
+  { name: "James Whitfield", company: "SailTech UK, United Kingdom", quote: "250+ 5-star reviews speak for themselves. Easysea delivers quality and innovation like no other brand.", stars: 5 },
+];
 
-const TestimonialsSection = () => (
-  <section id="partners" className="py-28 section-alt">
-    <div className="container mx-auto px-4">
-      <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-20">
-        <p className="text-xs uppercase tracking-[0.3em] text-primary font-heading font-semibold mb-4">Trusted worldwide</p>
-        <h2 className="font-heading text-3xl md:text-5xl font-bold text-foreground">What our dealers say</h2>
-      </motion.div>
+const TestimonialsSection = () => {
+  const { data: videos } = useQuery({
+    queryKey: ["landing-testimonials"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("testimonials")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+      return (data || []) as Testimonial[];
+    },
+  });
 
-      {/* Video Testimonials */}
-      <VideoTestimonials />
+  return (
+    <section id="partners" className="py-28 section-alt">
+      <div className="container mx-auto px-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-20">
+          <p className="text-xs uppercase tracking-[0.3em] text-primary font-heading font-semibold mb-4">Trusted worldwide</p>
+          <h2 className="font-heading text-3xl md:text-5xl font-bold text-foreground">What our dealers say</h2>
+        </motion.div>
 
-      {/* Text Testimonials */}
-      <div className="grid md:grid-cols-3 gap-6">
-        {testimonials.map((t, i) => (
-          <motion.div key={t.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }}
-            className="glass-card-solid p-8 hover:border-primary/30 transition-colors">
-            <div className="flex gap-0.5 mb-5">
-              {Array.from({ length: t.stars }).map((_, j) => (
-                <Star key={j} size={14} className="fill-warning text-warning" />
-              ))}
-            </div>
-            <p className="text-foreground/80 text-sm italic mb-6 leading-relaxed">"{t.quote}"</p>
-            <div>
-              <p className="font-heading text-sm font-bold text-foreground">{t.name}</p>
-              <p className="text-xs text-muted-foreground">{t.company}</p>
-            </div>
+        {/* Video Testimonials */}
+        {videos && videos.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-16 flex flex-wrap items-center justify-center gap-6"
+          >
+            {videos.map((v) => (
+              <VideoTestimonial key={v.id} url={v.video_url} type={v.video_type} vertical={v.is_vertical} />
+            ))}
           </motion.div>
-        ))}
+        )}
+
+        {/* Text Testimonials */}
+        <div className="grid md:grid-cols-3 gap-6">
+          {textTestimonials.map((t, i) => (
+            <motion.div key={t.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }}
+              className="glass-card-solid p-8 hover:border-primary/30 transition-colors">
+              <div className="flex gap-0.5 mb-5">
+                {Array.from({ length: t.stars }).map((_, j) => (
+                  <Star key={j} size={14} className="fill-warning text-warning" />
+                ))}
+              </div>
+              <p className="text-foreground/80 text-sm italic mb-6 leading-relaxed">"{t.quote}"</p>
+              <div>
+                <p className="font-heading text-sm font-bold text-foreground">{t.name}</p>
+                <p className="text-xs text-muted-foreground">{t.company}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 export default TestimonialsSection;
