@@ -202,7 +202,72 @@ const AdminClientDetail = () => {
     enabled: !!id,
   });
 
-  const [form, setForm] = useState({
+  const DOC_CATEGORIES = [
+    { value: "contract", label: "Contract" },
+    { value: "price_list", label: "Price List (PDF)" },
+    { value: "marketing", label: "Marketing Material" },
+    { value: "certificate", label: "Certificate" },
+    { value: "other", label: "Other" },
+  ];
+
+  const { data: clientDocs } = useQuery({
+    queryKey: ["admin-client-documents", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("client_documents")
+        .select("*")
+        .eq("client_id", id!)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingDoc(true);
+    try {
+      const filePath = `${id}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("client-documents").upload(filePath, file);
+      if (upErr) throw upErr;
+      const { error: dbErr } = await supabase.from("client_documents").insert({
+        client_id: id!,
+        title: docTitle.trim() || file.name,
+        file_name: file.name,
+        file_path: filePath,
+        doc_category: docCategory,
+        uploaded_by: user.id,
+      });
+      if (dbErr) throw dbErr;
+      queryClient.invalidateQueries({ queryKey: ["admin-client-documents", id] });
+      toast.success("Document uploaded");
+      setDocTitle("");
+    } catch (err: any) {
+      toast.error("Upload failed: " + err.message);
+    } finally {
+      setUploadingDoc(false);
+      if (docInputRef.current) docInputRef.current.value = "";
+    }
+  };
+
+  const deleteDoc = async (doc: any) => {
+    try {
+      await supabase.storage.from("client-documents").remove([doc.file_path]);
+      await supabase.from("client_documents").delete().eq("id", doc.id);
+      queryClient.invalidateQueries({ queryKey: ["admin-client-documents", id] });
+      toast.success("Document deleted");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const getDocUrl = (filePath: string) => {
+    const { data } = supabase.storage.from("client-documents").getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+
     company_name: "", contact_name: "", email: "", phone: "", country: "", zone: "",
     status: "", discount_class: "", notes: "", address: "", website: "", business_type: "", vat_number: "",
   });
