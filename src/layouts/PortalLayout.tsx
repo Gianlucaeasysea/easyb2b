@@ -15,6 +15,20 @@ import logo from "@/assets/easysea-logo.png";
 const PortalHeader = () => {
   const { signOut, user } = useAuth();
   const { isClientMode, toggleClientMode } = useClientMode();
+  const navigate = useNavigate();
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["unread-notifications-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("client_notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("read", false);
+      if (error) return 0;
+      return count || 0;
+    },
+    refetchInterval: 30000,
+  });
 
   return (
     <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
