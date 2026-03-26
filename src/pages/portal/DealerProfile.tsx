@@ -54,7 +54,7 @@ const DealerProfile = () => {
     enabled: !!client,
   });
 
-  // Communications
+  // Communications — only show transactional notifications sent to this client
   const { data: communications } = useQuery({
     queryKey: ["my-communications", client?.id],
     queryFn: async () => {
@@ -62,6 +62,8 @@ const DealerProfile = () => {
         .from("client_communications")
         .select("*")
         .eq("client_id", client!.id)
+        .eq("direction", "outbound")
+        .neq("template_type", "custom")
         .order("created_at", { ascending: false });
       return data || [];
     },
