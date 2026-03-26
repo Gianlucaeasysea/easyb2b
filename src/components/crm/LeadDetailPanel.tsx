@@ -170,9 +170,24 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
                 </span>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={startEdit} className="h-8 w-8">
-              <Edit2 size={14} />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" onClick={startEdit} className="h-8 w-8">
+                <Edit2 size={14} />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => {
+                if (confirm(`Eliminare il lead "${lead.company_name}"?`)) {
+                  supabase.from("activities").delete().eq("lead_id", lead.id).then(() => {
+                    supabase.from("leads").delete().eq("id", lead.id).then(() => {
+                      queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
+                      toast({ title: "Lead eliminato" });
+                      onClose();
+                    });
+                  });
+                }
+              }}>
+                <Trash2 size={14} />
+              </Button>
+            </div>
           </div>
 
           {/* Quick actions */}
