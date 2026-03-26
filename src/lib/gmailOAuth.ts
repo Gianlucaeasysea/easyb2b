@@ -1,6 +1,41 @@
-const GOOGLE_IDENTITY_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
+type GoogleOAuthError = {
+  type: "popup_failed_to_open" | "popup_closed" | "unknown";
+};
 
-// Public OAuth client IDs are safe to ship in frontend code.
+type GoogleCodeResponse = {
+  code?: string;
+  scope?: string;
+  state?: string;
+  error?: string;
+  error_description?: string;
+  error_uri?: string;
+};
+
+type GoogleCodeClient = {
+  requestCode: () => void;
+};
+
+type GoogleCodeClientConfig = {
+  client_id: string;
+  scope: string;
+  callback: (response: GoogleCodeResponse) => void;
+  error_callback?: (error: GoogleOAuthError) => void;
+  ux_mode?: "popup" | "redirect";
+  login_hint?: string;
+  prompt?: string;
+  select_account?: boolean;
+  include_granted_scopes?: boolean;
+};
+
+type GoogleIdentityServices = {
+  accounts: {
+    oauth2: {
+      initCodeClient: (config: GoogleCodeClientConfig) => GoogleCodeClient;
+    };
+  };
+};
+
+const GOOGLE_IDENTITY_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
 const GOOGLE_CLIENT_ID = "495157225927-5vl858qj6audau88lafer0d2hq69e0aj.apps.googleusercontent.com";
 const GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 
@@ -18,7 +53,9 @@ function getPopupErrorMessage(error: GoogleOAuthError) {
 }
 
 export async function loadGoogleIdentityScript() {
-  if (window.google?.accounts?.oauth2) {
+  const googleWindow = window as Window & { google?: GoogleIdentityServices };
+
+  if (googleWindow.google?.accounts?.oauth2) {
     return;
   }
 
@@ -44,7 +81,7 @@ export async function loadGoogleIdentityScript() {
 
   await googleIdentityScriptPromise;
 
-  if (!window.google?.accounts?.oauth2) {
+  if (!googleWindow.google?.accounts?.oauth2) {
     throw new Error("Google Identity Services non è disponibile nella pagina.");
   }
 }
@@ -53,7 +90,8 @@ export async function requestGmailAuthorizationCode(loginHint = "business@easyse
   await loadGoogleIdentityScript();
 
   return await new Promise<string>((resolve, reject) => {
-    const googleOauth = window.google?.accounts?.oauth2;
+    const googleWindow = window as Window & { google?: GoogleIdentityServices };
+    const googleOauth = googleWindow.google?.accounts?.oauth2;
 
     if (!googleOauth) {
       reject(new Error("Google Identity Services non è disponibile."));
