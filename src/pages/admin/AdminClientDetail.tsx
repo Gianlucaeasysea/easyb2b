@@ -1066,6 +1066,78 @@ const AdminClientDetail = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Manual Order Dialog */}
+      <Dialog open={showCreateOrder} onOpenChange={setShowCreateOrder}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="font-heading">Crea Ordine Manuale</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Crea un ordine manuale per <strong>{client?.company_name}</strong></p>
+            
+            {/* Product selection */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase">Aggiungi Prodotti</Label>
+              <Select onValueChange={v => {
+                const prod = products?.find(p => p.id === v);
+                if (prod && !orderItems.find(i => i.product_id === v)) {
+                  setOrderItems(prev => [...prev, { product_id: v, quantity: 1, unit_price: Number(prod.price || 0) }]);
+                }
+              }}>
+                <SelectTrigger className="bg-secondary border-border rounded-lg"><SelectValue placeholder="Seleziona prodotto..." /></SelectTrigger>
+                <SelectContent>
+                  {products?.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name} {p.sku ? `(${p.sku})` : ""} — €{Number(p.price || 0).toFixed(2)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {orderItems.length > 0 && (
+              <div className="space-y-2">
+                {orderItems.map((item, idx) => {
+                  const prod = products?.find(p => p.id === item.product_id);
+                  return (
+                    <div key={idx} className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{prod?.name}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono">{prod?.sku}</p>
+                      </div>
+                      <Input
+                        type="number" min={1} value={item.quantity}
+                        onChange={e => setOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: parseInt(e.target.value) || 1 } : it))}
+                        className="w-16 h-8 text-sm bg-background border-border rounded-lg text-center"
+                      />
+                      <Input
+                        type="number" min={0} step={0.01} value={item.unit_price}
+                        onChange={e => setOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, unit_price: parseFloat(e.target.value) || 0 } : it))}
+                        className="w-24 h-8 text-sm bg-background border-border rounded-lg"
+                        placeholder="€"
+                      />
+                      <span className="text-sm font-mono w-20 text-right">€{(item.unit_price * item.quantity).toFixed(2)}</span>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => setOrderItems(prev => prev.filter((_, i) => i !== idx))}>
+                        <X size={12} />
+                      </Button>
+                    </div>
+                  );
+                })}
+                <div className="flex justify-between pt-2 border-t border-border">
+                  <span className="text-sm font-heading font-bold">Totale</span>
+                  <span className="text-sm font-heading font-bold">€{orderItems.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <Label className="text-xs text-muted-foreground">Note</Label>
+              <Textarea value={newOrderNotes} onChange={e => setNewOrderNotes(e.target.value)} className="mt-1 bg-secondary border-border rounded-lg" placeholder="Note ordine..." rows={2} />
+            </div>
+
+            <Button onClick={createManualOrder} disabled={creatingOrder || orderItems.length === 0} className="w-full gap-1 bg-foreground text-background">
+              <PackagePlus size={14} /> {creatingOrder ? "Creazione..." : "Crea Ordine"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
