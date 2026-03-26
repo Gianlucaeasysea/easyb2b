@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Target, Activity, Phone } from "lucide-react";
+import { LayoutDashboard, Users, Target, Activity, Phone, HelpCircle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -12,6 +12,7 @@ const items = [
   { title: "Pipeline", url: "/crm/pipeline", icon: Target },
   { title: "Activities", url: "/crm/activities", icon: Activity },
   { title: "Contacts", url: "/crm/contacts", icon: Phone },
+  { title: "How To", url: "/crm/help", icon: HelpCircle },
 ];
 
 export function CRMSidebar() {

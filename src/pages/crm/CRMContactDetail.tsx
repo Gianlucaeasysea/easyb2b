@@ -281,11 +281,14 @@ const CRMContactDetail = () => {
                     size="sm" className="h-6 text-xs" disabled={savingNotes}
                     onClick={async () => {
                       setSavingNotes(true);
-                      const { error } = await supabase.from("clients").update({ notes: notesValue.trim() || null }).eq("id", id!);
+                      const trimmed = notesValue.trim() || null;
+                      const { error } = await supabase.from("clients").update({ notes: trimmed }).eq("id", id!);
                       setSavingNotes(false);
                       if (error) { toast.error("Errore salvataggio"); return; }
                       toast.success("Note salvate");
                       setEditingNotes(false);
+                      // Force immediate cache update so UI reflects new notes
+                      queryClient.setQueryData(["crm-client", id], (old: any) => old ? { ...old, notes: trimmed } : old);
                       queryClient.invalidateQueries({ queryKey: ["crm-client", id] });
                     }}
                   >

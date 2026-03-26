@@ -53,6 +53,7 @@ import CRMPipeline from "./pages/crm/CRMPipeline";
 import CRMActivities from "./pages/crm/CRMActivities";
 import CRMContacts from "./pages/crm/CRMContacts";
 import CRMContactDetail from "./pages/crm/CRMContactDetail";
+import CRMHelp from "./pages/crm/CRMHelp";
 
 const queryClient = new QueryClient();
 
@@ -123,6 +124,7 @@ const App = () => (
               <Route path="activities" element={<CRMActivities />} />
               <Route path="contacts" element={<CRMContacts />} />
               <Route path="contacts/:id" element={<CRMContactDetail />} />
+              <Route path="help" element={<CRMHelp />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
