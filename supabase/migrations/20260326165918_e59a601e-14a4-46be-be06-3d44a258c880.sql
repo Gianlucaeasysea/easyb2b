@@ -1,0 +1,1 @@
+DELETE FROM leads a USING leads b WHERE a.id > b.id AND a.company_name = b.company_name AND COALESCE(a.email,'') = COALESCE(b.email,'');
