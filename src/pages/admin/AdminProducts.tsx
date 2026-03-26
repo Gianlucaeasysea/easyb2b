@@ -81,6 +81,7 @@ const AdminProducts = () => {
         shopify_id: v.shopify_variant_id,
         name: v.variant_title,
         sku: v.sku,
+        barcode: v.barcode || null,
         price: v.price,
         compare_at_price: v.compare_at_price,
         stock_quantity: v.inventory_quantity,

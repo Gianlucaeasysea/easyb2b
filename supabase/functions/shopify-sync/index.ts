@@ -77,6 +77,7 @@ serve(async (req) => {
         product_title: p.title,
         variant_title: v.title === "Default Title" ? p.title : `${p.title} - ${v.title}`,
         sku: v.sku || "",
+        barcode: v.barcode || null,
         price: parseFloat(v.price) || 0,
         compare_at_price: v.compare_at_price ? parseFloat(v.compare_at_price) : null,
         inventory_quantity: v.inventory_quantity || 0,
