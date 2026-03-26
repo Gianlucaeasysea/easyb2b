@@ -2,6 +2,24 @@ type GoogleOAuthError = {
   type: "popup_failed_to_open" | "popup_closed" | "unknown";
 };
 
+type GmailOAuthPopupMessage =
+  | {
+      source: "gmail-oauth-popup";
+      type: "success";
+      code: string;
+      redirectUri: string;
+    }
+  | {
+      source: "gmail-oauth-popup";
+      type: "error";
+      message: string;
+    };
+
+export type GmailAuthorizationCodeResult = {
+  code: string;
+  redirectUri: string;
+};
+
 type GoogleCodeResponse = {
   code?: string;
   scope?: string;
@@ -38,6 +56,7 @@ type GoogleIdentityServices = {
 const GOOGLE_IDENTITY_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
 const GOOGLE_CLIENT_ID = "495157225927-5vl858qj6audau88lafer0d2hq69e0aj.apps.googleusercontent.com";
 const GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+export const GMAIL_POPUP_BRIDGE_URL = "https://easyb2b.lovable.app/oauth/gmail-popup";
 
 let googleIdentityScriptPromise: Promise<void> | null = null;
 
@@ -86,7 +105,35 @@ export async function loadGoogleIdentityScript() {
   }
 }
 
-export async function requestGmailAuthorizationCode(loginHint = "business@easysea.org") {
+function getPopupFeatures() {
+  const width = 560;
+  const height = 720;
+  const left = window.screenX + Math.max(0, (window.outerWidth - width) / 2);
+  const top = window.screenY + Math.max(0, (window.outerHeight - height) / 2);
+
+  return [
+    "popup=yes",
+    `width=${width}`,
+    `height=${height}`,
+    `left=${Math.round(left)}`,
+    `top=${Math.round(top)}`,
+    "resizable=yes",
+    "scrollbars=yes",
+  ].join(",");
+}
+
+function isPopupMessage(value: unknown): value is GmailOAuthPopupMessage {
+  if (!value || typeof value !== "object") return false;
+
+  const message = value as Partial<GmailOAuthPopupMessage>;
+  return message.source === "gmail-oauth-popup" && (message.type === "success" || message.type === "error");
+}
+
+function getPopupBridgeOrigin() {
+  return new URL(GMAIL_POPUP_BRIDGE_URL).origin;
+}
+
+export async function requestGmailAuthorizationCodeOnCurrentOrigin(loginHint = "business@easysea.org") {
   await loadGoogleIdentityScript();
 
   return await new Promise<string>((resolve, reject) => {
@@ -125,4 +172,68 @@ export async function requestGmailAuthorizationCode(loginHint = "business@easyse
 
     client.requestCode();
   });
+}
+
+function requestGmailAuthorizationCodeFromPublishedBridge(loginHint: string) {
+  return new Promise<GmailAuthorizationCodeResult>((resolve, reject) => {
+    const popupBridgeUrl = new URL(GMAIL_POPUP_BRIDGE_URL);
+    popupBridgeUrl.searchParams.set("targetOrigin", window.location.origin);
+    popupBridgeUrl.searchParams.set("loginHint", loginHint);
+
+    const popup = window.open(popupBridgeUrl.toString(), "gmail-oauth-popup", getPopupFeatures());
+
+    if (!popup) {
+      reject(new Error(getPopupErrorMessage({ type: "popup_failed_to_open" })));
+      return;
+    }
+
+    const allowedOrigin = getPopupBridgeOrigin();
+
+    const cleanup = () => {
+      window.removeEventListener("message", handleMessage);
+      window.clearInterval(closeWatcher);
+    };
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== allowedOrigin || !isPopupMessage(event.data)) {
+        return;
+      }
+
+      cleanup();
+
+      if (!popup.closed) {
+        popup.close();
+      }
+
+      if (event.data.type === "success") {
+        resolve({
+          code: event.data.code,
+          redirectUri: event.data.redirectUri,
+        });
+        return;
+      }
+
+      reject(new Error(event.data.message || "Errore durante l'autorizzazione Google."));
+    };
+
+    const closeWatcher = window.setInterval(() => {
+      if (!popup.closed) return;
+      cleanup();
+      reject(new Error(getPopupErrorMessage({ type: "popup_closed" })));
+    }, 500);
+
+    window.addEventListener("message", handleMessage);
+  });
+}
+
+export async function requestGmailAuthorizationCode(loginHint = "business@easysea.org"): Promise<GmailAuthorizationCodeResult> {
+  if (window.location.origin === getPopupBridgeOrigin()) {
+    const code = await requestGmailAuthorizationCodeOnCurrentOrigin(loginHint);
+    return {
+      code,
+      redirectUri: window.location.origin,
+    };
+  }
+
+  return requestGmailAuthorizationCodeFromPublishedBridge(loginHint);
 }

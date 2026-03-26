@@ -79,18 +79,17 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail }: Clie
     setConnectingGmail(true);
 
     try {
+      const { code, redirectUri } = await requestGmailAuthorizationCode("business@easysea.org");
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.access_token) {
         throw new Error("Sessione non valida. Effettua di nuovo l'accesso.");
       }
 
-      const authorizationCode = await requestGmailAuthorizationCode("business@easysea.org");
-
       const { data, error } = await supabase.functions.invoke("gmail-exchange-code", {
         body: {
-          code: authorizationCode,
-          redirectUri: window.location.origin,
+          code,
+          redirectUri,
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
