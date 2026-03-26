@@ -132,6 +132,9 @@ const AdminClientDetail = () => {
   const [docTitle, setDocTitle] = useState("");
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const docInputRef = useRef<HTMLInputElement>(null);
+  const [showCreateOrder, setShowCreateOrder] = useState(false);
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [newOrderNotes, setNewOrderNotes] = useState("");
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["admin-client", id],
