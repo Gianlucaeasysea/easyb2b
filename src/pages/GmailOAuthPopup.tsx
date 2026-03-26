@@ -38,7 +38,7 @@ const GmailOAuthPopup = () => {
 
     const run = async () => {
       try {
-        const code = await requestGmailAuthorizationCodeOnCurrentOrigin(searchParams.get("loginHint") ?? "business@easysea.org");
+        const code = await requestGmailAuthorizationCodeOnCurrentOrigin(searchParams.get("loginHint") || undefined);
 
         if (cancelled) return;
 
