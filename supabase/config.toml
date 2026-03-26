@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.generate-email-draft]
 verify_jwt = false
+
+[functions.gmail-oauth-callback]
+verify_jwt = false
+
+[functions.gmail-sync-inbox]
+verify_jwt = false
