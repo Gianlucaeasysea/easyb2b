@@ -2,12 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Send, Clock, AlertCircle, Inbox, ArrowUpRight, ArrowDownLeft, RefreshCw, Link2 } from "lucide-react";
+import { Mail, Send, Clock, AlertCircle, Inbox, ArrowUpRight, ArrowDownLeft, RefreshCw, Link2, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ComposeEmailDialog } from "./ComposeEmailDialog";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 
 interface ClientCommunicationsProps {
   clientId: string;
@@ -25,6 +26,23 @@ const templateLabels: Record<string, string> = {
 export const ClientCommunications = ({ clientId, clientName, clientEmail }: ClientCommunicationsProps) => {
   const [composeOpen, setComposeOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Handle Gmail OAuth redirect status
+  useEffect(() => {
+    const gmailStatus = searchParams.get("gmail_status");
+    if (gmailStatus === "success") {
+      toast.success("Gmail collegato con successo! Ora puoi sincronizzare le email.");
+      searchParams.delete("gmail_status");
+      setSearchParams(searchParams, { replace: true });
+    } else if (gmailStatus === "error") {
+      const errorMsg = searchParams.get("gmail_error") || "Errore sconosciuto";
+      toast.error(`Errore collegamento Gmail: ${errorMsg}`);
+      searchParams.delete("gmail_status");
+      searchParams.delete("gmail_error");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data: communications, isLoading, refetch } = useQuery({
     queryKey: ["client-communications", clientId],
@@ -39,13 +57,19 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail }: Clie
     },
   });
 
+  // Real check: is Gmail connected?
   const { data: gmailConnected } = useQuery({
     queryKey: ["gmail-connected"],
     queryFn: async () => {
-      // Check if gmail tokens exist by trying sync (will return needs_auth if not)
-      return true; // We'll check on sync
+      const { data, error } = await supabase
+        .from("gmail_tokens")
+        .select("id, expires_at")
+        .eq("email", "business@easysea.org")
+        .maybeSingle();
+      if (error) return false;
+      return !!data;
     },
-    staleTime: Infinity,
+    staleTime: 30000,
   });
 
   const handleSync = async () => {
@@ -77,7 +101,6 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail }: Clie
 
   const handleConnectGmail = () => {
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    // Navigate directly instead of popup to avoid ERR_BLOCKED_BY_RESPONSE
     window.location.href = `https://${projectId}.supabase.co/functions/v1/gmail-oauth-callback`;
   };
 
@@ -88,19 +111,25 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail }: Clie
           <Mail size={16} /> Comunicazioni
         </h3>
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleConnectGmail}
-            className="gap-1 text-xs"
-          >
-            <Link2 size={12} /> Collega Gmail
-          </Button>
+          {gmailConnected ? (
+            <Badge variant="outline" className="text-[10px] gap-1 border-green-500/30 text-green-600">
+              <CheckCircle2 size={10} /> Gmail connesso
+            </Badge>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleConnectGmail}
+              className="gap-1 text-xs"
+            >
+              <Link2 size={12} /> Collega Gmail
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
             onClick={handleSync}
-            disabled={syncing}
+            disabled={syncing || !gmailConnected}
             className="gap-1 text-xs"
           >
             <RefreshCw size={12} className={syncing ? "animate-spin" : ""} />
@@ -117,6 +146,14 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail }: Clie
         </div>
       </div>
 
+      {!gmailConnected && (
+        <div className="p-3 bg-muted/50 border border-border rounded-lg">
+          <p className="text-xs text-muted-foreground">
+            📧 Gmail non ancora collegato. Clicca "Collega Gmail" per abilitare la sincronizzazione delle email in entrata.
+          </p>
+        </div>
+      )}
+
       {!clientEmail && (
         <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
           <p className="text-xs text-warning">⚠️ Il cliente non ha un indirizzo email configurato</p>
@@ -129,7 +166,11 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail }: Clie
         <div className="p-8 text-center text-muted-foreground">
           <Mail size={32} className="mx-auto mb-2 opacity-30" />
           <p className="text-sm">Nessuna comunicazione</p>
-          <p className="text-xs mt-1">Clicca "Sincronizza" per importare le email ricevute</p>
+          <p className="text-xs mt-1">
+            {gmailConnected
+              ? 'Clicca "Sincronizza" per importare le email ricevute'
+              : 'Collega Gmail per importare le email ricevute'}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
