@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { getGmailOAuthConfig } from '../_shared/gmail-oauth-config.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +9,17 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
+  }
+
+  let oauthConfig
+  try {
+    oauthConfig = getGmailOAuthConfig()
+  } catch (error) {
+    console.error('Missing Gmail OAuth config:', error)
+    return new Response(
+      `<html><body><h2>Configurazione Gmail incompleta</h2><p>Mancano le credenziali OAuth necessarie per collegare Gmail.</p></body></html>`,
+      { headers: { 'Content-Type': 'text/html' }, status: 500 }
+    )
   }
 
   const url = new URL(req.url)
@@ -22,13 +34,11 @@ Deno.serve(async (req) => {
 
   if (!code) {
     // Start OAuth flow
-    const clientId = Deno.env.get('GOOGLE_CLIENT_ID')!
-    const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/gmail-oauth-callback`
     const scope = 'https://www.googleapis.com/auth/gmail.readonly'
     
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
-    authUrl.searchParams.set('client_id', clientId)
-    authUrl.searchParams.set('redirect_uri', redirectUri)
+    authUrl.searchParams.set('client_id', oauthConfig.clientId)
+    authUrl.searchParams.set('redirect_uri', oauthConfig.redirectUri)
     authUrl.searchParams.set('response_type', 'code')
     authUrl.searchParams.set('scope', scope)
     authUrl.searchParams.set('access_type', 'offline')
@@ -39,18 +49,14 @@ Deno.serve(async (req) => {
   }
 
   // Exchange code for tokens
-  const clientId = Deno.env.get('GOOGLE_CLIENT_ID')!
-  const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')!
-  const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/gmail-oauth-callback`
-
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
+      client_id: oauthConfig.clientId,
+      client_secret: oauthConfig.clientSecret,
+      redirect_uri: oauthConfig.redirectUri,
       grant_type: 'authorization_code',
     }),
   })

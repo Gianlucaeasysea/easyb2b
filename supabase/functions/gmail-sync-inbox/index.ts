@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { getGmailOAuthConfig } from '../_shared/gmail-oauth-config.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,8 +11,7 @@ async function refreshTokenIfNeeded(supabase: any, tokenRow: any): Promise<strin
     return tokenRow.access_token
   }
 
-  const clientId = Deno.env.get('GOOGLE_CLIENT_ID')!
-  const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')!
+  const { clientId, clientSecret } = getGmailOAuthConfig()
 
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
