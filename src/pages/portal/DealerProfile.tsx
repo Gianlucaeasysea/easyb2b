@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, MapPin, Building2, Plus, Trash2, Save, CreditCard, Mail, ArrowUpRight, ArrowDownLeft, Clock } from "lucide-react";
+import { User, MapPin, Building2, Plus, Trash2, Save, CreditCard, Mail, ArrowUpRight, ArrowDownLeft, Clock, FileText, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -67,6 +67,33 @@ const DealerProfile = () => {
     },
     enabled: !!client,
   });
+
+  // Client documents
+  const { data: clientDocs } = useQuery({
+    queryKey: ["my-client-documents", client?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("client_documents")
+        .select("*")
+        .eq("client_id", client!.id)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+    enabled: !!client,
+  });
+
+  const DOC_CATEGORIES: Record<string, string> = {
+    contract: "Contract",
+    price_list: "Price List",
+    marketing: "Marketing Material",
+    certificate: "Certificate",
+    other: "Other",
+  };
+
+  const getDocUrl = (filePath: string) => {
+    const { data } = supabase.storage.from("client-documents").getPublicUrl(filePath);
+    return data.publicUrl;
+  };
 
   // --- Contacts CRUD ---
   const [newContact, setNewContact] = useState({ contact_name: "", email: "", phone: "", role: "" });
@@ -160,6 +187,7 @@ const DealerProfile = () => {
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="mb-6 bg-secondary">
           <TabsTrigger value="profile" className="gap-1.5 text-xs"><Building2 size={14} /> Profile</TabsTrigger>
+          <TabsTrigger value="documents" className="gap-1.5 text-xs"><FileText size={14} /> Documents ({clientDocs?.length || 0})</TabsTrigger>
           <TabsTrigger value="communications" className="gap-1.5 text-xs"><Mail size={14} /> Communications ({communications?.length || 0})</TabsTrigger>
         </TabsList>
 
@@ -331,6 +359,53 @@ const DealerProfile = () => {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="documents">
+          <div className="glass-card-solid p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <FileText size={16} className="text-primary" />
+              <h2 className="font-heading font-bold text-foreground text-sm">Downloadable Documents</h2>
+              <Badge variant="outline" className="text-[10px]">{clientDocs?.length || 0} files</Badge>
+            </div>
+            {!clientDocs?.length ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <FileText size={36} className="mx-auto mb-3 opacity-30" />
+                <p className="text-sm">No documents available yet.</p>
+                <p className="text-xs mt-1">Contracts, price lists, and marketing materials will appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {clientDocs.map((doc: any) => (
+                  <a
+                    key={doc.id}
+                    href={getDocUrl(doc.file_path)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between bg-secondary/50 rounded-lg px-4 py-3 hover:bg-secondary/80 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <FileText size={16} className="text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                          {doc.title || doc.file_name}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          <Badge variant="outline" className="text-[9px] mr-1.5 py-0">
+                            {DOC_CATEGORIES[doc.doc_category] || doc.doc_category}
+                          </Badge>
+                          {doc.file_name} · {format(new Date(doc.created_at), "dd MMM yyyy")}
+                        </p>
+                      </div>
+                    </div>
+                    <Download size={14} className="text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                  </a>
+                ))}
               </div>
             )}
           </div>

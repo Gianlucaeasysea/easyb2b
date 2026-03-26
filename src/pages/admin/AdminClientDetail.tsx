@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,13 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check, CreditCard, Plus, Bell, Send } from "lucide-react";
+import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check, CreditCard, Plus, Bell, Send, FileText, Upload, Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 
 const NOTIFICATION_TYPES = [
@@ -112,6 +113,7 @@ const statusColors: Record<string, string> = {
 
 const AdminClientDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -126,6 +128,10 @@ const AdminClientDetail = () => {
   const [copied, setCopied] = useState<string | null>(null);
   const [showAddAddress, setShowAddAddress] = useState(false);
   const [newAddr, setNewAddr] = useState({ label: "", address_line: "", city: "", province: "", postal_code: "", country: "" });
+  const [docCategory, setDocCategory] = useState("contract");
+  const [docTitle, setDocTitle] = useState("");
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["admin-client", id],
@@ -197,6 +203,71 @@ const AdminClientDetail = () => {
     },
     enabled: !!id,
   });
+
+  const DOC_CATEGORIES = [
+    { value: "contract", label: "Contract" },
+    { value: "price_list", label: "Price List (PDF)" },
+    { value: "marketing", label: "Marketing Material" },
+    { value: "certificate", label: "Certificate" },
+    { value: "other", label: "Other" },
+  ];
+
+  const { data: clientDocs } = useQuery({
+    queryKey: ["admin-client-documents", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("client_documents")
+        .select("*")
+        .eq("client_id", id!)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingDoc(true);
+    try {
+      const filePath = `${id}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("client-documents").upload(filePath, file);
+      if (upErr) throw upErr;
+      const { error: dbErr } = await supabase.from("client_documents").insert({
+        client_id: id!,
+        title: docTitle.trim() || file.name,
+        file_name: file.name,
+        file_path: filePath,
+        doc_category: docCategory,
+        uploaded_by: user.id,
+      });
+      if (dbErr) throw dbErr;
+      queryClient.invalidateQueries({ queryKey: ["admin-client-documents", id] });
+      toast.success("Document uploaded");
+      setDocTitle("");
+    } catch (err: any) {
+      toast.error("Upload failed: " + err.message);
+    } finally {
+      setUploadingDoc(false);
+      if (docInputRef.current) docInputRef.current.value = "";
+    }
+  };
+
+  const deleteDoc = async (doc: any) => {
+    try {
+      await supabase.storage.from("client-documents").remove([doc.file_path]);
+      await supabase.from("client_documents").delete().eq("id", doc.id);
+      queryClient.invalidateQueries({ queryKey: ["admin-client-documents", id] });
+      toast.success("Document deleted");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const getDocUrl = (filePath: string) => {
+    const { data } = supabase.storage.from("client-documents").getPublicUrl(filePath);
+    return data.publicUrl;
+  };
 
   const [form, setForm] = useState({
     company_name: "", contact_name: "", email: "", phone: "", country: "", zone: "",
@@ -662,6 +733,7 @@ const AdminClientDetail = () => {
             <TabsList className="mb-4 bg-secondary">
               <TabsTrigger value="orders" className="gap-1 text-xs"><ShoppingBag size={14} /> Ordini ({totalOrders})</TabsTrigger>
               <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Comunicazioni</TabsTrigger>
+              <TabsTrigger value="documents" className="gap-1 text-xs"><FileText size={14} /> Documenti ({clientDocs?.length || 0})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="orders">
@@ -731,6 +803,99 @@ const AdminClientDetail = () => {
                   clientName={form.company_name}
                   clientEmail={form.email}
                 />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="documents">
+              <div className="glass-card-solid p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-heading font-bold text-foreground flex items-center gap-2">
+                    <FileText size={16} /> Client Documents
+                  </h2>
+                  <Badge variant="outline" className="text-xs">{clientDocs?.length || 0} files</Badge>
+                </div>
+
+                {/* Upload section */}
+                <div className="p-4 bg-secondary/50 rounded-lg border border-border mb-6 space-y-3">
+                  <p className="text-xs font-semibold text-foreground">Upload New Document</p>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="flex-1 min-w-[180px]">
+                      <label className="text-[10px] text-muted-foreground mb-1 block">Title (optional)</label>
+                      <Input
+                        placeholder="e.g. Q1 2026 Price List"
+                        value={docTitle}
+                        onChange={e => setDocTitle(e.target.value)}
+                        className="bg-background border-border rounded-lg h-8 text-xs"
+                      />
+                    </div>
+                    <div className="min-w-[160px]">
+                      <label className="text-[10px] text-muted-foreground mb-1 block">Category</label>
+                      <Select value={docCategory} onValueChange={setDocCategory}>
+                        <SelectTrigger className="bg-background border-border rounded-lg h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DOC_CATEGORIES.map(c => (
+                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <input ref={docInputRef} type="file" className="hidden" onChange={handleDocUpload} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.zip" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => docInputRef.current?.click()}
+                        disabled={uploadingDoc}
+                        className="gap-1.5 text-xs h-8 rounded-lg"
+                      >
+                        <Upload size={12} />
+                        {uploadingDoc ? "Uploading..." : "Select & Upload"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documents list */}
+                {!clientDocs?.length ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    <FileText size={36} className="mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">No documents uploaded yet.</p>
+                    <p className="text-xs mt-1">Upload contracts, price lists, or marketing materials for this client.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {clientDocs.map((doc: any) => (
+                      <div key={doc.id} className="flex items-center justify-between bg-secondary/50 rounded-lg px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <FileText size={14} className="text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">{doc.title || doc.file_name}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {DOC_CATEGORIES.find(c => c.value === doc.doc_category)?.label || doc.doc_category}
+                              {" · "}{doc.file_name}
+                              {" · "}{format(new Date(doc.created_at), "dd MMM yyyy")}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Badge variant="outline" className="text-[10px]">
+                            {DOC_CATEGORIES.find(c => c.value === doc.doc_category)?.label || doc.doc_category}
+                          </Badge>
+                          <a href={getDocUrl(doc.file_path)} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Download size={12} /></Button>
+                          </a>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteDoc(doc)}>
+                            <Trash2 size={12} />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>
