@@ -13,6 +13,9 @@ import BecomeADealer from "./pages/BecomeADealer";
 import GmailOAuthPopup from "./pages/GmailOAuthPopup";
 import NotFound from "./pages/NotFound";
 import Unsubscribe from "./pages/Unsubscribe";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import CookiePolicy from "./pages/CookiePolicy";
 
 // Layouts
 import PortalLayout from "./layouts/PortalLayout";

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Mail, Globe } from "lucide-react";
+import { Mail, Globe, MapPin } from "lucide-react";
 import logo from "@/assets/easysea-logo.png";
 
 const Footer = () => (
@@ -26,19 +26,27 @@ const Footer = () => (
           <ul className="space-y-3 text-sm text-muted-foreground">
             <li className="flex items-center gap-2"><Mail size={14} /> b2b@easysea.org</li>
             <li className="flex items-center gap-2"><Globe size={14} /> easysea.org</li>
+            <li className="flex items-start gap-2"><MapPin size={14} className="mt-0.5 flex-shrink-0" /> Via Per Curnasco 52, 24127 Bergamo (BG), Italia</li>
           </ul>
         </div>
         <div>
           <h4 className="font-heading text-sm font-bold text-foreground mb-4 uppercase tracking-wider">Legal</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li><a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a></li>
-            <li><a href="#" className="hover:text-foreground transition-colors">Terms of Service</a></li>
-            <li><a href="#" className="hover:text-foreground transition-colors">Cookie Policy</a></li>
+            <li><Link to="/privacy-policy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
+            <li><Link to="/terms-of-service" className="hover:text-foreground transition-colors">Termini e Condizioni</Link></li>
+            <li><Link to="/cookie-policy" className="hover:text-foreground transition-colors">Cookie Policy</Link></li>
           </ul>
         </div>
       </div>
-      <div className="border-t border-border pt-6 text-center text-xs text-muted-foreground">
-        &copy; {new Date().getFullYear()} Easysea Srl — Italian Innovative Company. All rights reserved.
+      <div className="border-t border-border pt-6">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+          <p>&copy; {new Date().getFullYear()} Easysea Srl — Italian Innovative Company. All rights reserved.</p>
+          <div className="flex flex-wrap items-center gap-4 text-[11px]">
+            <span>P.IVA IT15126351004</span>
+            <span className="hidden md:inline">·</span>
+            <span>Capitale Sociale € 13.781,28</span>
+          </div>
+        </div>
       </div>
     </div>
   </footer>
