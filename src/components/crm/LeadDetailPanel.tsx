@@ -16,7 +16,7 @@ import { format } from "date-fns";
 import {
   Phone, Mail, MessageCircle, StickyNote, Video, Calendar,
   Plus, Check, Clock, User, Building, MapPin, Globe, FileText,
-  ArrowRight, Edit2, Save, X,
+  ArrowRight, Edit2, Save, X, Trash2,
 } from "lucide-react";
 
 const stages = ["new", "contacted", "qualified", "proposal", "won", "lost"];
