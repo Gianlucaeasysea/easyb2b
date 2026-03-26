@@ -12,6 +12,7 @@ const items = [
   { title: "Pipeline", url: "/crm/pipeline", icon: Target },
   { title: "Activities", url: "/crm/activities", icon: Activity },
   { title: "Contacts", url: "/crm/contacts", icon: Phone },
+  { title: "How To", url: "/crm/help", icon: HelpCircle },
 ];
 
 export function CRMSidebar() {

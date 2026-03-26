@@ -124,6 +124,7 @@ const App = () => (
               <Route path="activities" element={<CRMActivities />} />
               <Route path="contacts" element={<CRMContacts />} />
               <Route path="contacts/:id" element={<CRMContactDetail />} />
+              <Route path="help" element={<CRMHelp />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
