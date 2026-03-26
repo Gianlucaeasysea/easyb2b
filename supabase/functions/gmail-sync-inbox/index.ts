@@ -191,6 +191,7 @@ Deno.serve(async (req) => {
       const headers = msgData.payload?.headers || []
       const from = headers.find((h: any) => h.name.toLowerCase() === 'from')?.value || ''
       const to = headers.find((h: any) => h.name.toLowerCase() === 'to')?.value || ''
+      const cc = headers.find((h: any) => h.name.toLowerCase() === 'cc')?.value || ''
       const subject = headers.find((h: any) => h.name.toLowerCase() === 'subject')?.value || '(nessun oggetto)'
       const date = headers.find((h: any) => h.name.toLowerCase() === 'date')?.value || ''
 
@@ -210,6 +211,19 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Also check CC for client match
+      if (!client && cc) {
+        const ccParts = cc.split(',').map((e: string) => extractEmail(e.trim()))
+        for (const ccEmail of ccParts) {
+          client = emailToClient.get(ccEmail)
+          if (client) {
+            direction = 'inbound'
+            contactEmail = ccEmail
+            break
+          }
+        }
+      }
+
       if (!client) continue
 
       // Extract body
@@ -220,6 +234,10 @@ Deno.serve(async (req) => {
       } else {
         bodyContent = decodeBody(msgData.payload?.body) || ''
       }
+
+      // Store from/to/cc in metadata for display
+      const emailMetadata: Record<string, any> = { from, to }
+      if (cc) emailMetadata.cc = cc
 
       await supabase.from('client_communications').insert({
         client_id: client.id,
@@ -232,6 +250,7 @@ Deno.serve(async (req) => {
         status: direction === 'inbound' ? 'received' : 'sent',
         gmail_message_id: msg.id,
         gmail_thread_id: msgData.threadId || null,
+        metadata: emailMetadata,
         created_at: date ? new Date(date).toISOString() : new Date().toISOString(),
       })
 
