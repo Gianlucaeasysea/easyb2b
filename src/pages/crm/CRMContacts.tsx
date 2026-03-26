@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
 const CRMContacts = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
 
   const { data: leads } = useQuery({
