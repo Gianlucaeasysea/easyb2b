@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Mail, Send, Clock, AlertCircle, ArrowUpRight, ArrowDownLeft,
-  RefreshCw, Link2, CheckCircle2, Filter, ChevronDown, ChevronRight, X, MessageSquare
+  Mail, Send, Clock, ArrowUpRight, ArrowDownLeft,
+  RefreshCw, Link2, CheckCircle2, Filter, ChevronDown, ChevronRight, MessageSquare, Reply
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -21,6 +21,8 @@ interface ClientCommunicationsProps {
   clientName: string;
   clientEmail: string;
   contactEmails?: string[];
+  orderId?: string;
+  orderCode?: string;
 }
 
 interface GmailConnectionStatus {
@@ -31,19 +33,20 @@ interface GmailConnectionStatus {
 }
 
 const templateLabels: Record<string, string> = {
-  order_update: "📦 Aggiornamento Ordine",
-  payment_reminder: "💰 Sollecito Pagamento",
-  custom: "✉️ Personalizzato",
-  inbound: "📥 Ricevuta",
+  order_update: "📦 Order Update",
+  payment_reminder: "💰 Payment Reminder",
+  custom: "✉️ Custom",
+  inbound: "📥 Received",
 };
 
-export const ClientCommunications = ({ clientId, clientName, clientEmail, contactEmails = [] }: ClientCommunicationsProps) => {
+export const ClientCommunications = ({ clientId, clientName, clientEmail, contactEmails = [], orderId, orderCode }: ClientCommunicationsProps) => {
   const [composeOpen, setComposeOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [connectingGmail, setConnectingGmail] = useState(false);
   const [filterEmail, setFilterEmail] = useState<string>("all");
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
   const [openEmail, setOpenEmail] = useState<any>(null);
+  const [replyTo, setReplyTo] = useState<{ to: string; subject: string; threadId?: string } | null>(null);
 
   const { data: communications, isLoading, refetch } = useQuery({
     queryKey: ["client-communications", clientId],
@@ -114,10 +117,8 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
 
     const sortedStandalone = [...standalone].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    // Merge into unified list
-    const result: { type: "thread"; threadId: string; msgs: any[] }[] | { type: "single"; msg: any }[] = [];
-    let tIdx = 0, sIdx = 0;
     const merged: any[] = [];
+    let tIdx = 0, sIdx = 0;
 
     while (tIdx < threadGroups.length || sIdx < sortedStandalone.length) {
       const threadDate = tIdx < threadGroups.length ? threadGroups[tIdx].lastDate : -Infinity;
@@ -179,7 +180,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
         await refetchGmailStatus();
         return;
       }
-      toast.success(`Sincronizzazione completata: ${result?.synced || 0} nuove email importate (${result?.searched_emails || 0} indirizzi cercati)`);
+      toast.success(`Sincronizzazione completata: ${result?.synced || 0} nuove email importate`);
       await Promise.all([refetch(), refetchGmailStatus()]);
     } catch (err: any) {
       toast.error("Errore durante la sincronizzazione");
@@ -188,11 +189,34 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
     }
   };
 
+  const handleReply = (comm: any) => {
+    // Determine who to reply to
+    const replyEmail = comm.direction === "inbound"
+      ? (comm.metadata as any)?.from ? extractEmailFromHeader((comm.metadata as any).from) : comm.recipient_email
+      : comm.recipient_email;
+    const replySubject = comm.subject?.startsWith("Re:") ? comm.subject : `Re: ${comm.subject}`;
+    setReplyTo({ to: replyEmail, subject: replySubject, threadId: comm.gmail_thread_id });
+    setOpenEmail(null);
+    setComposeOpen(true);
+  };
+
+  const extractEmailFromHeader = (header: string): string => {
+    const match = header.match(/<([^>]+)>/);
+    return match ? match[1] : header.trim();
+  };
+
   const stripHtml = (html: string) => html?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim() || "";
+
+  const getMetadataDisplay = (comm: any) => {
+    const meta = comm.metadata as any;
+    if (!meta) return null;
+    return { from: meta.from, to: meta.to, cc: meta.cc };
+  };
 
   const renderMessageRow = (comm: any, compact = false) => {
     const isInbound = comm.direction === "inbound";
     const preview = stripHtml(comm.body || "").slice(0, 120);
+    const meta = getMetadataDisplay(comm);
 
     return (
       <div
@@ -218,11 +242,28 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
           </span>
         </div>
         <p className="text-[11px] text-muted-foreground truncate pl-[18px]">{preview}</p>
-        {comm.recipient_email && comm.recipient_email !== "business@easysea.org" && (
-          <span className="text-[10px] text-muted-foreground pl-[18px]">
-            {isInbound ? `← da ${comm.recipient_email}` : `→ a ${comm.recipient_email}`}
-          </span>
-        )}
+        <div className="pl-[18px] space-y-0.5 mt-0.5">
+          {meta?.from && (
+            <span className="text-[10px] text-muted-foreground block truncate">
+              Da: {meta.from}
+            </span>
+          )}
+          {meta?.to && (
+            <span className="text-[10px] text-muted-foreground block truncate">
+              A: {meta.to}
+            </span>
+          )}
+          {meta?.cc && (
+            <span className="text-[10px] text-muted-foreground block truncate">
+              CC: {meta.cc}
+            </span>
+          )}
+          {!meta && comm.recipient_email && comm.recipient_email !== "business@easysea.org" && (
+            <span className="text-[10px] text-muted-foreground block">
+              {isInbound ? `← da ${comm.recipient_email}` : `→ a ${comm.recipient_email}`}
+            </span>
+          )}
+        </div>
       </div>
     );
   };
@@ -249,7 +290,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
             <RefreshCw size={12} className={syncing ? "animate-spin" : ""} />
             {syncing ? "Sync..." : "Sincronizza"}
           </Button>
-          <Button size="sm" onClick={() => setComposeOpen(true)} className="gap-1 text-xs" disabled={!clientEmail}>
+          <Button size="sm" onClick={() => { setReplyTo(null); setComposeOpen(true); }} className="gap-1 text-xs" disabled={!clientEmail}>
             <Send size={12} /> Nuova Email
           </Button>
         </div>
@@ -296,7 +337,6 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
             if (item.type === "single") {
               return renderMessageRow(item.msg);
             }
-            // Thread
             const { threadId, msgs } = item;
             const isExpanded = expandedThreads.has(threadId);
             const lastMsg = msgs[msgs.length - 1];
@@ -304,7 +344,6 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
 
             return (
               <div key={threadId} className="rounded-lg border border-border overflow-hidden">
-                {/* Thread header - clickable to expand */}
                 <div
                   className="flex items-center gap-2 p-3 bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors"
                   onClick={() => toggleThread(threadId)}
@@ -318,14 +357,12 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
                   </span>
                 </div>
 
-                {/* Expanded: show all messages */}
                 {isExpanded && (
                   <div className="p-2 space-y-1 bg-background">
                     {msgs.map((msg: any, i: number) => renderMessageRow(msg, i > 0))}
                   </div>
                 )}
 
-                {/* Collapsed: show preview of last message */}
                 {!isExpanded && (
                   <div
                     className="px-3 py-2 bg-background cursor-pointer hover:bg-secondary/20"
@@ -361,14 +398,28 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
               )}
               {openEmail?.subject}
             </DialogTitle>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock size={10} />
-              {openEmail && format(new Date(openEmail.created_at), "dd MMMM yyyy, HH:mm", { locale: it })}
-              <span className="mx-1">·</span>
-              {openEmail?.direction === "inbound"
-                ? `Da: ${openEmail?.recipient_email}`
-                : `A: ${openEmail?.recipient_email}`
-              }
+            <div className="space-y-1 text-xs text-muted-foreground mt-1">
+              <div className="flex items-center gap-2">
+                <Clock size={10} />
+                {openEmail && format(new Date(openEmail.created_at), "dd MMMM yyyy, HH:mm", { locale: it })}
+              </div>
+              {(openEmail?.metadata as any)?.from && (
+                <p><span className="font-medium text-foreground">Da:</span> {(openEmail.metadata as any).from}</p>
+              )}
+              {(openEmail?.metadata as any)?.to && (
+                <p><span className="font-medium text-foreground">A:</span> {(openEmail.metadata as any).to}</p>
+              )}
+              {(openEmail?.metadata as any)?.cc && (
+                <p><span className="font-medium text-foreground">CC:</span> {(openEmail.metadata as any).cc}</p>
+              )}
+              {!(openEmail?.metadata as any)?.from && openEmail?.recipient_email && (
+                <p>
+                  {openEmail?.direction === "inbound"
+                    ? `Da: ${openEmail?.recipient_email}`
+                    : `A: ${openEmail?.recipient_email}`
+                  }
+                </p>
+              )}
             </div>
           </DialogHeader>
           <ScrollArea className="flex-1 mt-2">
@@ -383,6 +434,12 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
               )}
             </div>
           </ScrollArea>
+          {/* Reply button */}
+          <div className="flex justify-end pt-3 border-t border-border">
+            <Button size="sm" onClick={() => handleReply(openEmail)} className="gap-1.5">
+              <Reply size={14} /> Rispondi
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -392,6 +449,10 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
         clientId={clientId}
         clientName={clientName}
         clientEmail={clientEmail}
+        orderId={orderId}
+        orderCode={orderCode}
+        initialTo={replyTo?.to}
+        initialSubject={replyTo?.subject}
         onSent={() => refetch()}
       />
     </div>
