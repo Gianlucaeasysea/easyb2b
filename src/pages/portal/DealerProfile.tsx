@@ -363,6 +363,53 @@ const DealerProfile = () => {
             )}
           </div>
         </TabsContent>
+
+        <TabsContent value="documents">
+          <div className="glass-card-solid p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <FileText size={16} className="text-primary" />
+              <h2 className="font-heading font-bold text-foreground text-sm">Downloadable Documents</h2>
+              <Badge variant="outline" className="text-[10px]">{clientDocs?.length || 0} files</Badge>
+            </div>
+            {!clientDocs?.length ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <FileText size={36} className="mx-auto mb-3 opacity-30" />
+                <p className="text-sm">No documents available yet.</p>
+                <p className="text-xs mt-1">Contracts, price lists, and marketing materials will appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {clientDocs.map((doc: any) => (
+                  <a
+                    key={doc.id}
+                    href={getDocUrl(doc.file_path)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between bg-secondary/50 rounded-lg px-4 py-3 hover:bg-secondary/80 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <FileText size={16} className="text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                          {doc.title || doc.file_name}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          <Badge variant="outline" className="text-[9px] mr-1.5 py-0">
+                            {DOC_CATEGORIES[doc.doc_category] || doc.doc_category}
+                          </Badge>
+                          {doc.file_name} · {format(new Date(doc.created_at), "dd MMM yyyy")}
+                        </p>
+                      </div>
+                    </div>
+                    <Download size={14} className="text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );
