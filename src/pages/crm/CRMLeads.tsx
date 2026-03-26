@@ -3,15 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Plus, Phone, Mail, MessageCircle, Search, ChevronRight } from "lucide-react";
+import { Users, Plus, Phone, Mail, MessageCircle, Search, ChevronRight, Trash2, Filter } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import LeadDetailPanel from "@/components/crm/LeadDetailPanel";
 
 const statusColors: Record<string, string> = {
   new: "border-primary text-primary",
@@ -29,6 +30,9 @@ const CRMLeads = () => {
   const [open, setOpen] = useState(false);
   const [detailLead, setDetailLead] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterZone, setFilterZone] = useState("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({ company_name: "", contact_name: "", email: "", phone: "", zone: "", source: "" });
 
   const { data: leads, isLoading } = useQuery({
@@ -53,15 +57,21 @@ const CRMLeads = () => {
     },
   });
 
-  const updateStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("leads").update({ status }).eq("id", id);
+  const deleteLeads = useMutation({
+    mutationFn: async (ids: string[]) => {
+      // Delete related activities first
+      for (const id of ids) {
+        await supabase.from("activities").delete().eq("lead_id", id);
+      }
+      const { error } = await supabase.from("leads").delete().in("id", ids);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
-      toast({ title: "Status updated" });
+      setSelected(new Set());
+      toast({ title: `${selected.size} lead eliminati` });
     },
+    onError: (e: any) => toast({ title: "Errore", description: e.message, variant: "destructive" }),
   });
 
   const openWhatsApp = (phone: string, name: string) => {
@@ -73,11 +83,31 @@ const CRMLeads = () => {
     window.open(`mailto:${email}?subject=${encodeURIComponent("Easysea — Follow-up")}&body=${encodeURIComponent(`Hi ${name},\n\nThank you for your interest in Easysea products.\n\nBest regards,\nEasysea Sales Team`)}`, "_blank");
   };
 
+  // Get unique zones for filter
+  const zones = [...new Set(leads?.map(l => l.zone).filter(Boolean) || [])].sort();
+
   const filtered = leads?.filter(l => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return l.company_name?.toLowerCase().includes(s) || l.contact_name?.toLowerCase().includes(s) || l.zone?.toLowerCase().includes(s);
+    if (search) {
+      const s = search.toLowerCase();
+      if (!l.company_name?.toLowerCase().includes(s) && !l.contact_name?.toLowerCase().includes(s) && !l.zone?.toLowerCase().includes(s)) return false;
+    }
+    if (filterStatus !== "all" && l.status !== filterStatus) return false;
+    if (filterZone !== "all" && l.zone !== filterZone) return false;
+    return true;
   });
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === (filtered?.length || 0)) setSelected(new Set());
+    else setSelected(new Set(filtered?.map(l => l.id) || []));
+  };
 
   return (
     <div>
@@ -86,52 +116,87 @@ const CRMLeads = () => {
           <h1 className="font-heading text-2xl font-bold text-foreground">Leads</h1>
           <p className="text-sm text-muted-foreground">Manage and qualify potential dealers</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">
-              <Plus size={16} className="mr-2" /> Add Lead
+        <div className="flex items-center gap-2">
+          {selected.size > 0 && (
+            <Button variant="destructive" size="sm" className="gap-1" onClick={() => {
+              if (confirm(`Eliminare ${selected.size} lead selezionati?`)) deleteLeads.mutate(Array.from(selected));
+            }}>
+              <Trash2 size={14} /> Elimina ({selected.size})
             </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border">
-            <DialogHeader><DialogTitle className="font-heading">New Lead</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Company *</Label>
-                <Input className="rounded-lg bg-secondary border-border" value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+          )}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">
+                <Plus size={16} className="mr-2" /> Add Lead
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border">
+              <DialogHeader><DialogTitle className="font-heading">New Lead</DialogTitle></DialogHeader>
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Contact</Label>
-                  <Input className="rounded-lg bg-secondary border-border" value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} />
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Company *</Label>
+                  <Input className="rounded-lg bg-secondary border-border" value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Contact</Label>
+                    <Input className="rounded-lg bg-secondary border-border" value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
+                    <Input className="rounded-lg bg-secondary border-border" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Phone</Label>
+                    <Input className="rounded-lg bg-secondary border-border" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+39..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Region</Label>
+                    <Input className="rounded-lg bg-secondary border-border" value={form.zone} onChange={e => setForm(f => ({ ...f, zone: e.target.value }))} />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
-                  <Input className="rounded-lg bg-secondary border-border" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Source</Label>
+                  <Input className="rounded-lg bg-secondary border-border" placeholder="Website, Fair..." value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} />
                 </div>
+                <Button onClick={() => addLead.mutate()} disabled={!form.company_name} className="w-full rounded-lg bg-foreground text-background font-heading font-semibold">Add Lead</Button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Phone</Label>
-                  <Input className="rounded-lg bg-secondary border-border" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+39..." />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Region</Label>
-                  <Input className="rounded-lg bg-secondary border-border" value={form.zone} onChange={e => setForm(f => ({ ...f, zone: e.target.value }))} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Source</Label>
-                <Input className="rounded-lg bg-secondary border-border" placeholder="Website, Fair..." value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} />
-              </div>
-              <Button onClick={() => addLead.mutate()} disabled={!form.company_name} className="w-full rounded-lg bg-foreground text-background font-heading font-semibold">Add Lead</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="mb-4 relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-        <Input placeholder="Search leads..." className="pl-9 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+          <Input placeholder="Search leads..." className="pl-9 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-36 bg-secondary border-border rounded-lg">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            {["new", "contacted", "qualified", "proposal", "won", "lost"].map(s => (
+              <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterZone} onValueChange={setFilterZone}>
+          <SelectTrigger className="w-40 bg-secondary border-border rounded-lg">
+            <SelectValue placeholder="Region" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Regions</SelectItem>
+            {zones.map(z => (
+              <SelectItem key={z} value={z!}>{z}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Badge variant="outline" className="text-xs">{filtered?.length || 0} leads</Badge>
       </div>
 
       {isLoading ? (
@@ -139,13 +204,16 @@ const CRMLeads = () => {
       ) : !filtered?.length ? (
         <div className="text-center py-20 glass-card-solid">
           <Users className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">No leads yet. Add your first lead to get started.</p>
+          <p className="text-muted-foreground">No leads found.</p>
         </div>
       ) : (
         <div className="glass-card-solid overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox checked={selected.size === filtered.length && filtered.length > 0} onCheckedChange={toggleAll} />
+                </TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Region</TableHead>
@@ -156,12 +224,15 @@ const CRMLeads = () => {
             </TableHeader>
             <TableBody>
               {filtered.map(l => (
-                <TableRow key={l.id} className="cursor-pointer" onClick={() => setDetailLead(l)}>
-                  <TableCell className="font-heading font-semibold">{l.company_name}</TableCell>
-                  <TableCell>{l.contact_name}</TableCell>
-                  <TableCell className="text-muted-foreground">{l.zone}</TableCell>
-                  <TableCell className="text-muted-foreground">{l.source}</TableCell>
-                  <TableCell>
+                <TableRow key={l.id} className="cursor-pointer">
+                  <TableCell onClick={e => e.stopPropagation()}>
+                    <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggleSelect(l.id)} />
+                  </TableCell>
+                  <TableCell onClick={() => setDetailLead(l)} className="font-heading font-semibold">{l.company_name}</TableCell>
+                  <TableCell onClick={() => setDetailLead(l)}>{l.contact_name}</TableCell>
+                  <TableCell onClick={() => setDetailLead(l)} className="text-muted-foreground">{l.zone}</TableCell>
+                  <TableCell onClick={() => setDetailLead(l)} className="text-muted-foreground">{l.source}</TableCell>
+                  <TableCell onClick={() => setDetailLead(l)}>
                     <Badge variant="outline" className={statusColors[l.status || "new"]}>{l.status}</Badge>
                   </TableCell>
                   <TableCell>
@@ -181,7 +252,11 @@ const CRMLeads = () => {
                           <Mail size={16} />
                         </Button>
                       )}
-                      <ChevronRight size={16} className="text-muted-foreground ml-1" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/60 hover:text-destructive" onClick={() => {
+                        if (confirm(`Eliminare il lead "${l.company_name}"?`)) deleteLeads.mutate([l.id]);
+                      }} title="Delete">
+                        <Trash2 size={14} />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -191,60 +266,12 @@ const CRMLeads = () => {
         </div>
       )}
 
-      {/* Lead Detail Dialog */}
-      <Dialog open={!!detailLead} onOpenChange={() => setDetailLead(null)}>
-        <DialogContent className="bg-card border-border max-w-lg">
-          {detailLead && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="font-heading">{detailLead.company_name}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><span className="text-muted-foreground text-xs uppercase">Contact</span><p className="font-medium">{detailLead.contact_name || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">Region</span><p className="font-medium">{detailLead.zone || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">Email</span><p className="font-medium">{detailLead.email || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">Phone</span><p className="font-medium">{detailLead.phone || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">Source</span><p className="font-medium">{detailLead.source || "—"}</p></div>
-                </div>
-                {detailLead.notes && (
-                  <div><span className="text-muted-foreground text-xs uppercase">Notes</span><p className="text-sm mt-1">{detailLead.notes}</p></div>
-                )}
-
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Change Status</Label>
-                  <Select value={detailLead.status || "new"} onValueChange={v => { updateStatus.mutate({ id: detailLead.id, status: v }); setDetailLead({ ...detailLead, status: v }); }}>
-                    <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {["new", "contacted", "qualified", "proposal", "won", "lost"].map(s => (
-                        <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex gap-2">
-                  {detailLead.phone && (
-                    <>
-                      <Button variant="outline" className="flex-1 rounded-lg" onClick={() => openWhatsApp(detailLead.phone, detailLead.contact_name || detailLead.company_name)}>
-                        <MessageCircle size={16} className="mr-2" /> WhatsApp
-                      </Button>
-                      <Button variant="outline" className="flex-1 rounded-lg" onClick={() => window.open(`tel:${detailLead.phone}`, "_blank")}>
-                        <Phone size={16} className="mr-2" /> Call
-                      </Button>
-                    </>
-                  )}
-                  {detailLead.email && (
-                    <Button variant="outline" className="flex-1 rounded-lg" onClick={() => openEmail(detailLead.email, detailLead.contact_name || detailLead.company_name)}>
-                      <Mail size={16} className="mr-2" /> Email
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Lead Detail Panel */}
+      <LeadDetailPanel
+        lead={detailLead}
+        open={!!detailLead}
+        onClose={() => setDetailLead(null)}
+      />
     </div>
   );
 };
