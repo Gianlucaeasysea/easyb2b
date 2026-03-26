@@ -18,6 +18,7 @@ const items = [
   { title: "Importa Dati", url: "/admin/import", icon: Upload },
   { title: "Listini & Sconti", url: "/admin/price-lists", icon: Tag },
   { title: "System Map", url: "/admin/system-map", icon: Map },
+  { title: "CMS / Pagine", url: "/admin/cms", icon: Globe },
   { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
