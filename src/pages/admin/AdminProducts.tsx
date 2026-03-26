@@ -265,6 +265,7 @@ const AdminProducts = () => {
                         <span className="font-heading font-semibold text-sm text-foreground">{p.name}</span>
                       </td>
                       <td className="p-3 font-mono text-xs text-muted-foreground">{p.sku || "—"}</td>
+                      <td className="p-3 font-mono text-xs text-muted-foreground">{(p as any).barcode || "—"}</td>
                       <td className="p-3">
                         {fam ? (
                           <button
