@@ -251,6 +251,39 @@ export type Database = {
           },
         ]
       }
+      client_notifications: {
+        Row: {
+          body: string | null
+          client_id: string
+          created_at: string
+          id: string
+          order_id: string | null
+          read: boolean
+          title: string
+          type: string
+        }
+        Insert: {
+          body?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          read?: boolean
+          title: string
+          type?: string
+        }
+        Update: {
+          body?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          read?: boolean
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       client_shipping_addresses: {
         Row: {
           address_line: string | null
