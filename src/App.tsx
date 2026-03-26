@@ -51,6 +51,7 @@ import CRMLeads from "./pages/crm/CRMLeads";
 import CRMPipeline from "./pages/crm/CRMPipeline";
 import CRMActivities from "./pages/crm/CRMActivities";
 import CRMContacts from "./pages/crm/CRMContacts";
+import CRMContactDetail from "./pages/crm/CRMContactDetail";
 
 const queryClient = new QueryClient();
 
