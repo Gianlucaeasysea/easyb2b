@@ -15,6 +15,7 @@ import { useState } from "react";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
 import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
+import { ContactManager } from "@/components/crm/ContactManager";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
