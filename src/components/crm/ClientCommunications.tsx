@@ -60,14 +60,8 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail }: Clie
       
       const result = res.data;
       if (result?.needs_auth) {
-        // Open OAuth flow
         const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-        window.open(
-          `https://${projectId}.supabase.co/functions/v1/gmail-oauth-callback`,
-          '_blank',
-          'width=600,height=700'
-        );
-        toast.info("Completa l'autorizzazione Gmail nella finestra aperta");
+        window.location.href = `https://${projectId}.supabase.co/functions/v1/gmail-oauth-callback`;
         return;
       }
 
@@ -83,11 +77,8 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail }: Clie
 
   const handleConnectGmail = () => {
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    window.open(
-      `https://${projectId}.supabase.co/functions/v1/gmail-oauth-callback`,
-      '_blank',
-      'width=600,height=700'
-    );
+    // Navigate directly instead of popup to avoid ERR_BLOCKED_BY_RESPONSE
+    window.location.href = `https://${projectId}.supabase.co/functions/v1/gmail-oauth-callback`;
   };
 
   return (
