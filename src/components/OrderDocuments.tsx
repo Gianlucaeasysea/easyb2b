@@ -87,6 +87,22 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
       } catch (emailErr) {
         console.error("Document notification email failed:", emailErr);
       }
+
+      // Create in-app notification for the dealer
+      try {
+        const { data: order } = await supabase.from("orders").select("client_id").eq("id", orderId).single();
+        if (order?.client_id) {
+          await supabase.from("client_notifications").insert({
+            client_id: order.client_id,
+            title: `New document available: ${DOC_TYPES.find(d => d.value === docType)?.label || docType}`,
+            body: file.name,
+            type: "document",
+            order_id: orderId,
+          });
+        }
+      } catch (notifErr) {
+        console.error("In-app notification failed:", notifErr);
+      }
     } catch (err: any) {
       toast.error("Upload failed: " + err.message);
     } finally {

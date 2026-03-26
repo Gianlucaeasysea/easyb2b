@@ -43,6 +43,19 @@ const PortalHeader = () => {
       </div>
       <div className="flex items-center gap-2">
         <Button
+          variant="ghost"
+          size="icon"
+          className="relative text-muted-foreground hover:text-foreground"
+          onClick={() => navigate("/portal/notifications")}
+        >
+          <Bell size={18} />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold animate-pulse">
+              {unreadCount}
+            </span>
+          )}
+        </Button>
+        <Button
           variant={isClientMode ? "default" : "outline"}
           size="sm"
           onClick={toggleClientMode}
