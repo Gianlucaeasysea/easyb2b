@@ -278,6 +278,19 @@ const AdminOrderDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Communications section */}
+      {client?.email && (
+        <div className="glass-card-solid p-5 mt-6">
+          <ClientCommunications
+            clientId={order.client_id}
+            clientName={client.company_name || "Client"}
+            clientEmail={client.email}
+            orderId={order.id}
+            orderCode={(order as any).order_code}
+          />
+        </div>
+      )}
     </div>
   );
 };
