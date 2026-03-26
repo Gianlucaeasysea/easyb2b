@@ -256,7 +256,7 @@ const AdminProductDetail = () => {
                               if (error) throw error;
                               const match = (data.products || []).find((sp: any) => String(sp.shopify_variant_id) === String(v.shopify_id));
                               if (match) {
-                                await supabase.from("products").update({ stock_quantity: match.inventory_quantity }).eq("id", v.id);
+                                await supabase.from("products").update({ stock_quantity: match.inventory_quantity, barcode: match.barcode || null } as any).eq("id", v.id);
                                 queryClient.invalidateQueries({ queryKey: ["product-variants", family] });
                                 toast.success(`Stock resincronizzato: ${match.inventory_quantity}`);
                               } else {
