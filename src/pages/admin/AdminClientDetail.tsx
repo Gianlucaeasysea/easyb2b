@@ -798,7 +798,12 @@ const AdminClientDetail = () => {
               <div className="glass-card-solid overflow-hidden">
                 <div className="p-4 border-b border-border flex items-center justify-between">
                   <h2 className="font-heading font-bold text-foreground flex items-center gap-2"><ShoppingBag size={16} /> Order History</h2>
-                  <Badge variant="outline" className="text-xs">{totalOrders} orders</Badge>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setShowCreateOrder(true)}>
+                      <PackagePlus size={14} /> Crea Ordine Manuale
+                    </Button>
+                    <Badge variant="outline" className="text-xs">{totalOrders} orders</Badge>
+                  </div>
                 </div>
                 {!orders?.length ? (
                   <div className="p-8 text-center text-muted-foreground text-sm">No orders yet</div>
