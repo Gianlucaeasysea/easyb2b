@@ -126,6 +126,10 @@ const AdminClientDetail = () => {
   const [copied, setCopied] = useState<string | null>(null);
   const [showAddAddress, setShowAddAddress] = useState(false);
   const [newAddr, setNewAddr] = useState({ label: "", address_line: "", city: "", province: "", postal_code: "", country: "" });
+  const [docCategory, setDocCategory] = useState("contract");
+  const [docTitle, setDocTitle] = useState("");
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["admin-client", id],
