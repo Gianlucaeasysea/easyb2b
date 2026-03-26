@@ -228,6 +228,61 @@ const AdminClientDetail = () => {
     enabled: !!id,
   });
 
+  const { data: products } = useQuery({
+    queryKey: ["admin-products-for-order"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("products").select("id, name, sku, price").eq("active_b2b", true).order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const [orderItems, setOrderItems] = useState<{ product_id: string; quantity: number; unit_price: number }[]>([]);
+
+  const createManualOrder = async () => {
+    if (!id || orderItems.length === 0) return;
+    setCreatingOrder(true);
+    try {
+      const totalAmount = orderItems.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+      const { data: order, error: orderErr } = await supabase.from("orders").insert({
+        client_id: id,
+        status: "confirmed",
+        order_type: "MANUAL B2B",
+        total_amount: totalAmount,
+        notes: newOrderNotes || null,
+      }).select().single();
+      if (orderErr) throw orderErr;
+
+      const items = orderItems.map(item => ({
+        order_id: order.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        subtotal: item.unit_price * item.quantity,
+      }));
+      const { error: itemsErr } = await supabase.from("order_items").insert(items);
+      if (itemsErr) throw itemsErr;
+
+      await supabase.from("order_events").insert({
+        order_id: order.id,
+        event_type: "created",
+        title: "Ordine creato manualmente da admin",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["admin-client-orders", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-new-orders"] });
+      toast.success("Ordine creato manualmente!");
+      setShowCreateOrder(false);
+      setOrderItems([]);
+      setNewOrderNotes("");
+    } catch (err: any) {
+      toast.error("Errore: " + err.message);
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
   const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
