@@ -187,6 +187,7 @@ const DealerProfile = () => {
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="mb-6 bg-secondary">
           <TabsTrigger value="profile" className="gap-1.5 text-xs"><Building2 size={14} /> Profile</TabsTrigger>
+          <TabsTrigger value="documents" className="gap-1.5 text-xs"><FileText size={14} /> Documents ({clientDocs?.length || 0})</TabsTrigger>
           <TabsTrigger value="communications" className="gap-1.5 text-xs"><Mail size={14} /> Communications ({communications?.length || 0})</TabsTrigger>
         </TabsList>
 
