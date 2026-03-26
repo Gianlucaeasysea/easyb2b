@@ -130,6 +130,7 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<CRMDashboard />} />
+              <Route path="requests" element={<CRMRequests />} />
               <Route path="leads" element={<CRMLeads />} />
               <Route path="pipeline" element={<CRMPipeline />} />
               <Route path="activities" element={<CRMActivities />} />
