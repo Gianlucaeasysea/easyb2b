@@ -26,14 +26,18 @@ Deno.serve(async (req) => {
   const code = url.searchParams.get('code')
   const error = url.searchParams.get('error')
 
+  // Determine the app URL for redirects
+  const appUrl = Deno.env.get('APP_URL') || 'https://easyb2b.lovable.app'
+
   if (error) {
-    return new Response(`<html><body><h2>Errore OAuth: ${error}</h2><p>Chiudi questa finestra e riprova.</p></body></html>`, {
-      headers: { 'Content-Type': 'text/html' },
-    })
+    console.error('OAuth error from Google:', error)
+    const redirectUrl = `${appUrl}/crm/contacts?gmail_status=error&gmail_error=${encodeURIComponent(error)}`
+    return Response.redirect(redirectUrl, 302)
   }
 
   if (!code) {
     // Start OAuth flow
+    console.log('Starting Gmail OAuth flow...')
     const scope = 'https://www.googleapis.com/auth/gmail.readonly'
     
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
@@ -45,8 +49,11 @@ Deno.serve(async (req) => {
     authUrl.searchParams.set('prompt', 'consent')
     authUrl.searchParams.set('login_hint', 'business@easysea.org')
 
+    console.log('Redirecting to Google with redirect_uri:', oauthConfig.redirectUri)
     return Response.redirect(authUrl.toString(), 302)
   }
+
+  console.log('Received authorization code, exchanging for tokens...')
 
   // Exchange code for tokens
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -64,11 +71,12 @@ Deno.serve(async (req) => {
   const tokenData = await tokenRes.json()
 
   if (!tokenRes.ok) {
-    console.error('Token exchange failed:', tokenData)
-    return new Response(`<html><body><h2>Errore scambio token</h2><pre>${JSON.stringify(tokenData, null, 2)}</pre></body></html>`, {
-      headers: { 'Content-Type': 'text/html' },
-    })
+    console.error('Token exchange failed:', JSON.stringify(tokenData))
+    const redirectUrl = `${appUrl}/crm/contacts?gmail_status=error&gmail_error=${encodeURIComponent(tokenData.error_description || tokenData.error || 'Token exchange failed')}`
+    return Response.redirect(redirectUrl, 302)
   }
+
+  console.log('Token exchange successful, saving to database...')
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -90,17 +98,14 @@ Deno.serve(async (req) => {
     }, { onConflict: 'email' })
 
   if (dbError) {
-    console.error('DB save error:', dbError)
-    return new Response(`<html><body><h2>Errore salvataggio token</h2><pre>${JSON.stringify(dbError)}</pre></body></html>`, {
-      headers: { 'Content-Type': 'text/html' },
-    })
+    console.error('DB save error:', JSON.stringify(dbError))
+    const redirectUrl = `${appUrl}/crm/contacts?gmail_status=error&gmail_error=${encodeURIComponent('Errore salvataggio token')}`
+    return Response.redirect(redirectUrl, 302)
   }
 
-  return new Response(`
-    <html><body style="font-family:sans-serif;text-align:center;padding:50px">
-      <h2>✅ Gmail collegato con successo!</h2>
-      <p>L'account business@easysea.org è ora connesso al CRM.</p>
-      <p>Puoi chiudere questa finestra.</p>
-    </body></html>
-  `, { headers: { 'Content-Type': 'text/html' } })
+  console.log('Gmail tokens saved successfully!')
+
+  // Redirect back to CRM with success
+  const redirectUrl = `${appUrl}/crm/contacts?gmail_status=success`
+  return Response.redirect(redirectUrl, 302)
 })
