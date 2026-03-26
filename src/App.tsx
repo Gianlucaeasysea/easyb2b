@@ -13,6 +13,9 @@ import BecomeADealer from "./pages/BecomeADealer";
 import GmailOAuthPopup from "./pages/GmailOAuthPopup";
 import NotFound from "./pages/NotFound";
 import Unsubscribe from "./pages/Unsubscribe";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import CookiePolicy from "./pages/CookiePolicy";
 
 // Layouts
 import PortalLayout from "./layouts/PortalLayout";
@@ -74,6 +77,9 @@ const App = () => (
             <Route path="/diventa-distributore" element={<BecomeADealer />} />
             <Route path="/oauth/gmail-popup" element={<GmailOAuthPopup />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/cookie-policy" element={<CookiePolicy />} />
 
             {/* Dealer Portal */}
             <Route path="/portal" element={
