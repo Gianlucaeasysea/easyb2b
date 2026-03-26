@@ -123,24 +123,20 @@ Deno.serve(async (req) => {
     .select('client_id, email, contact_name')
     .not('email', 'is', null)
 
-  const emailToClient = new Map<string, { id: string; name: string; contactEmail: string }>()
+  // Build a map: email -> { clientId, clientName }
+  const emailToClient = new Map<string, { id: string; name: string }>()
 
-  // Add main client emails
   for (const c of (clients || [])) {
     if (c.email) {
-      emailToClient.set(c.email.toLowerCase(), { id: c.id, name: c.company_name, contactEmail: c.email.toLowerCase() })
+      emailToClient.set(c.email.toLowerCase(), { id: c.id, name: c.company_name })
     }
   }
-
-  // Add contact emails (map to parent client)
   for (const cc of (clientContacts || [])) {
     if (cc.email) {
-      // Find client name
       const parentClient = (clients || []).find(c => c.id === cc.client_id)
       emailToClient.set(cc.email.toLowerCase(), {
         id: cc.client_id,
         name: parentClient?.company_name || cc.contact_name || 'Unknown',
-        contactEmail: cc.email.toLowerCase(),
       })
     }
   }
@@ -151,89 +147,99 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Fetch recent messages (last 100)
-  const listRes = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=100&q=in:inbox OR in:sent`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  )
-  const listData = await listRes.json()
-
-  if (!listData.messages?.length) {
-    return new Response(JSON.stringify({ synced: 0 }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
-
+  // Collect unique emails to search for
+  const allEmails = Array.from(emailToClient.keys())
   let synced = 0
+  const processedMessageIds = new Set<string>()
 
-  for (const msg of listData.messages) {
-    const { data: existing } = await supabase
-      .from('client_communications')
-      .select('id')
-      .eq('gmail_message_id', msg.id)
-      .maybeSingle()
+  // Search Gmail for each client email (batch emails into groups to reduce API calls)
+  // Gmail query: from:email OR to:email
+  const BATCH_SIZE = 5 // search 5 emails at a time
+  for (let i = 0; i < allEmails.length; i += BATCH_SIZE) {
+    const batch = allEmails.slice(i, i + BATCH_SIZE)
+    const queryParts = batch.map(e => `from:${e} OR to:${e}`).join(' OR ')
+    const query = encodeURIComponent(queryParts)
 
-    if (existing) continue
-
-    const msgRes = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
+    const listRes = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50&q=${query}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     )
-    const msgData = await msgRes.json()
+    const listData = await listRes.json()
 
-    const headers = msgData.payload?.headers || []
-    const from = headers.find((h: any) => h.name.toLowerCase() === 'from')?.value || ''
-    const to = headers.find((h: any) => h.name.toLowerCase() === 'to')?.value || ''
-    const subject = headers.find((h: any) => h.name.toLowerCase() === 'subject')?.value || '(nessun oggetto)'
-    const date = headers.find((h: any) => h.name.toLowerCase() === 'date')?.value || ''
+    if (!listData.messages?.length) continue
 
-    const senderEmail = extractEmail(from)
-    const recipientEmail = extractEmail(to)
-    const labels = msgData.labelIds || []
+    for (const msg of listData.messages) {
+      if (processedMessageIds.has(msg.id)) continue
+      processedMessageIds.add(msg.id)
 
-    // Determine direction and match client
-    let client = emailToClient.get(senderEmail)
-    let direction = 'inbound'
-    let contactEmail = senderEmail
+      // Check if already imported
+      const { data: existing } = await supabase
+        .from('client_communications')
+        .select('id')
+        .eq('gmail_message_id', msg.id)
+        .maybeSingle()
 
-    if (!client) {
-      // Check if we sent TO a known client/contact
-      client = emailToClient.get(recipientEmail)
-      if (client) {
-        direction = 'outbound'
-        contactEmail = recipientEmail
+      if (existing) continue
+
+      // Fetch full message
+      const msgRes = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      )
+      const msgData = await msgRes.json()
+
+      const headers = msgData.payload?.headers || []
+      const from = headers.find((h: any) => h.name.toLowerCase() === 'from')?.value || ''
+      const to = headers.find((h: any) => h.name.toLowerCase() === 'to')?.value || ''
+      const subject = headers.find((h: any) => h.name.toLowerCase() === 'subject')?.value || '(nessun oggetto)'
+      const date = headers.find((h: any) => h.name.toLowerCase() === 'date')?.value || ''
+
+      const senderEmail = extractEmail(from)
+      const recipientEmail = extractEmail(to)
+
+      // Determine direction and match client
+      let client = emailToClient.get(senderEmail)
+      let direction = 'inbound'
+      let contactEmail = senderEmail
+
+      if (!client) {
+        client = emailToClient.get(recipientEmail)
+        if (client) {
+          direction = 'outbound'
+          contactEmail = recipientEmail
+        }
       }
+
+      if (!client) continue
+
+      // Extract body
+      let bodyContent = ''
+      if (msgData.payload?.parts) {
+        const { html, text } = extractTextFromParts(msgData.payload.parts)
+        bodyContent = html || text
+      } else {
+        bodyContent = decodeBody(msgData.payload?.body) || ''
+      }
+
+      await supabase.from('client_communications').insert({
+        client_id: client.id,
+        subject,
+        body: bodyContent || '(contenuto vuoto)',
+        direction,
+        template_type: direction === 'inbound' ? 'inbound' : 'custom',
+        sent_by: user.id,
+        recipient_email: contactEmail,
+        status: direction === 'inbound' ? 'received' : 'sent',
+        gmail_message_id: msg.id,
+        gmail_thread_id: msgData.threadId || null,
+        created_at: date ? new Date(date).toISOString() : new Date().toISOString(),
+      })
+
+      synced++
     }
-
-    if (!client) continue
-
-    // Extract body
-    let bodyContent = ''
-    if (msgData.payload?.parts) {
-      const { html, text } = extractTextFromParts(msgData.payload.parts)
-      bodyContent = html || text
-    } else {
-      bodyContent = decodeBody(msgData.payload?.body) || ''
-    }
-
-    await supabase.from('client_communications').insert({
-      client_id: client.id,
-      subject,
-      body: bodyContent || '(contenuto vuoto)',
-      direction,
-      template_type: direction === 'inbound' ? 'inbound' : 'custom',
-      sent_by: user.id,
-      recipient_email: contactEmail,
-      status: direction === 'inbound' ? 'received' : 'sent',
-      gmail_message_id: msg.id,
-      gmail_thread_id: msgData.threadId || null,
-      created_at: date ? new Date(date).toISOString() : new Date().toISOString(),
-    })
-
-    synced++
   }
 
-  return new Response(JSON.stringify({ synced }), {
+  return new Response(JSON.stringify({ synced, searched_emails: allEmails.length }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 })
