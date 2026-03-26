@@ -249,6 +249,7 @@ const AdminProducts = () => {
                 <tr className="border-b border-border">
                   <th className="text-left p-3 text-xs font-heading text-muted-foreground">Product</th>
                   <th className="text-left p-3 text-xs font-heading text-muted-foreground">SKU</th>
+                  <th className="text-left p-3 text-xs font-heading text-muted-foreground">Barcode</th>
                   <th className="text-left p-3 text-xs font-heading text-muted-foreground">Family</th>
                   <th className="text-right p-3 text-xs font-heading text-muted-foreground">Price</th>
                   <th className="text-right p-3 text-xs font-heading text-muted-foreground">Stock</th>
