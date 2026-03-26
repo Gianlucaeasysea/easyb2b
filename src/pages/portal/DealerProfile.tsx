@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, MapPin, Building2, Plus, Trash2, Save, CreditCard, Mail, ArrowUpRight, ArrowDownLeft, Clock } from "lucide-react";
+import { User, MapPin, Building2, Plus, Trash2, Save, CreditCard, Mail, ArrowUpRight, ArrowDownLeft, Clock, FileText, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
