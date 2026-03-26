@@ -149,8 +149,8 @@ export async function requestGmailAuthorizationCodeOnCurrentOrigin(loginHint = "
       client_id: GOOGLE_CLIENT_ID,
       scope: GMAIL_READONLY_SCOPE,
       ux_mode: "popup",
-      login_hint: loginHint,
-      prompt: "consent",
+      ...(loginHint ? { login_hint: loginHint } : {}),
+      prompt: "select_account consent",
       include_granted_scopes: true,
       callback: (response) => {
         if (response.error) {

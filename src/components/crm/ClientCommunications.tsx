@@ -79,7 +79,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail }: Clie
     setConnectingGmail(true);
 
     try {
-      const { code, redirectUri } = await requestGmailAuthorizationCode("business@easysea.org");
+      const { code, redirectUri } = await requestGmailAuthorizationCode();
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.access_token) {
