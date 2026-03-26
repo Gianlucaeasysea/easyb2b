@@ -106,6 +106,66 @@ export type Database = {
           },
         ]
       }
+      client_communications: {
+        Row: {
+          body: string
+          client_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          order_id: string | null
+          recipient_email: string
+          sent_by: string
+          status: string
+          subject: string
+          template_type: string
+        }
+        Insert: {
+          body: string
+          client_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          order_id?: string | null
+          recipient_email: string
+          sent_by: string
+          status?: string
+          subject: string
+          template_type?: string
+        }
+        Update: {
+          body?: string
+          client_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          order_id?: string | null
+          recipient_email?: string
+          sent_by?: string
+          status?: string
+          subject?: string
+          template_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_communications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_communications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_contacts: {
         Row: {
           client_id: string

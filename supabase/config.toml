@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.handle-email-suppression]
 verify_jwt = false
+
+[functions.send-crm-email]
+verify_jwt = false
+
+[functions.generate-email-draft]
+verify_jwt = false
