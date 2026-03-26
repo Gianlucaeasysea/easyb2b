@@ -335,6 +335,7 @@ const CRMContactDetail = () => {
                   clientId={id!}
                   clientName={client.company_name}
                   clientEmail={client.email || ""}
+                  contactEmails={contacts?.map(c => c.email).filter(Boolean) as string[]}
                 />
               </div>
             </TabsContent>
