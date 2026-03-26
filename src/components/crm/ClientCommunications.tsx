@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
   Mail, Send, Clock, ArrowUpRight, ArrowDownLeft,
-  RefreshCw, Link2, CheckCircle2, Filter, ChevronDown, ChevronRight, MessageSquare, Reply
+  RefreshCw, Link2, CheckCircle2, Filter, ChevronDown, ChevronRight, MessageSquare, Reply, User
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -31,13 +32,6 @@ interface GmailConnectionStatus {
   expiresAt?: string | null;
   updatedAt?: string | null;
 }
-
-const templateLabels: Record<string, string> = {
-  order_update: "📦 Order Update",
-  payment_reminder: "💰 Payment Reminder",
-  custom: "✉️ Custom",
-  inbound: "📥 Received",
-};
 
 export const ClientCommunications = ({ clientId, clientName, clientEmail, contactEmails = [], orderId, orderCode }: ClientCommunicationsProps) => {
   const [composeOpen, setComposeOpen] = useState(false);
@@ -96,7 +90,6 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
     );
   }, [communications, filterEmail]);
 
-  // Group by gmail_thread_id
   const groupedByThread = useMemo(() => {
     const threads = new Map<string, any[]>();
     const standalone: any[] = [];
@@ -114,16 +107,12 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
       return { threadId, msgs, lastDate: new Date(msgs[msgs.length - 1].created_at).getTime() };
     });
     threadGroups.sort((a, b) => b.lastDate - a.lastDate);
-
     const sortedStandalone = [...standalone].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
     const merged: any[] = [];
     let tIdx = 0, sIdx = 0;
-
     while (tIdx < threadGroups.length || sIdx < sortedStandalone.length) {
       const threadDate = tIdx < threadGroups.length ? threadGroups[tIdx].lastDate : -Infinity;
       const standaloneDate = sIdx < sortedStandalone.length ? new Date(sortedStandalone[sIdx].created_at).getTime() : -Infinity;
-
       if (threadDate >= standaloneDate) {
         merged.push({ type: "thread" as const, ...threadGroups[tIdx] });
         tIdx++;
@@ -190,7 +179,6 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
   };
 
   const handleReply = (comm: any) => {
-    // Determine who to reply to
     const replyEmail = comm.direction === "inbound"
       ? (comm.metadata as any)?.from ? extractEmailFromHeader((comm.metadata as any).from) : comm.recipient_email
       : comm.recipient_email;
@@ -207,62 +195,66 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
 
   const stripHtml = (html: string) => html?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim() || "";
 
-  const getMetadataDisplay = (comm: any) => {
-    const meta = comm.metadata as any;
-    if (!meta) return null;
-    return { from: meta.from, to: meta.to, cc: meta.cc };
+  const formatHeaderName = (header: string) => {
+    // Show just the name or email nicely
+    const match = header.match(/^"?([^"<]+)"?\s*<([^>]+)>/);
+    if (match) return match[1].trim();
+    return header.replace(/<[^>]+>/, "").trim() || header;
   };
 
-  const renderMessageRow = (comm: any, compact = false) => {
+  const renderEmailCard = (comm: any, isNested = false) => {
     const isInbound = comm.direction === "inbound";
-    const preview = stripHtml(comm.body || "").slice(0, 120);
-    const meta = getMetadataDisplay(comm);
+    const meta = comm.metadata as any;
+    const preview = stripHtml(comm.body || "").slice(0, 150);
 
     return (
       <div
         key={comm.id}
         onClick={() => setOpenEmail(comm)}
-        className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-sm ${
-          compact ? "ml-6 border-l-2" : ""
-        } ${
+        className={`group cursor-pointer transition-all rounded-lg border ${isNested ? "ml-4" : ""} ${
           isInbound
-            ? "bg-primary/5 border-primary/20 hover:border-primary/40"
-            : "bg-secondary/30 border-border hover:border-primary/20"
+            ? "border-primary/20 hover:border-primary/40 bg-primary/[0.03] hover:bg-primary/[0.06]"
+            : "border-border hover:border-primary/30 bg-card hover:bg-secondary/40"
         }`}
       >
-        <div className="flex items-center gap-2 mb-0.5">
-          {isInbound ? (
-            <ArrowDownLeft size={10} className="text-primary shrink-0" />
-          ) : (
-            <ArrowUpRight size={10} className="text-success shrink-0" />
-          )}
-          <span className="text-xs font-semibold text-foreground truncate flex-1">{comm.subject}</span>
-          <span className="text-[10px] text-muted-foreground shrink-0">
-            {format(new Date(comm.created_at), "dd MMM HH:mm", { locale: it })}
-          </span>
-        </div>
-        <p className="text-[11px] text-muted-foreground truncate pl-[18px]">{preview}</p>
-        <div className="pl-[18px] space-y-0.5 mt-0.5">
-          {meta?.from && (
-            <span className="text-[10px] text-muted-foreground block truncate">
-              Da: {meta.from}
-            </span>
-          )}
-          {meta?.to && (
-            <span className="text-[10px] text-muted-foreground block truncate">
-              A: {meta.to}
-            </span>
-          )}
-          {meta?.cc && (
-            <span className="text-[10px] text-muted-foreground block truncate">
-              CC: {meta.cc}
-            </span>
-          )}
-          {!meta && comm.recipient_email && comm.recipient_email !== "business@easysea.org" && (
-            <span className="text-[10px] text-muted-foreground block">
-              {isInbound ? `← da ${comm.recipient_email}` : `→ a ${comm.recipient_email}`}
-            </span>
-          )}
+        <div className="p-4">
+          {/* Top row: direction + subject + date */}
+          <div className="flex items-start gap-3 mb-2">
+            <div className={`mt-0.5 p-1.5 rounded-full shrink-0 ${isInbound ? "bg-primary/10" : "bg-muted"}`}>
+              {isInbound ? <ArrowDownLeft size={12} className="text-primary" /> : <ArrowUpRight size={12} className="text-muted-foreground" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 justify-between">
+                <h4 className="text-sm font-semibold text-foreground truncate">{comm.subject}</h4>
+                <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                  {format(new Date(comm.created_at), "dd MMM yyyy, HH:mm", { locale: it })}
+                </span>
+              </div>
+              {/* From / To / CC metadata */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+                {meta?.from && (
+                  <span className="flex items-center gap-1">
+                    <span className="font-medium text-foreground/70">From:</span> {formatHeaderName(meta.from)}
+                  </span>
+                )}
+                {meta?.to && (
+                  <span className="flex items-center gap-1">
+                    <span className="font-medium text-foreground/70">To:</span> {formatHeaderName(meta.to)}
+                  </span>
+                )}
+                {meta?.cc && (
+                  <span className="flex items-center gap-1">
+                    <span className="font-medium text-foreground/70">CC:</span> {meta.cc}
+                  </span>
+                )}
+                {!meta && comm.recipient_email && (
+                  <span>{isInbound ? `From: ${comm.recipient_email}` : `To: ${comm.recipient_email}`}</span>
+                )}
+              </div>
+            </div>
+          </div>
+          {/* Preview */}
+          <p className="text-xs text-muted-foreground line-clamp-2 ml-[36px]">{preview}</p>
         </div>
       </div>
     );
@@ -273,25 +265,25 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="font-heading font-bold text-foreground flex items-center gap-2">
-          <Mail size={16} /> Comunicazioni
+          <Mail size={16} /> Communications
         </h3>
         <div className="flex items-center gap-2 flex-wrap">
           {gmailConnected ? (
             <Badge variant="outline" className="gap-1 border-primary/20 bg-primary/10 text-primary text-[10px]">
-              <CheckCircle2 size={10} /> Gmail connesso
+              <CheckCircle2 size={10} /> Gmail connected
             </Badge>
           ) : (
             <Button size="sm" variant="outline" onClick={handleConnectGmail} disabled={connectingGmail} className="gap-1 text-xs">
               {connectingGmail ? <RefreshCw size={12} className="animate-spin" /> : <Link2 size={12} />}
-              {connectingGmail ? "Collegamento..." : "Collega Gmail"}
+              {connectingGmail ? "Connecting..." : "Connect Gmail"}
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={handleSync} disabled={syncing || connectingGmail || !gmailConnected} className="gap-1 text-xs">
             <RefreshCw size={12} className={syncing ? "animate-spin" : ""} />
-            {syncing ? "Sync..." : "Sincronizza"}
+            {syncing ? "Syncing..." : "Sync"}
           </Button>
           <Button size="sm" onClick={() => { setReplyTo(null); setComposeOpen(true); }} className="gap-1 text-xs" disabled={!clientEmail}>
-            <Send size={12} /> Nuova Email
+            <Send size={12} /> New Email
           </Button>
         </div>
       </div>
@@ -301,16 +293,14 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
         <div className="flex items-center gap-2">
           <Filter size={14} className="text-muted-foreground" />
           <Select value={filterEmail} onValueChange={setFilterEmail}>
-            <SelectTrigger className="w-72 h-8 text-xs">
-              <SelectValue placeholder="Tutti i contatti" />
+            <SelectTrigger className="w-80 h-9 text-xs">
+              <SelectValue placeholder="All contacts" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tutti i contatti ({communications?.length || 0})</SelectItem>
+              <SelectItem value="all">All contacts ({communications?.length || 0})</SelectItem>
               {allEmails.map(email => {
                 const count = communications?.filter(c => c.recipient_email?.toLowerCase() === email).length || 0;
-                return (
-                  <SelectItem key={email} value={email}>{email} ({count})</SelectItem>
-                );
+                return <SelectItem key={email} value={email}>{email} ({count})</SelectItem>;
               })}
             </SelectContent>
           </Select>
@@ -318,64 +308,94 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
       )}
 
       {!gmailConnected && (
-        <div className="rounded-lg border border-border bg-muted/50 p-3">
-          <p className="text-xs text-muted-foreground">📧 Gmail non collegato. Clicca "Collega Gmail" per iniziare.</p>
+        <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-center">
+          <Mail size={24} className="mx-auto mb-2 text-muted-foreground/50" />
+          <p className="text-xs text-muted-foreground">Gmail not connected. Click "Connect Gmail" to start syncing emails.</p>
         </div>
       )}
 
       {/* Email list */}
       {isLoading ? (
-        <p className="text-xs text-muted-foreground">Caricamento...</p>
+        <div className="flex items-center justify-center py-8">
+          <RefreshCw size={16} className="animate-spin text-muted-foreground mr-2" />
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </div>
       ) : !groupedByThread.length ? (
-        <div className="p-8 text-center text-muted-foreground">
-          <Mail size={32} className="mx-auto mb-2 opacity-30" />
-          <p className="text-sm">Nessuna comunicazione</p>
+        <div className="py-12 text-center">
+          <Mail size={36} className="mx-auto mb-3 text-muted-foreground/20" />
+          <p className="text-sm text-muted-foreground">No communications yet</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Send an email or sync Gmail to see conversations here</p>
         </div>
       ) : (
         <div className="space-y-2">
           {groupedByThread.map((item: any) => {
             if (item.type === "single") {
-              return renderMessageRow(item.msg);
+              return renderEmailCard(item.msg);
             }
             const { threadId, msgs } = item;
             const isExpanded = expandedThreads.has(threadId);
             const lastMsg = msgs[msgs.length - 1];
             const firstSubject = msgs[0].subject;
+            const inboundCount = msgs.filter((m: any) => m.direction === "inbound").length;
+            const outboundCount = msgs.filter((m: any) => m.direction === "outbound").length;
 
             return (
-              <div key={threadId} className="rounded-lg border border-border overflow-hidden">
+              <div key={threadId} className="rounded-lg border border-border overflow-hidden bg-card">
+                {/* Thread header */}
                 <div
-                  className="flex items-center gap-2 p-3 bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/40 cursor-pointer transition-colors"
                   onClick={() => toggleThread(threadId)}
                 >
-                  {isExpanded ? <ChevronDown size={14} className="text-muted-foreground" /> : <ChevronRight size={14} className="text-muted-foreground" />}
-                  <MessageSquare size={12} className="text-primary" />
-                  <span className="text-xs font-semibold text-foreground truncate flex-1">{firstSubject}</span>
-                  <Badge variant="outline" className="text-[10px] shrink-0">{msgs.length} msg</Badge>
-                  <span className="text-[10px] text-muted-foreground shrink-0">
-                    {format(new Date(lastMsg.created_at), "dd MMM HH:mm", { locale: it })}
+                  <div className="p-1.5 rounded-full bg-primary/10 shrink-0">
+                    <MessageSquare size={12} className="text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground truncate">{firstSubject}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[11px] text-muted-foreground">
+                        {msgs.length} messages
+                      </span>
+                      {inboundCount > 0 && (
+                        <Badge variant="outline" className="text-[9px] h-4 px-1.5 gap-0.5 border-primary/20">
+                          <ArrowDownLeft size={8} /> {inboundCount} in
+                        </Badge>
+                      )}
+                      {outboundCount > 0 && (
+                        <Badge variant="outline" className="text-[9px] h-4 px-1.5 gap-0.5">
+                          <ArrowUpRight size={8} /> {outboundCount} out
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                    {format(new Date(lastMsg.created_at), "dd MMM, HH:mm", { locale: it })}
                   </span>
+                  {isExpanded ? <ChevronDown size={14} className="text-muted-foreground shrink-0" /> : <ChevronRight size={14} className="text-muted-foreground shrink-0" />}
                 </div>
 
+                {/* Expanded: all messages */}
                 {isExpanded && (
-                  <div className="p-2 space-y-1 bg-background">
-                    {msgs.map((msg: any, i: number) => renderMessageRow(msg, i > 0))}
+                  <div className="px-3 pb-3 space-y-2 border-t border-border pt-3 bg-secondary/10">
+                    {msgs.map((msg: any) => renderEmailCard(msg, true))}
                   </div>
                 )}
 
+                {/* Collapsed: preview of last message */}
                 {!isExpanded && (
                   <div
-                    className="px-3 py-2 bg-background cursor-pointer hover:bg-secondary/20"
+                    className="px-4 py-2.5 bg-secondary/20 cursor-pointer hover:bg-secondary/40 transition-colors border-t border-border"
                     onClick={() => setOpenEmail(lastMsg)}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 ml-[36px]">
                       {lastMsg.direction === "inbound" ? (
-                        <ArrowDownLeft size={10} className="text-primary" />
+                        <ArrowDownLeft size={10} className="text-primary shrink-0" />
                       ) : (
-                        <ArrowUpRight size={10} className="text-success" />
+                        <ArrowUpRight size={10} className="text-muted-foreground shrink-0" />
                       )}
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {stripHtml(lastMsg.body || "").slice(0, 100)}
+                      <p className="text-xs text-muted-foreground truncate">
+                        {stripHtml(lastMsg.body || "").slice(0, 120)}
                       </p>
                     </div>
                   </div>
@@ -392,36 +412,50 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
           <DialogHeader>
             <DialogTitle className="font-heading text-base flex items-center gap-2">
               {openEmail?.direction === "inbound" ? (
-                <ArrowDownLeft size={16} className="text-primary" />
+                <div className="p-1.5 rounded-full bg-primary/10 shrink-0"><ArrowDownLeft size={14} className="text-primary" /></div>
               ) : (
-                <ArrowUpRight size={16} className="text-success" />
+                <div className="p-1.5 rounded-full bg-muted shrink-0"><ArrowUpRight size={14} className="text-muted-foreground" /></div>
               )}
-              {openEmail?.subject}
+              <span className="truncate">{openEmail?.subject}</span>
             </DialogTitle>
-            <div className="space-y-1 text-xs text-muted-foreground mt-1">
-              <div className="flex items-center gap-2">
-                <Clock size={10} />
-                {openEmail && format(new Date(openEmail.created_at), "dd MMMM yyyy, HH:mm", { locale: it })}
-              </div>
-              {(openEmail?.metadata as any)?.from && (
-                <p><span className="font-medium text-foreground">Da:</span> {(openEmail.metadata as any).from}</p>
-              )}
-              {(openEmail?.metadata as any)?.to && (
-                <p><span className="font-medium text-foreground">A:</span> {(openEmail.metadata as any).to}</p>
-              )}
-              {(openEmail?.metadata as any)?.cc && (
-                <p><span className="font-medium text-foreground">CC:</span> {(openEmail.metadata as any).cc}</p>
-              )}
-              {!(openEmail?.metadata as any)?.from && openEmail?.recipient_email && (
-                <p>
-                  {openEmail?.direction === "inbound"
-                    ? `Da: ${openEmail?.recipient_email}`
-                    : `A: ${openEmail?.recipient_email}`
-                  }
-                </p>
-              )}
-            </div>
           </DialogHeader>
+          
+          {/* Email metadata */}
+          <div className="rounded-lg bg-secondary/30 border border-border p-3 space-y-1.5 text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock size={12} />
+              <span>{openEmail && format(new Date(openEmail.created_at), "dd MMMM yyyy, HH:mm", { locale: it })}</span>
+            </div>
+            <Separator />
+            {(openEmail?.metadata as any)?.from && (
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-foreground w-10 shrink-0">From:</span>
+                <span className="text-muted-foreground break-all">{(openEmail.metadata as any).from}</span>
+              </div>
+            )}
+            {(openEmail?.metadata as any)?.to && (
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-foreground w-10 shrink-0">To:</span>
+                <span className="text-muted-foreground break-all">{(openEmail.metadata as any).to}</span>
+              </div>
+            )}
+            {(openEmail?.metadata as any)?.cc && (
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-foreground w-10 shrink-0">CC:</span>
+                <span className="text-muted-foreground break-all">{(openEmail.metadata as any).cc}</span>
+              </div>
+            )}
+            {!(openEmail?.metadata as any)?.from && openEmail?.recipient_email && (
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-foreground w-10 shrink-0">
+                  {openEmail?.direction === "inbound" ? "From:" : "To:"}
+                </span>
+                <span className="text-muted-foreground">{openEmail?.recipient_email}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Email body */}
           <ScrollArea className="flex-1 mt-2">
             <div className="pr-4">
               {openEmail?.body?.includes("<") ? (
@@ -434,10 +468,11 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
               )}
             </div>
           </ScrollArea>
-          {/* Reply button */}
+          
+          {/* Reply */}
           <div className="flex justify-end pt-3 border-t border-border">
             <Button size="sm" onClick={() => handleReply(openEmail)} className="gap-1.5">
-              <Reply size={14} /> Rispondi
+              <Reply size={14} /> Reply
             </Button>
           </div>
         </DialogContent>
