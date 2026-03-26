@@ -131,7 +131,8 @@ const AdminProducts = () => {
 
   const filteredVariants = products?.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.sku?.toLowerCase().includes(search.toLowerCase())
+    p.sku?.toLowerCase().includes(search.toLowerCase()) ||
+    (p as any).barcode?.toLowerCase().includes(search.toLowerCase())
   ) || [];
 
   return (
@@ -249,6 +250,7 @@ const AdminProducts = () => {
                 <tr className="border-b border-border">
                   <th className="text-left p-3 text-xs font-heading text-muted-foreground">Product</th>
                   <th className="text-left p-3 text-xs font-heading text-muted-foreground">SKU</th>
+                  <th className="text-left p-3 text-xs font-heading text-muted-foreground">Barcode</th>
                   <th className="text-left p-3 text-xs font-heading text-muted-foreground">Family</th>
                   <th className="text-right p-3 text-xs font-heading text-muted-foreground">Price</th>
                   <th className="text-right p-3 text-xs font-heading text-muted-foreground">Stock</th>
@@ -264,6 +266,7 @@ const AdminProducts = () => {
                         <span className="font-heading font-semibold text-sm text-foreground">{p.name}</span>
                       </td>
                       <td className="p-3 font-mono text-xs text-muted-foreground">{p.sku || "—"}</td>
+                      <td className="p-3 font-mono text-xs text-muted-foreground">{(p as any).barcode || "—"}</td>
                       <td className="p-3">
                         {fam ? (
                           <button

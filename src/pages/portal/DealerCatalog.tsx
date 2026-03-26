@@ -132,7 +132,7 @@ const DealerCatalog = () => {
   };
 
   const filtered = catalogProducts.filter(p => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku?.toLowerCase().includes(search.toLowerCase()));
+    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku?.toLowerCase().includes(search.toLowerCase())) || ((p as any).barcode?.toLowerCase().includes(search.toLowerCase()));
     const matchCat = !selectedCategory || getProductMacroCategory(p) === selectedCategory;
     return matchSearch && matchCat;
   });
@@ -251,7 +251,8 @@ const DealerCatalog = () => {
                     </div>
                     <div className="p-4">
                       <h3 className="font-heading text-sm font-semibold text-foreground mb-1">{p.name}</h3>
-                      {!isClientMode && p.sku && <p className="text-xs font-mono text-muted-foreground mb-1">{p.sku}</p>}
+                      {p.sku && <p className="text-xs font-mono text-muted-foreground">{p.sku}</p>}
+                      {(p as any).barcode && <p className="text-xs font-mono text-muted-foreground mb-1">EAN: {(p as any).barcode}</p>}
                       {p.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{p.description}</p>}
 
                       {isClientMode ? (

@@ -99,6 +99,9 @@ const ProductDetailModal = ({
               {product.sku && (
                 <p className="text-xs font-mono text-muted-foreground mt-1">SKU: {product.sku}</p>
               )}
+              {product.barcode && (
+                <p className="text-xs font-mono text-muted-foreground">EAN: {product.barcode}</p>
+              )}
             </DialogHeader>
 
             {/* Pricing */}
