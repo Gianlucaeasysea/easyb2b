@@ -46,6 +46,7 @@ import AdminPriceLists from "./pages/admin/AdminPriceLists";
 import AdminProductDetail from "./pages/admin/AdminProductDetail";
 import AdminSystemMap from "./pages/admin/AdminSystemMap";
 import AdminMarketing from "./pages/admin/AdminMarketing";
+import AdminCMS from "./pages/admin/AdminCMS";
 
 // CRM
 import CRMDashboard from "./pages/crm/CRMDashboard";
@@ -112,6 +113,7 @@ const App = () => (
               <Route path="price-lists" element={<AdminPriceLists />} />
               <Route path="system-map" element={<AdminSystemMap />} />
               <Route path="marketing" element={<AdminMarketing />} />
+              <Route path="cms" element={<AdminCMS />} />
             </Route>
 
             {/* CRM */}

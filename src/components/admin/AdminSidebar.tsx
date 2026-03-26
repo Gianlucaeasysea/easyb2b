@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Package, ShoppingBag, FileText, Settings, Upload, Tag, Map, FileImage, PackagePlus } from "lucide-react";
+import { LayoutDashboard, Users, Package, ShoppingBag, FileText, Settings, Upload, Tag, Map, FileImage, PackagePlus, Globe } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useNewOrderNotifications } from "@/hooks/useNewOrderNotifications";
@@ -18,6 +18,7 @@ const items = [
   { title: "Importa Dati", url: "/admin/import", icon: Upload },
   { title: "Listini & Sconti", url: "/admin/price-lists", icon: Tag },
   { title: "System Map", url: "/admin/system-map", icon: Map },
+  { title: "CMS / Pagine", url: "/admin/cms", icon: Globe },
   { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
