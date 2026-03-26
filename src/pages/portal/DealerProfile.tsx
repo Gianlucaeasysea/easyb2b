@@ -68,6 +68,33 @@ const DealerProfile = () => {
     enabled: !!client,
   });
 
+  // Client documents
+  const { data: clientDocs } = useQuery({
+    queryKey: ["my-client-documents", client?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("client_documents")
+        .select("*")
+        .eq("client_id", client!.id)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+    enabled: !!client,
+  });
+
+  const DOC_CATEGORIES: Record<string, string> = {
+    contract: "Contract",
+    price_list: "Price List",
+    marketing: "Marketing Material",
+    certificate: "Certificate",
+    other: "Other",
+  };
+
+  const getDocUrl = (filePath: string) => {
+    const { data } = supabase.storage.from("client-documents").getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
   // --- Contacts CRUD ---
   const [newContact, setNewContact] = useState({ contact_name: "", email: "", phone: "", role: "" });
 
