@@ -223,7 +223,7 @@ const DealerCart = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-heading text-sm font-semibold text-foreground truncate">{item.name}</p>
-                {item.sku && <p className="text-xs font-mono text-muted-foreground">{item.sku}</p>}
+                {item.sku && <p className="text-xs font-mono text-muted-foreground">SKU: {item.sku}</p>}
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs text-muted-foreground line-through">€{item.unitPrice.toFixed(2)}</span>
                   <span className="text-sm font-semibold text-foreground">€{item.b2bPrice.toFixed(2)}</span>

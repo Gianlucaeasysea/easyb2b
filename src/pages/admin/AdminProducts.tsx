@@ -131,7 +131,8 @@ const AdminProducts = () => {
 
   const filteredVariants = products?.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.sku?.toLowerCase().includes(search.toLowerCase())
+    p.sku?.toLowerCase().includes(search.toLowerCase()) ||
+    (p as any).barcode?.toLowerCase().includes(search.toLowerCase())
   ) || [];
 
   return (
