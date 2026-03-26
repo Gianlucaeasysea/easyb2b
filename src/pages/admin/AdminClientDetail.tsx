@@ -121,6 +121,8 @@ const AdminClientDetail = () => {
   const [showCreateAccount, setShowCreateAccount] = useState(false);
   const [accountPassword, setAccountPassword] = useState("dealer2025");
   const [creatingAccount, setCreatingAccount] = useState(false);
+  const [showComposeFromOrder, setShowComposeFromOrder] = useState(false);
+  const [composeOrderContext, setComposeOrderContext] = useState<any>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [showAddAddress, setShowAddAddress] = useState(false);
   const [newAddr, setNewAddr] = useState({ label: "", address_line: "", city: "", province: "", postal_code: "", country: "" });
