@@ -14,6 +14,7 @@ import { it } from "date-fns/locale";
 import { useState } from "react";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
+import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -44,6 +45,7 @@ const CRMContactDetail = () => {
   const navigate = useNavigate();
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeOrderCtx, setComposeOrderCtx] = useState<any>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   // Client data
   const { data: client, isLoading } = useQuery({
@@ -308,8 +310,8 @@ const CRMContactDetail = () => {
                     </TableHeader>
                     <TableBody>
                       {orders.map(o => (
-                        <TableRow key={o.id} className="hover:bg-secondary/50">
-                          <TableCell className="font-mono text-xs font-semibold">{(o as any).order_code || `#${o.id.slice(0, 8)}`}</TableCell>
+                        <TableRow key={o.id} className="hover:bg-secondary/50 cursor-pointer" onClick={() => setSelectedOrderId(o.id)}>
+                          <TableCell className="font-mono text-xs font-semibold text-primary">{(o as any).order_code || `#${o.id.slice(0, 8)}`}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">{fmtDate(o.created_at)}</TableCell>
                           <TableCell><Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"]}`}>{o.status || "draft"}</Badge></TableCell>
                           <TableCell>
@@ -320,7 +322,7 @@ const CRMContactDetail = () => {
                           <TableCell className="text-right font-mono text-sm font-semibold">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => {
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation();
                                 setComposeOrderCtx({
                                   orderId: o.id,
                                   orderCode: (o as any).order_code || `#${o.id.slice(0, 8)}`,
@@ -404,6 +406,12 @@ const CRMContactDetail = () => {
         orderStatus={composeOrderCtx?.orderStatus}
         orderTotal={composeOrderCtx?.orderTotal}
         trackingNumber={composeOrderCtx?.trackingNumber}
+      />
+
+      <CRMOrderDetailModal
+        open={!!selectedOrderId}
+        onOpenChange={(open) => { if (!open) setSelectedOrderId(null); }}
+        orderId={selectedOrderId}
       />
     </div>
   );
