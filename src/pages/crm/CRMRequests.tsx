@@ -4,20 +4,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Check, X, Target } from "lucide-react";
+import { FileText, Check, X, ArrowRight, Target, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { format } from "date-fns";
 
-const AdminRequests = () => {
+const CRMRequests = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
   const { data: requests, isLoading } = useQuery({
-    queryKey: ["admin-requests"],
+    queryKey: ["crm-dealer-requests"],
     queryFn: async () => {
       const { data, error } = await supabase.from("distributor_requests").select("*").order("created_at", { ascending: false });
       if (error) throw error;
@@ -31,13 +31,14 @@ const AdminRequests = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-dealer-requests"] });
       toast({ title: "Request updated" });
     },
   });
 
   const convertToLead = useMutation({
     mutationFn: async (request: any) => {
+      // Create lead from request
       const { error } = await supabase.from("leads").insert({
         company_name: request.company_name,
         contact_name: request.contact_name,
@@ -50,25 +51,27 @@ const AdminRequests = () => {
         assigned_to: user?.id,
       });
       if (error) throw error;
+      // Mark request as converted
       await supabase.from("distributor_requests").update({ status: "converted" }).eq("id", request.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-dealer-requests"] });
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
-      toast({ title: "Lead creato dalla richiesta!" });
+      toast({ title: "Lead created from request!" });
       setSelectedRequest(null);
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const newRequests = requests?.filter(r => r.status === "new") || [];
+  const processedRequests = requests?.filter(r => r.status !== "new") || [];
 
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">Dealer Requests</h1>
-          <p className="text-sm text-muted-foreground">Review and manage incoming dealer applications</p>
+          <p className="text-sm text-muted-foreground">Incoming applications from the "Become a Dealer" form</p>
         </div>
         <div className="flex items-center gap-2">
           {newRequests.length > 0 && (
@@ -93,6 +96,7 @@ const AdminRequests = () => {
                 <TableHead>Company</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Region</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Date</TableHead>
@@ -106,14 +110,16 @@ const AdminRequests = () => {
                   <TableCell className="font-heading font-semibold">{r.company_name}</TableCell>
                   <TableCell className="text-sm">{r.contact_name}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">{r.email}</TableCell>
-                  <TableCell className="text-muted-foreground">{r.zone || "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{r.business_type || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{r.phone}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{r.zone || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{r.business_type || "—"}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">{format(new Date(r.created_at), "dd MMM yyyy")}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={
                       r.status === "new" ? "border-warning text-warning" :
                       r.status === "approved" || r.status === "converted" ? "bg-success/20 text-success border-0" :
-                      r.status === "rejected" ? "bg-destructive/20 text-destructive border-0" : ""
+                      r.status === "rejected" ? "bg-destructive/20 text-destructive border-0" :
+                      ""
                     }>{r.status}</Badge>
                   </TableCell>
                   <TableCell>
@@ -123,10 +129,7 @@ const AdminRequests = () => {
                           <Button size="sm" variant="ghost" className="text-success hover:text-success h-8 gap-1" onClick={() => convertToLead.mutate(r)} title="Convert to Lead">
                             <Target size={14} /> Pipeline
                           </Button>
-                          <Button size="sm" variant="ghost" className="text-success hover:text-success h-8" onClick={() => updateStatus.mutate({ id: r.id, status: "approved" })}>
-                            <Check size={14} />
-                          </Button>
-                          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive h-8" onClick={() => updateStatus.mutate({ id: r.id, status: "rejected" })}>
+                          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive h-8" onClick={() => updateStatus.mutate({ id: r.id, status: "rejected" })} title="Reject">
                             <X size={14} />
                           </Button>
                         </>
@@ -174,10 +177,7 @@ const AdminRequests = () => {
                     <Button className="flex-1 gap-1 bg-foreground text-background" onClick={() => convertToLead.mutate(selectedRequest)}>
                       <Target size={14} /> Open in Pipeline
                     </Button>
-                    <Button variant="outline" className="gap-1" onClick={() => updateStatus.mutate({ id: selectedRequest.id, status: "approved" })}>
-                      <Check size={14} /> Approve
-                    </Button>
-                    <Button variant="outline" className="gap-1 text-destructive" onClick={() => {
+                    <Button variant="outline" className="flex-1 gap-1 text-destructive" onClick={() => {
                       updateStatus.mutate({ id: selectedRequest.id, status: "rejected" });
                       setSelectedRequest(null);
                     }}>
@@ -194,4 +194,4 @@ const AdminRequests = () => {
   );
 };
 
-export default AdminRequests;
+export default CRMRequests;

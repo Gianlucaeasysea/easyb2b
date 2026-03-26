@@ -58,6 +58,7 @@ import CRMPipeline from "./pages/crm/CRMPipeline";
 import CRMActivities from "./pages/crm/CRMActivities";
 import CRMContacts from "./pages/crm/CRMContacts";
 import CRMContactDetail from "./pages/crm/CRMContactDetail";
+import CRMRequests from "./pages/crm/CRMRequests";
 import CRMHelp from "./pages/crm/CRMHelp";
 
 const queryClient = new QueryClient();
@@ -129,6 +130,7 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<CRMDashboard />} />
+              <Route path="requests" element={<CRMRequests />} />
               <Route path="leads" element={<CRMLeads />} />
               <Route path="pipeline" element={<CRMPipeline />} />
               <Route path="activities" element={<CRMActivities />} />
