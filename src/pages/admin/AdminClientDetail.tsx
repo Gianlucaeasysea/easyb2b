@@ -656,48 +656,84 @@ const AdminClientDetail = () => {
           </Button>
         </div>
 
-        {/* Right: Orders */}
+        {/* Right: Tabs - Orders & Communications */}
         <div className="lg:col-span-2">
-          <div className="glass-card-solid overflow-hidden">
-            <div className="p-4 border-b border-border flex items-center justify-between">
-              <h2 className="font-heading font-bold text-foreground flex items-center gap-2"><ShoppingBag size={16} /> Order History</h2>
-              <Badge variant="outline" className="text-xs">{totalOrders} orders</Badge>
-            </div>
-            {!orders?.length ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">No orders yet</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Order Code</TableHead>
-                    <TableHead className="text-xs">Date</TableHead>
-                    <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-xs">Payment</TableHead>
-                    <TableHead className="text-xs">Items</TableHead>
-                    <TableHead className="text-xs text-right">Total</TableHead>
-                    <TableHead className="text-xs"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map(o => (
-                    <TableRow key={o.id} className="cursor-pointer hover:bg-secondary/50" onClick={() => setSelectedOrder(o)}>
-                      <TableCell className="font-mono text-xs font-semibold">{(o as any).order_code || `#${o.id.slice(0, 8)}`}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{fmtDate(o.created_at)}</TableCell>
-                      <TableCell><Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"] || "bg-muted text-muted-foreground"}`}>{o.status || "draft"}</Badge></TableCell>
-                      <TableCell>
-                        {(o as any).payment_status ? (
-                          <Badge className={`border-0 text-[10px] ${(o as any).payment_status === 'Payed' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>{(o as any).payment_status}</Badge>
-                        ) : <span className="text-xs text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{(o.order_items as any[])?.length || 0}</TableCell>
-                      <TableCell className="text-right font-mono text-sm font-semibold">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
-                      <TableCell><Eye size={14} className="text-muted-foreground" /></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+          <Tabs defaultValue="orders" className="w-full">
+            <TabsList className="mb-4 bg-secondary">
+              <TabsTrigger value="orders" className="gap-1 text-xs"><ShoppingBag size={14} /> Ordini ({totalOrders})</TabsTrigger>
+              <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Comunicazioni</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="orders">
+              <div className="glass-card-solid overflow-hidden">
+                <div className="p-4 border-b border-border flex items-center justify-between">
+                  <h2 className="font-heading font-bold text-foreground flex items-center gap-2"><ShoppingBag size={16} /> Order History</h2>
+                  <Badge variant="outline" className="text-xs">{totalOrders} orders</Badge>
+                </div>
+                {!orders?.length ? (
+                  <div className="p-8 text-center text-muted-foreground text-sm">No orders yet</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Order Code</TableHead>
+                        <TableHead className="text-xs">Date</TableHead>
+                        <TableHead className="text-xs">Status</TableHead>
+                        <TableHead className="text-xs">Payment</TableHead>
+                        <TableHead className="text-xs">Items</TableHead>
+                        <TableHead className="text-xs text-right">Total</TableHead>
+                        <TableHead className="text-xs"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orders.map(o => (
+                        <TableRow key={o.id} className="cursor-pointer hover:bg-secondary/50" onClick={() => setSelectedOrder(o)}>
+                          <TableCell className="font-mono text-xs font-semibold">{(o as any).order_code || `#${o.id.slice(0, 8)}`}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{fmtDate(o.created_at)}</TableCell>
+                          <TableCell><Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"] || "bg-muted text-muted-foreground"}`}>{o.status || "draft"}</Badge></TableCell>
+                          <TableCell>
+                            {(o as any).payment_status ? (
+                              <Badge className={`border-0 text-[10px] ${(o as any).payment_status === 'Payed' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>{(o as any).payment_status}</Badge>
+                            ) : <span className="text-xs text-muted-foreground">—</span>}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{(o.order_items as any[])?.length || 0}</TableCell>
+                          <TableCell className="text-right font-mono text-sm font-semibold">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Eye size={14} className="text-muted-foreground" />
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => {
+                                e.stopPropagation();
+                                setComposeOrderContext({
+                                  orderId: o.id,
+                                  orderCode: (o as any).order_code || `#${o.id.slice(0, 8)}`,
+                                  orderStatus: o.status,
+                                  orderTotal: o.total_amount,
+                                  trackingNumber: (o as any).tracking_number,
+                                });
+                                setShowComposeFromOrder(true);
+                              }}>
+                                <Send size={12} className="text-primary" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="communications">
+              <div className="glass-card-solid p-6">
+                <ClientCommunications
+                  clientId={id!}
+                  clientName={form.company_name}
+                  clientEmail={form.email}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
