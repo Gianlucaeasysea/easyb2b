@@ -77,6 +77,9 @@ const App = () => (
             <Route path="/diventa-distributore" element={<BecomeADealer />} />
             <Route path="/oauth/gmail-popup" element={<GmailOAuthPopup />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/cookie-policy" element={<CookiePolicy />} />
 
             {/* Dealer Portal */}
             <Route path="/portal" element={
