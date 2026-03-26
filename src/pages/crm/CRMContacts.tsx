@@ -87,7 +87,9 @@ const CRMContacts = () => {
             </TableHeader>
             <TableBody>
               {allContacts.map(c => (
-                <TableRow key={`${c.type}-${c.id}`}>
+                <TableRow key={`${c.type}-${c.id}`} className="cursor-pointer hover:bg-secondary/50" onClick={() => {
+                    if (c.type === "client") navigate(`/crm/contacts/${c.id}`);
+                  }}>
                   <TableCell className="font-heading font-semibold">{c.company_name}</TableCell>
                   <TableCell>{c.contact_name}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">{c.email}</TableCell>
@@ -99,7 +101,7 @@ const CRMContacts = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                       {c.phone && (
                         <>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-success" onClick={() => openWhatsApp(c.phone!, c.contact_name || c.company_name)} title="WhatsApp">
@@ -115,6 +117,7 @@ const CRMContacts = () => {
                           <Mail size={16} />
                         </Button>
                       )}
+                      {c.type === "client" && <ChevronRight size={16} className="text-muted-foreground ml-1" />}
                     </div>
                   </TableCell>
                 </TableRow>
