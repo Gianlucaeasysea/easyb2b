@@ -46,9 +46,13 @@ const fmtDate = (d: string | null | undefined) => {
 const CRMContactDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeOrderCtx, setComposeOrderCtx] = useState<any>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
 
   // Client data
   const { data: client, isLoading } = useQuery({
