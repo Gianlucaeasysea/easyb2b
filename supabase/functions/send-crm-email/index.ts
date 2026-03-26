@@ -83,6 +83,7 @@ Deno.serve(async (req) => {
     await client.send({
       from: `EasySea <${GMAIL_USER}>`,
       to,
+      cc: cc || undefined,
       bcc: bcc || 'g.scotto@easysea.org',
       subject,
       content: text || '',
