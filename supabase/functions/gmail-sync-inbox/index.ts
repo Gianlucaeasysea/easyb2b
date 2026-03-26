@@ -10,9 +10,7 @@ async function refreshTokenIfNeeded(supabase: any, tokenRow: any): Promise<strin
   if (new Date(tokenRow.expires_at) > new Date(Date.now() + 60000)) {
     return tokenRow.access_token
   }
-
   const { clientId, clientSecret } = getGmailOAuthConfig()
-
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -23,16 +21,13 @@ async function refreshTokenIfNeeded(supabase: any, tokenRow: any): Promise<strin
       grant_type: 'refresh_token',
     }),
   })
-
   const data = await res.json()
   if (!res.ok) throw new Error(`Token refresh failed: ${JSON.stringify(data)}`)
-
   const expiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString()
   await supabase
     .from('gmail_tokens')
     .update({ access_token: data.access_token, expires_at: expiresAt, updated_at: new Date().toISOString() })
     .eq('id', tokenRow.id)
-
   return data.access_token
 }
 
@@ -44,8 +39,7 @@ function extractEmail(headerValue: string): string {
 function decodeBody(body: any): string {
   if (body?.data) {
     try {
-      const decoded = atob(body.data.replace(/-/g, '+').replace(/_/g, '/'))
-      return decoded
+      return atob(body.data.replace(/-/g, '+').replace(/_/g, '/'))
     } catch { return '' }
   }
   return ''
@@ -89,7 +83,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Check role
   const { data: roleData } = await supabase.rpc('get_user_role', { _user_id: user.id })
   if (!roleData || !['admin', 'sales'].includes(roleData)) {
     return new Response(JSON.stringify({ error: 'Forbidden' }), {
@@ -119,26 +112,48 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Get clients with email
+  // Build email→client map from BOTH clients.email AND client_contacts.email
   const { data: clients } = await supabase
     .from('clients')
     .select('id, email, company_name')
     .not('email', 'is', null)
 
-  if (!clients?.length) {
+  const { data: clientContacts } = await supabase
+    .from('client_contacts')
+    .select('client_id, email, contact_name')
+    .not('email', 'is', null)
+
+  const emailToClient = new Map<string, { id: string; name: string; contactEmail: string }>()
+
+  // Add main client emails
+  for (const c of (clients || [])) {
+    if (c.email) {
+      emailToClient.set(c.email.toLowerCase(), { id: c.id, name: c.company_name, contactEmail: c.email.toLowerCase() })
+    }
+  }
+
+  // Add contact emails (map to parent client)
+  for (const cc of (clientContacts || [])) {
+    if (cc.email) {
+      // Find client name
+      const parentClient = (clients || []).find(c => c.id === cc.client_id)
+      emailToClient.set(cc.email.toLowerCase(), {
+        id: cc.client_id,
+        name: parentClient?.company_name || cc.contact_name || 'Unknown',
+        contactEmail: cc.email.toLowerCase(),
+      })
+    }
+  }
+
+  if (emailToClient.size === 0) {
     return new Response(JSON.stringify({ synced: 0 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
-  const clientEmailMap = new Map<string, { id: string; name: string }>()
-  for (const c of clients) {
-    if (c.email) clientEmailMap.set(c.email.toLowerCase(), { id: c.id, name: c.company_name })
-  }
-
-  // Fetch recent messages (last 50)
+  // Fetch recent messages (last 100)
   const listRes = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50&q=in:inbox`,
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=100&q=in:inbox OR in:sent`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   )
   const listData = await listRes.json()
@@ -152,7 +167,6 @@ Deno.serve(async (req) => {
   let synced = 0
 
   for (const msg of listData.messages) {
-    // Check if already imported
     const { data: existing } = await supabase
       .from('client_communications')
       .select('id')
@@ -161,7 +175,6 @@ Deno.serve(async (req) => {
 
     if (existing) continue
 
-    // Fetch full message
     const msgRes = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -170,13 +183,29 @@ Deno.serve(async (req) => {
 
     const headers = msgData.payload?.headers || []
     const from = headers.find((h: any) => h.name.toLowerCase() === 'from')?.value || ''
+    const to = headers.find((h: any) => h.name.toLowerCase() === 'to')?.value || ''
     const subject = headers.find((h: any) => h.name.toLowerCase() === 'subject')?.value || '(nessun oggetto)'
     const date = headers.find((h: any) => h.name.toLowerCase() === 'date')?.value || ''
 
     const senderEmail = extractEmail(from)
-    const client = clientEmailMap.get(senderEmail)
+    const recipientEmail = extractEmail(to)
+    const labels = msgData.labelIds || []
 
-    if (!client) continue // Not from a known client
+    // Determine direction and match client
+    let client = emailToClient.get(senderEmail)
+    let direction = 'inbound'
+    let contactEmail = senderEmail
+
+    if (!client) {
+      // Check if we sent TO a known client/contact
+      client = emailToClient.get(recipientEmail)
+      if (client) {
+        direction = 'outbound'
+        contactEmail = recipientEmail
+      }
+    }
+
+    if (!client) continue
 
     // Extract body
     let bodyContent = ''
@@ -187,16 +216,15 @@ Deno.serve(async (req) => {
       bodyContent = decodeBody(msgData.payload?.body) || ''
     }
 
-    // Insert as inbound communication
     await supabase.from('client_communications').insert({
       client_id: client.id,
       subject,
       body: bodyContent || '(contenuto vuoto)',
-      direction: 'inbound',
-      template_type: 'inbound',
+      direction,
+      template_type: direction === 'inbound' ? 'inbound' : 'custom',
       sent_by: user.id,
-      recipient_email: 'business@easysea.org',
-      status: 'received',
+      recipient_email: contactEmail,
+      status: direction === 'inbound' ? 'received' : 'sent',
       gmail_message_id: msg.id,
       gmail_thread_id: msgData.threadId || null,
       created_at: date ? new Date(date).toISOString() : new Date().toISOString(),

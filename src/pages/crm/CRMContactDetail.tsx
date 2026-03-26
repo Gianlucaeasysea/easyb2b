@@ -15,6 +15,7 @@ import { useState } from "react";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
 import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
+import { ContactManager } from "@/components/crm/ContactManager";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -231,29 +232,12 @@ const CRMContactDetail = () => {
             </div>
           </div>
 
-          {/* Contacts */}
-          <div className="glass-card-solid p-5">
-            <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
-              <Users size={14} /> Contatti
-            </h3>
-            {client.contact_name && (
-              <div className="p-3 bg-secondary/50 rounded-lg mb-2 text-sm">
-                <p className="font-semibold text-foreground">{client.contact_name} <span className="text-muted-foreground text-xs">· Principale</span></p>
-                {client.email && <p className="text-xs text-muted-foreground">{client.email}</p>}
-                {client.phone && <p className="text-xs text-muted-foreground">{client.phone}</p>}
-              </div>
-            )}
-            {contacts?.map(c => (
-              <div key={c.id} className="p-3 bg-secondary/50 rounded-lg mb-2 text-sm">
-                <p className="font-semibold text-foreground">{c.contact_name} {c.role && <span className="text-muted-foreground text-xs">· {c.role}</span>}</p>
-                {c.email && <p className="text-xs text-muted-foreground">{c.email}</p>}
-                {c.phone && <p className="text-xs text-muted-foreground">{c.phone}</p>}
-              </div>
-            ))}
-            {!contacts?.length && !client.contact_name && (
-              <p className="text-xs text-muted-foreground">Nessun contatto</p>
-            )}
-          </div>
+          <ContactManager
+            clientId={id!}
+            clientMainEmail={client.email}
+            clientMainPhone={client.phone}
+            clientMainContactName={client.contact_name}
+          />
 
           {/* Shipping Addresses */}
           {addresses && addresses.length > 0 && (
@@ -351,6 +335,7 @@ const CRMContactDetail = () => {
                   clientId={id!}
                   clientName={client.company_name}
                   clientEmail={client.email || ""}
+                  contactEmails={contacts?.map(c => c.email).filter(Boolean) as string[]}
                 />
               </div>
             </TabsContent>
