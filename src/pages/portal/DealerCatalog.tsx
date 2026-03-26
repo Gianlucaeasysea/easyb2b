@@ -132,7 +132,7 @@ const DealerCatalog = () => {
   };
 
   const filtered = catalogProducts.filter(p => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku?.toLowerCase().includes(search.toLowerCase()));
+    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku?.toLowerCase().includes(search.toLowerCase())) || ((p as any).barcode?.toLowerCase().includes(search.toLowerCase()));
     const matchCat = !selectedCategory || getProductMacroCategory(p) === selectedCategory;
     return matchSearch && matchCat;
   });
