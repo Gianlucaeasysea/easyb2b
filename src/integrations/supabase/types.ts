@@ -111,7 +111,10 @@ export type Database = {
           body: string
           client_id: string
           created_at: string
+          direction: string
           error_message: string | null
+          gmail_message_id: string | null
+          gmail_thread_id: string | null
           id: string
           metadata: Json | null
           order_id: string | null
@@ -125,7 +128,10 @@ export type Database = {
           body: string
           client_id: string
           created_at?: string
+          direction?: string
           error_message?: string | null
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
           id?: string
           metadata?: Json | null
           order_id?: string | null
@@ -139,7 +145,10 @@ export type Database = {
           body?: string
           client_id?: string
           created_at?: string
+          direction?: string
           error_message?: string | null
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
           id?: string
           metadata?: Json | null
           order_id?: string | null
@@ -505,6 +514,39 @@ export type Database = {
           id?: string
           token?: string
           used_at?: string | null
+        }
+        Relationships: []
+      }
+      gmail_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          refresh_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          email?: string
+          expires_at: string
+          id?: string
+          refresh_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

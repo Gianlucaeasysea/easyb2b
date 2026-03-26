@@ -1,0 +1,1 @@
+ALTER TABLE public.gmail_tokens ADD CONSTRAINT gmail_tokens_email_unique UNIQUE (email);
