@@ -267,7 +267,7 @@ const AdminClientDetail = () => {
     return data.publicUrl;
   };
 
-
+  const [form, setForm] = useState({
     company_name: "", contact_name: "", email: "", phone: "", country: "", zone: "",
     status: "", discount_class: "", notes: "", address: "", website: "", business_type: "", vat_number: "",
   });
