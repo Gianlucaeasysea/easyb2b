@@ -263,13 +263,50 @@ const CRMContactDetail = () => {
             </div>
           )}
 
-          {/* Notes */}
-          {client.notes && (
-            <div className="glass-card-solid p-5">
-              <h3 className="font-heading font-bold text-foreground mb-2 text-sm">📝 Note</h3>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{client.notes}</p>
+          {/* Notes - editable */}
+          <div className="glass-card-solid p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-heading font-bold text-foreground text-sm">📝 Note Azienda</h3>
+              {!editingNotes ? (
+                <Button
+                  size="sm" variant="ghost" className="h-6 text-xs"
+                  onClick={() => { setEditingNotes(true); setNotesValue(client.notes || ""); }}
+                >
+                  {client.notes ? "Modifica" : "Aggiungi"}
+                </Button>
+              ) : (
+                <div className="flex gap-1">
+                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setEditingNotes(false)}>Annulla</Button>
+                  <Button
+                    size="sm" className="h-6 text-xs" disabled={savingNotes}
+                    onClick={async () => {
+                      setSavingNotes(true);
+                      const { error } = await supabase.from("clients").update({ notes: notesValue.trim() || null }).eq("id", id!);
+                      setSavingNotes(false);
+                      if (error) { toast.error("Errore salvataggio"); return; }
+                      toast.success("Note salvate");
+                      setEditingNotes(false);
+                      queryClient.invalidateQueries({ queryKey: ["crm-client", id] });
+                    }}
+                  >
+                    {savingNotes ? "..." : "Salva"}
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
+            {editingNotes ? (
+              <Textarea
+                value={notesValue}
+                onChange={e => setNotesValue(e.target.value)}
+                placeholder="Scrivi note sull'azienda..."
+                className="text-sm min-h-[100px] resize-none"
+              />
+            ) : client.notes ? (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{client.notes}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">Nessuna nota. Clicca "Aggiungi" per inserirne una.</p>
+            )}
+          </div>
         </div>
 
         {/* Right - Tabs */}
