@@ -102,7 +102,7 @@ const AdminOrderDetail = () => {
         queryClient.invalidateQueries({ queryKey: ["order-events", id] });
       }
 
-      // Send email notification on status change
+      // Send email notification + in-app notification on status change
       if (previousStatus !== status) {
         try {
           await supabase.functions.invoke('send-order-notification', {
@@ -114,6 +114,20 @@ const AdminOrderDetail = () => {
           });
         } catch (emailErr) {
           console.error("Email notification failed:", emailErr);
+        }
+
+        // Create in-app notification for the dealer
+        try {
+          const statusLabel = statusConfig[status]?.label || status;
+          await supabase.from("client_notifications").insert({
+            client_id: (order as any)?.client_id,
+            title: `Order ${(order as any)?.order_code || ''} status updated: ${statusLabel}`,
+            body: trackingNumber ? `Tracking: ${trackingNumber}` : `Your order status has been updated to "${statusLabel}".`,
+            type: "order",
+            order_id: id,
+          });
+        } catch (notifErr) {
+          console.error("In-app notification failed:", notifErr);
         }
       }
     } catch (err: any) {
