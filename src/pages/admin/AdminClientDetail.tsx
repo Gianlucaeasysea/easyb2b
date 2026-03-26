@@ -803,6 +803,22 @@ const AdminClientDetail = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Compose Email from Order */}
+      {composeOrderContext && (
+        <ComposeEmailDialog
+          open={showComposeFromOrder}
+          onOpenChange={setShowComposeFromOrder}
+          clientId={id!}
+          clientName={form.company_name}
+          clientEmail={form.email}
+          orderId={composeOrderContext.orderId}
+          orderCode={composeOrderContext.orderCode}
+          orderStatus={composeOrderContext.orderStatus}
+          orderTotal={composeOrderContext.orderTotal}
+          trackingNumber={composeOrderContext.trackingNumber}
+        />
+      )}
+
       {/* Create Account Dialog */}
       <Dialog open={showCreateAccount} onOpenChange={setShowCreateAccount}>
         <DialogContent className="max-w-sm">
