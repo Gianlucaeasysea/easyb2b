@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Clock, CheckCircle, Truck, Package } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle, Truck, Package, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
 import OrderDocuments from "@/components/OrderDocuments";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
+import { ClientCommunications } from "@/components/crm/ClientCommunications";
 
 const statusOptions = [
   "draft", "confirmed", "processing", "To be prepared", "Ready", "On the road", "Delivered", "Payed", "Returned", "cancelled", "lost"
