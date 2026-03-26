@@ -112,6 +112,7 @@ const statusColors: Record<string, string> = {
 
 const AdminClientDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
