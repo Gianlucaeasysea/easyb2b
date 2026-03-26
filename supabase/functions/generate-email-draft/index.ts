@@ -5,13 +5,53 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const AI_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions'
+
+async function callLovableAi({
+  lovableApiKey,
+  messages,
+  model,
+}: {
+  lovableApiKey: string
+  messages: Array<{ role: 'system' | 'user'; content: string }>
+  model: string
+}) {
+  const response = await fetch(AI_GATEWAY_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${lovableApiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+
+    if (response.status === 429) {
+      throw new Error('Rate limits exceeded, please try again in a moment.')
+    }
+
+    if (response.status === 402) {
+      throw new Error('Lovable AI credits required. Please top up workspace usage to continue.')
+    }
+
+    throw new Error(`AI gateway error [${response.status}]: ${errorText}`)
+  }
+
+  const data = await response.json()
+  return data.choices?.[0]?.message?.content?.trim() || ''
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
 
   if (!lovableApiKey) {
@@ -85,48 +125,25 @@ ${context.custom_prompt || 'Follow-up commerciale generico.'}`
   }
 
   try {
-    const aiResponse = await fetch('https://ai.lovable.dev/api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${lovableApiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-      }),
+    const draft = await callLovableAi({
+      lovableApiKey,
+      model: 'google/gemini-3-flash-preview',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
     })
 
-    if (!aiResponse.ok) {
-      throw new Error(`AI API error: ${aiResponse.status}`)
-    }
-
-    const aiData = await aiResponse.json()
-    const draft = aiData.choices?.[0]?.message?.content || ''
-
-    // Generate subject suggestion
-    const subjectResponse = await fetch('https://ai.lovable.dev/api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${lovableApiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
-        messages: [
-          { role: 'system', content: 'Genera SOLO l\'oggetto dell\'email (una riga, senza virgolette). Professionale e conciso.' },
-          { role: 'user', content: `Template: ${template_type}. Cliente: ${context.client_name || ''}. Ordine: ${context.order_code || ''}. Contesto: ${context.custom_prompt || ''}` },
-        ],
-      }),
+    const suggestedSubject = await callLovableAi({
+      lovableApiKey,
+      model: 'google/gemini-2.5-flash-lite',
+      messages: [
+        { role: 'system', content: 'Genera SOLO l\'oggetto dell\'email (una riga, senza virgolette). Professionale e conciso.' },
+        { role: 'user', content: `Template: ${template_type}. Cliente: ${context.client_name || ''}. Ordine: ${context.order_code || ''}. Contesto: ${context.custom_prompt || ''}` },
+      ],
     })
 
-    const subjectData = await subjectResponse.json()
-    const suggestedSubject = subjectData.choices?.[0]?.message?.content?.trim() || 'Aggiornamento da EasySea'
-
-    return new Response(JSON.stringify({ draft, subject: suggestedSubject }), {
+    return new Response(JSON.stringify({ draft, subject: suggestedSubject || 'Aggiornamento da EasySea' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err: any) {
