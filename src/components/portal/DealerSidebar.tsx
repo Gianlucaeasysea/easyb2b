@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Package, Trophy, Megaphone, HelpCircle, FileImage, ShoppingCart, UserCircle } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, Trophy, Megaphone, HelpCircle, FileImage, ShoppingCart, UserCircle, Bell } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
