@@ -172,7 +172,7 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
                   <Badge variant="secondary" className="text-[10px]">{lead.source}</Badge>
                 )}
                 <span className="text-[10px] text-muted-foreground">
-                  Created {format(new Date(lead.created_at), "dd MMM yyyy")}
+                  Created {safeFormat(lead.created_at, "dd MMM yyyy")}
                 </span>
               </div>
             </div>
