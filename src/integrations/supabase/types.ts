@@ -379,18 +379,28 @@ export type Database = {
         Row: {
           address: string | null
           assigned_sales_id: string | null
+          avg_order_frequency_days: number | null
           business_type: string | null
           company_name: string
           contact_name: string | null
           country: string | null
           created_at: string
+          days_since_last_order: number | null
           discount_class: string | null
+          disqualified_reason: string | null
           email: string | null
           id: string
+          last_order_date: string | null
+          last_order_value: number | null
+          next_reorder_expected_date: string | null
           notes: string | null
           phone: string | null
+          platform_client_id: string | null
           portal_password: string | null
           status: string | null
+          status_changed_at: string | null
+          total_orders_count: number | null
+          total_orders_value: number | null
           updated_at: string
           user_id: string | null
           vat_number: string | null
@@ -400,18 +410,28 @@ export type Database = {
         Insert: {
           address?: string | null
           assigned_sales_id?: string | null
+          avg_order_frequency_days?: number | null
           business_type?: string | null
           company_name: string
           contact_name?: string | null
           country?: string | null
           created_at?: string
+          days_since_last_order?: number | null
           discount_class?: string | null
+          disqualified_reason?: string | null
           email?: string | null
           id?: string
+          last_order_date?: string | null
+          last_order_value?: number | null
+          next_reorder_expected_date?: string | null
           notes?: string | null
           phone?: string | null
+          platform_client_id?: string | null
           portal_password?: string | null
           status?: string | null
+          status_changed_at?: string | null
+          total_orders_count?: number | null
+          total_orders_value?: number | null
           updated_at?: string
           user_id?: string | null
           vat_number?: string | null
@@ -421,18 +441,28 @@ export type Database = {
         Update: {
           address?: string | null
           assigned_sales_id?: string | null
+          avg_order_frequency_days?: number | null
           business_type?: string | null
           company_name?: string
           contact_name?: string | null
           country?: string | null
           created_at?: string
+          days_since_last_order?: number | null
           discount_class?: string | null
+          disqualified_reason?: string | null
           email?: string | null
           id?: string
+          last_order_date?: string | null
+          last_order_value?: number | null
+          next_reorder_expected_date?: string | null
           notes?: string | null
           phone?: string | null
+          platform_client_id?: string | null
           portal_password?: string | null
           status?: string | null
+          status_changed_at?: string | null
+          total_orders_count?: number | null
+          total_orders_value?: number | null
           updated_at?: string
           user_id?: string | null
           vat_number?: string | null
