@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft, Building2, Mail, Phone, Globe, MapPin, ShoppingBag,
-  MessageCircle, Send, Eye, Clock, TrendingUp, Users, FileText
+  MessageCircle, Send, Eye, Clock, TrendingUp, Users, FileText, CalendarDays, BarChart3
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { it } from "date-fns/locale";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,11 +31,18 @@ const statusColors: Record<string, string> = {
   "On the road": "bg-primary/20 text-primary",
   Payed: "bg-success/20 text-success",
   cancelled: "bg-destructive/20 text-destructive",
-  active: "bg-success/20 text-success",
-  inactive: "bg-destructive/20 text-destructive",
-  onboarding: "bg-warning/20 text-warning",
   lead: "bg-primary/20 text-primary",
-  suspended: "bg-destructive/20 text-destructive",
+  qualifying: "bg-warning/20 text-warning",
+  onboarding: "bg-chart-4/20 text-chart-4",
+  active: "bg-success/20 text-success",
+  at_risk: "bg-destructive/20 text-destructive",
+  churned: "bg-muted text-muted-foreground",
+  disqualified: "bg-muted text-muted-foreground",
+};
+
+const statusLabel: Record<string, string> = {
+  lead: "Lead", qualifying: "Qualifying", onboarding: "Onboarding",
+  active: "Active", at_risk: "At Risk", churned: "Churned", disqualified: "Disqualified",
 };
 
 const fmtDate = (d: string | null | undefined) => {
@@ -54,7 +61,6 @@ const CRMContactDetail = () => {
   const [notesValue, setNotesValue] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
 
-  // Client data
   const { data: client, isLoading } = useQuery({
     queryKey: ["crm-client", id],
     queryFn: async () => {
@@ -65,7 +71,6 @@ const CRMContactDetail = () => {
     enabled: !!id,
   });
 
-  // Orders
   const { data: orders } = useQuery({
     queryKey: ["crm-client-orders", id],
     queryFn: async () => {
@@ -79,43 +84,28 @@ const CRMContactDetail = () => {
     enabled: !!id,
   });
 
-  // Contacts
   const { data: contacts } = useQuery({
     queryKey: ["crm-client-contacts", id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("client_contacts")
-        .select("*")
-        .eq("client_id", id!)
-        .order("created_at");
+      const { data } = await supabase.from("client_contacts").select("*").eq("client_id", id!).order("created_at");
       return data || [];
     },
     enabled: !!id,
   });
 
-  // Shipping addresses
   const { data: addresses } = useQuery({
     queryKey: ["crm-client-addresses", id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("client_shipping_addresses")
-        .select("*")
-        .eq("client_id", id!)
-        .order("created_at");
+      const { data } = await supabase.from("client_shipping_addresses").select("*").eq("client_id", id!).order("created_at");
       return (data as any[]) || [];
     },
     enabled: !!id,
   });
 
-  // Activities linked to this client
   const { data: activities } = useQuery({
     queryKey: ["crm-client-activities", id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("activities")
-        .select("*")
-        .eq("client_id", id!)
-        .order("created_at", { ascending: false });
+      const { data } = await supabase.from("activities").select("*").eq("client_id", id!).order("created_at", { ascending: false });
       return data || [];
     },
     enabled: !!id,
@@ -132,6 +122,13 @@ const CRMContactDetail = () => {
   if (isLoading) return <div className="text-muted-foreground p-6">Caricamento...</div>;
   if (!client) return <div className="text-muted-foreground p-6">Contatto non trovato</div>;
 
+  // Compute order metrics from client fields
+  const lastOrderDate = (client as any).last_order_date;
+  const daysSinceLastOrder = (client as any).days_since_last_order;
+  const avgFrequency = (client as any).avg_order_frequency_days;
+  const nextReorder = (client as any).next_reorder_expected_date;
+  const nextReorderDays = nextReorder ? differenceInDays(new Date(nextReorder), new Date()) : null;
+
   return (
     <div>
       {/* Header */}
@@ -147,7 +144,7 @@ const CRMContactDetail = () => {
           </p>
         </div>
         <Badge className={`border-0 ${statusColors[client.status || "lead"]}`}>
-          {client.status || "lead"}
+          {statusLabel[client.status || "lead"] || client.status || "lead"}
         </Badge>
         {client.email && (
           <Button size="sm" onClick={() => setComposeOpen(true)} className="gap-1">
@@ -157,34 +154,53 @@ const CRMContactDetail = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid sm:grid-cols-4 gap-4 mb-6">
+      <div className="grid sm:grid-cols-5 gap-4 mb-6">
         <div className="glass-card-solid p-4">
           <div className="flex items-center gap-2 mb-1">
             <ShoppingBag size={14} className="text-primary" />
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Ordini</span>
           </div>
-          <p className="font-heading text-xl font-bold text-foreground">{totalOrders}</p>
+          <p className="font-heading text-xl font-bold text-foreground">{(client as any).total_orders_count || totalOrders}</p>
         </div>
         <div className="glass-card-solid p-4">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp size={14} className="text-primary" />
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Fatturato</span>
           </div>
-          <p className="font-heading text-xl font-bold text-foreground">€{totalSpent.toLocaleString("it-IT", { minimumFractionDigits: 2 })}</p>
+          <p className="font-heading text-xl font-bold text-foreground">€{((client as any).total_orders_value || totalSpent).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="glass-card-solid p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Users size={14} className="text-primary" />
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Contatti</span>
+            <CalendarDays size={14} className="text-primary" />
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Last Order</span>
           </div>
-          <p className="font-heading text-xl font-bold text-foreground">{(contacts?.length || 0) + (client.contact_name ? 1 : 0)}</p>
+          <p className="font-heading text-sm font-bold text-foreground">
+            {lastOrderDate ? `${fmtDate(lastOrderDate)}` : "—"}
+          </p>
+          {daysSinceLastOrder != null && <p className="text-[10px] text-muted-foreground">{daysSinceLastOrder}d ago</p>}
         </div>
         <div className="glass-card-solid p-4">
           <div className="flex items-center gap-2 mb-1">
-            <FileText size={14} className="text-primary" />
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Tipo</span>
+            <BarChart3 size={14} className="text-primary" />
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Freq. Media</span>
           </div>
-          <p className="font-heading text-sm font-bold text-foreground">{client.business_type || "—"}</p>
+          <p className="font-heading text-xl font-bold text-foreground">{avgFrequency ? `${avgFrequency}d` : "—"}</p>
+        </div>
+        <div className="glass-card-solid p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock size={14} className={nextReorderDays !== null && nextReorderDays < 0 ? "text-destructive" : nextReorderDays !== null && nextReorderDays <= 7 ? "text-warning" : "text-success"} />
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Next Reorder</span>
+          </div>
+          {nextReorder ? (
+            <>
+              <p className={`font-heading text-sm font-bold ${nextReorderDays !== null && nextReorderDays < 0 ? "text-destructive" : nextReorderDays !== null && nextReorderDays <= 7 ? "text-warning" : "text-success"}`}>
+                {fmtDate(nextReorder)}
+              </p>
+              <p className="text-[10px] text-muted-foreground">{nextReorderDays !== null && nextReorderDays < 0 ? `${Math.abs(nextReorderDays)}d overdue` : `in ${nextReorderDays}d`}</p>
+            </>
+          ) : (
+            <p className="font-heading text-sm font-bold text-muted-foreground">—</p>
+          )}
         </div>
       </div>
 
@@ -192,7 +208,6 @@ const CRMContactDetail = () => {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left sidebar - Info */}
         <div className="space-y-4">
-          {/* Contact info */}
           <div className="glass-card-solid p-5">
             <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
               <Building2 size={14} /> Info Azienda
@@ -222,8 +237,6 @@ const CRMContactDetail = () => {
                 <p className="text-muted-foreground text-xs">P.IVA: {client.vat_number}</p>
               )}
             </div>
-
-            {/* Quick actions */}
             <div className="flex gap-2 mt-4">
               {client.phone && (
                 <>
@@ -245,7 +258,6 @@ const CRMContactDetail = () => {
             clientMainContactName={client.contact_name}
           />
 
-          {/* Shipping Addresses */}
           {addresses && addresses.length > 0 && (
             <div className="glass-card-solid p-5">
               <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
@@ -263,7 +275,7 @@ const CRMContactDetail = () => {
             </div>
           )}
 
-          {/* Notes - editable */}
+          {/* Notes */}
           <div className="glass-card-solid p-5">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-heading font-bold text-foreground text-sm">📝 Note Azienda</h3>
@@ -287,7 +299,6 @@ const CRMContactDetail = () => {
                       if (error) { toast.error("Errore salvataggio"); return; }
                       toast.success("Note salvate");
                       setEditingNotes(false);
-                      // Force immediate cache update so UI reflects new notes
                       queryClient.setQueryData(["crm-client", id], (old: any) => old ? { ...old, notes: trimmed } : old);
                       queryClient.invalidateQueries({ queryKey: ["crm-client", id] });
                     }}
@@ -307,7 +318,7 @@ const CRMContactDetail = () => {
             ) : client.notes ? (
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{client.notes}</p>
             ) : (
-              <p className="text-xs text-muted-foreground italic">Nessuna nota. Clicca "Aggiungi" per inserirne una.</p>
+              <p className="text-xs text-muted-foreground italic">Nessuna nota.</p>
             )}
           </div>
         </div>
@@ -317,6 +328,7 @@ const CRMContactDetail = () => {
           <Tabs defaultValue="orders" className="w-full">
             <TabsList className="mb-4 bg-secondary">
               <TabsTrigger value="orders" className="gap-1 text-xs"><ShoppingBag size={14} /> Ordini ({totalOrders})</TabsTrigger>
+              <TabsTrigger value="order-analytics" className="gap-1 text-xs"><BarChart3 size={14} /> Analytics</TabsTrigger>
               <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Comunicazioni</TabsTrigger>
               <TabsTrigger value="timeline" className="gap-1 text-xs"><Clock size={14} /> Timeline</TabsTrigger>
             </TabsList>
@@ -325,7 +337,10 @@ const CRMContactDetail = () => {
             <TabsContent value="orders">
               <div className="glass-card-solid overflow-hidden">
                 {!orders?.length ? (
-                  <div className="p-8 text-center text-muted-foreground text-sm">Nessun ordine</div>
+                  <div className="p-8 text-center text-muted-foreground text-sm">
+                    <ShoppingBag size={32} className="mx-auto mb-2 opacity-30" />
+                    <p>No orders placed yet — client is in {statusLabel[client.status || "lead"] || "onboarding"}</p>
+                  </div>
                 ) : (
                   <Table>
                     <TableHeader>
@@ -351,25 +366,60 @@ const CRMContactDetail = () => {
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm font-semibold">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation();
-                                setComposeOrderCtx({
-                                  orderId: o.id,
-                                  orderCode: (o as any).order_code || `#${o.id.slice(0, 8)}`,
-                                  orderStatus: o.status,
-                                  orderTotal: o.total_amount,
-                                  trackingNumber: (o as any).tracking_number,
-                                });
-                                setComposeOpen(true);
-                              }}>
-                                <Send size={12} className="text-primary" />
-                              </Button>
-                            </div>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => {
+                              e.stopPropagation();
+                              setComposeOrderCtx({
+                                orderId: o.id,
+                                orderCode: (o as any).order_code || `#${o.id.slice(0, 8)}`,
+                                orderStatus: o.status,
+                                orderTotal: o.total_amount,
+                                trackingNumber: (o as any).tracking_number,
+                              });
+                              setComposeOpen(true);
+                            }}>
+                              <Send size={12} className="text-primary" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Order Analytics tab */}
+            <TabsContent value="order-analytics">
+              <div className="glass-card-solid p-6">
+                <h3 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2">
+                  <BarChart3 size={16} /> Order Analytics
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                  <div className="p-4 bg-secondary/50 rounded-lg">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading mb-1">Last Order Date</p>
+                    <p className="font-heading font-bold text-foreground">{lastOrderDate ? fmtDate(lastOrderDate) : "—"}</p>
+                    {daysSinceLastOrder != null && <p className="text-xs text-muted-foreground">{daysSinceLastOrder} days ago</p>}
+                  </div>
+                  <div className="p-4 bg-secondary/50 rounded-lg">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading mb-1">Total Orders</p>
+                    <p className="font-heading font-bold text-foreground">{(client as any).total_orders_count || totalOrders}</p>
+                  </div>
+                  <div className="p-4 bg-secondary/50 rounded-lg">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading mb-1">Lifetime Value</p>
+                    <p className="font-heading font-bold text-foreground">€{((client as any).total_orders_value || totalSpent).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="p-4 bg-secondary/50 rounded-lg">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading mb-1">Avg Order Frequency</p>
+                    <p className="font-heading font-bold text-foreground">{avgFrequency ? `${avgFrequency} days` : "—"}</p>
+                  </div>
+                </div>
+                {nextReorder && (
+                  <div className={`p-4 rounded-lg border ${nextReorderDays !== null && nextReorderDays < 0 ? "border-destructive bg-destructive/10" : nextReorderDays !== null && nextReorderDays <= 7 ? "border-warning bg-warning/10" : "border-success bg-success/10"}`}>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-1">Next Reorder Expected</p>
+                    <p className={`font-heading text-lg font-bold ${nextReorderDays !== null && nextReorderDays < 0 ? "text-destructive" : nextReorderDays !== null && nextReorderDays <= 7 ? "text-warning" : "text-success"}`}>
+                      {fmtDate(nextReorder)} — {nextReorderDays !== null && nextReorderDays < 0 ? `${Math.abs(nextReorderDays)} days overdue` : `in ${nextReorderDays} days`}
+                    </p>
+                  </div>
                 )}
               </div>
             </TabsContent>
@@ -425,7 +475,6 @@ const CRMContactDetail = () => {
         </div>
       </div>
 
-      {/* Compose Email Dialog */}
       <ComposeEmailDialog
         open={composeOpen}
         onOpenChange={(open) => { setComposeOpen(open); if (!open) setComposeOrderCtx(null); }}

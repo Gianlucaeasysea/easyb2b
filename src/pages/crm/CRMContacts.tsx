@@ -10,6 +10,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { toast } from "sonner";
+import { differenceInDays, format } from "date-fns";
+
+const lifecycleStatuses = ["lead", "qualifying", "onboarding", "active", "at_risk", "churned", "disqualified"];
+
+const statusLabel: Record<string, string> = {
+  lead: "📋 Lead",
+  qualifying: "🔍 Qualifying",
+  onboarding: "🔄 Onboarding",
+  active: "✅ Active",
+  at_risk: "⚠️ At Risk",
+  churned: "❌ Churned",
+  disqualified: "🚫 Disqualified",
+};
+
+const statusColorClass: Record<string, string> = {
+  lead: "bg-primary/20 text-primary",
+  qualifying: "bg-warning/20 text-warning",
+  onboarding: "bg-chart-4/20 text-chart-4",
+  active: "bg-success/20 text-success",
+  at_risk: "bg-destructive/20 text-destructive",
+  churned: "bg-muted text-muted-foreground",
+  disqualified: "bg-muted text-muted-foreground",
+};
 
 const CRMContacts = () => {
   const navigate = useNavigate();
@@ -25,7 +48,7 @@ const CRMContacts = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, company_name, contact_name, email, phone, zone, status, country, business_type")
+        .select("id, company_name, contact_name, email, phone, zone, status, country, business_type, last_order_date, days_since_last_order, next_reorder_expected_date, total_orders_count, total_orders_value")
         .order("company_name");
       if (error) throw error;
       return data;
@@ -39,17 +62,6 @@ const CRMContacts = () => {
       if (error) throw error;
       const counts: Record<string, number> = {};
       data.forEach(c => { counts[c.client_id] = (counts[c.client_id] || 0) + 1; });
-      return counts;
-    },
-  });
-
-  const { data: orderCounts } = useQuery({
-    queryKey: ["crm-contacts-order-counts"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("orders").select("client_id").not("order_type", "in", "(\"B2C\",\"MANUAL B2C\",\"CUSTOM\")");
-      if (error) throw error;
-      const counts: Record<string, number> = {};
-      data.forEach(o => { counts[o.client_id] = (counts[o.client_id] || 0) + 1; });
       return counts;
     },
   });
@@ -86,9 +98,7 @@ const CRMContacts = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Get unique countries for filter
   const countries = [...new Set(clients?.map(c => c.country).filter(Boolean) || [])].sort();
-  const statuses = [...new Set(clients?.map(c => c.status).filter(Boolean) || [])].sort();
 
   const filtered = clients?.filter(c => {
     if (search) {
@@ -97,8 +107,8 @@ const CRMContacts = () => {
     }
     if (filterStatus !== "all" && c.status !== filterStatus) return false;
     if (filterCountry !== "all" && c.country !== filterCountry) return false;
-    if (filterHasOrders === "yes" && !(orderCounts?.[c.id])) return false;
-    if (filterHasOrders === "no" && (orderCounts?.[c.id] || 0) > 0) return false;
+    if (filterHasOrders === "yes" && !(c.total_orders_count && c.total_orders_count > 0)) return false;
+    if (filterHasOrders === "no" && (c.total_orders_count || 0) > 0) return false;
     return true;
   }) || [];
 
@@ -120,16 +130,13 @@ const CRMContacts = () => {
     window.open(`https://wa.me/${clean.replace("+", "")}?text=${encodeURIComponent(`Hi ${name}, this is the Easysea sales team.`)}`, "_blank");
   };
 
-  const openEmail = (email: string, name: string) => {
-    window.open(`mailto:${email}?subject=${encodeURIComponent(`Easysea — Follow-up`)}&body=${encodeURIComponent(`Hi ${name},\n\nThank you for your interest in Easysea products.\n\nBest regards,\nEasysea Sales Team`)}`, "_blank");
-  };
-
-  const openPhone = (phone: string) => {
-    window.open(`tel:${phone}`, "_blank");
-  };
-
-  const statusLabel: Record<string, string> = {
-    active: "✅ Attivo", inactive: "❌ Non Attivo", onboarding: "🔄 In Attivazione", lead: "📋 Lead", suspended: "⛔ Sospeso",
+  const getReorderColor = (date: string | null) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const daysAway = differenceInDays(d, new Date());
+    if (daysAway < 0) return "text-destructive font-semibold";
+    if (daysAway <= 7) return "text-warning font-semibold";
+    return "text-success";
   };
 
   return (
@@ -158,13 +165,13 @@ const CRMContacts = () => {
           <Input placeholder="Search companies..." className="pl-9 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-36 bg-secondary border-border rounded-lg">
+          <SelectTrigger className="w-40 bg-secondary border-border rounded-lg">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            {statuses.map(s => (
-              <SelectItem key={s} value={s!}>{statusLabel[s!] || s}</SelectItem>
+            {lifecycleStatuses.map(s => (
+              <SelectItem key={s} value={s}>{statusLabel[s] || s}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -205,12 +212,12 @@ const CRMContacts = () => {
                   <Checkbox checked={selected.size === filtered.length && filtered.length > 0} onCheckedChange={toggleAll} />
                 </TableHead>
                 <TableHead>Company</TableHead>
-                <TableHead>Main Contact</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead>Contact</TableHead>
                 <TableHead>Country</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Contacts</TableHead>
                 <TableHead>Orders</TableHead>
+                <TableHead>Last Order</TableHead>
+                <TableHead>Next Reorder</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -222,24 +229,35 @@ const CRMContacts = () => {
                   </TableCell>
                   <TableCell onClick={() => navigate(`/crm/contacts/${c.id}`)} className="font-heading font-semibold">{c.company_name}</TableCell>
                   <TableCell onClick={() => navigate(`/crm/contacts/${c.id}`)} className="text-sm">{c.contact_name || "—"}</TableCell>
-                  <TableCell onClick={() => navigate(`/crm/contacts/${c.id}`)} className="text-muted-foreground text-xs">{c.email || "—"}</TableCell>
                   <TableCell onClick={() => navigate(`/crm/contacts/${c.id}`)} className="text-muted-foreground text-sm">{c.country || c.zone || "—"}</TableCell>
                   <TableCell onClick={() => navigate(`/crm/contacts/${c.id}`)}>
-                    <Badge className={`border-0 text-[10px] ${
-                      c.status === "active" ? "bg-success/20 text-success" :
-                      c.status === "inactive" ? "bg-destructive/20 text-destructive" :
-                      c.status === "onboarding" ? "bg-warning/20 text-warning" :
-                      "bg-muted text-muted-foreground"
-                    }`}>
+                    <Badge className={`border-0 text-[10px] ${statusColorClass[c.status || "lead"] || "bg-muted text-muted-foreground"}`}>
                       {statusLabel[c.status || "lead"] || c.status}
                     </Badge>
                   </TableCell>
                   <TableCell onClick={() => navigate(`/crm/contacts/${c.id}`)}>
-                    <Badge variant="outline" className="text-[10px]">{(contactCounts?.[c.id] || 0)} contacts</Badge>
+                    {(c.total_orders_count || 0) > 0 ? (
+                      <Badge className="bg-success/20 text-success border-0 text-[10px]">{c.total_orders_count} orders</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell onClick={() => navigate(`/crm/contacts/${c.id}`)}>
-                    {(orderCounts?.[c.id] || 0) > 0 ? (
-                      <Badge className="bg-success/20 text-success border-0 text-[10px]">{orderCounts?.[c.id]} orders</Badge>
+                    {c.last_order_date ? (
+                      <div className="text-xs">
+                        <span className="text-foreground">{format(new Date(c.last_order_date), "dd/MM/yy")}</span>
+                        <span className="text-muted-foreground ml-1">({c.days_since_last_order || 0}d ago)</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell onClick={() => navigate(`/crm/contacts/${c.id}`)}>
+                    {c.next_reorder_expected_date ? (
+                      <span className={`text-xs ${getReorderColor(c.next_reorder_expected_date)}`}>
+                        {format(new Date(c.next_reorder_expected_date), "dd/MM/yy")}
+                        {differenceInDays(new Date(c.next_reorder_expected_date), new Date()) < 0 && " (overdue)"}
+                      </span>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
@@ -251,13 +269,13 @@ const CRMContacts = () => {
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-success" onClick={() => openWhatsApp(c.phone!, c.contact_name || c.company_name)} title="WhatsApp">
                             <MessageCircle size={16} />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openPhone(c.phone!)} title="Call">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => window.open(`tel:${c.phone}`)} title="Call">
                             <Phone size={16} />
                           </Button>
                         </>
                       )}
                       {c.email && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-warning" onClick={() => openEmail(c.email!, c.contact_name || c.company_name)} title="Email">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-warning" onClick={() => window.open(`mailto:${c.email}`)} title="Email">
                           <Mail size={16} />
                         </Button>
                       )}
