@@ -15,6 +15,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import LeadDetailPanel from "@/components/crm/LeadDetailPanel";
 
 const statusColors: Record<string, string> = {
+  lead: "border-primary text-primary",
+  qualifying: "border-warning text-warning",
+  onboarding: "border-chart-4 text-chart-4",
+  active: "bg-success/20 text-success border-0",
+  at_risk: "bg-destructive/20 text-destructive border-0",
+  churned: "bg-muted text-muted-foreground border-0",
+  disqualified: "bg-muted text-muted-foreground border-0",
+  // Legacy statuses
   new: "border-primary text-primary",
   contacted: "border-warning text-warning",
   qualified: "border-success text-success",
