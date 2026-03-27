@@ -12,7 +12,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
+
+const safeFormat = (dateStr: string | null | undefined, fmt: string) => {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  return isValid(d) ? format(d, fmt) : "—";
+};
 import {
   Phone, Mail, MessageCircle, StickyNote, Video, Calendar,
   Plus, Check, Clock, User, Building, MapPin, Globe, FileText,
