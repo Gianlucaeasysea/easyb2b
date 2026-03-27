@@ -12,7 +12,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
+
+const safeFormat = (dateStr: string | null | undefined, fmt: string) => {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  return isValid(d) ? format(d, fmt) : "—";
+};
 import {
   Phone, Mail, MessageCircle, StickyNote, Video, Calendar,
   Plus, Check, Clock, User, Building, MapPin, Globe, FileText,
@@ -111,7 +117,7 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
     if (!newNote.trim()) return;
     // Append to lead notes + create activity
     const currentNotes = lead?.notes || "";
-    const timestamp = format(new Date(), "dd/MM/yyyy HH:mm");
+    const timestamp = safeFormat(new Date().toISOString(), "dd/MM/yyyy HH:mm");
     const updatedNotes = `[${timestamp}] ${newNote}\n${currentNotes}`;
     
     updateLead.mutate({ notes: updatedNotes });
@@ -166,7 +172,7 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
                   <Badge variant="secondary" className="text-[10px]">{lead.source}</Badge>
                 )}
                 <span className="text-[10px] text-muted-foreground">
-                  Created {format(new Date(lead.created_at), "dd MMM yyyy")}
+                  Created {safeFormat(lead.created_at, "dd MMM yyyy")}
                 </span>
               </div>
             </div>
@@ -353,7 +359,7 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
                           <div className="flex items-center justify-between">
                             <p className="text-xs font-heading font-semibold">{act.title}</p>
                             <span className="text-[10px] text-muted-foreground">
-                              {format(new Date(act.created_at), "dd MMM yyyy HH:mm")}
+                              {safeFormat(act.created_at, "dd MMM yyyy HH:mm")}
                             </span>
                           </div>
                           {act.body && <p className="text-xs text-muted-foreground mt-1">{act.body}</p>}
