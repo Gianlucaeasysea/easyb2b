@@ -188,7 +188,7 @@ const CRMLeads = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            {["new", "contacted", "qualified", "proposal", "won", "lost"].map(s => (
+            {["lead", "qualifying", "onboarding", "active", "at_risk", "churned", "disqualified", "new", "contacted", "qualified", "proposal", "won", "lost"].map(s => (
               <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
             ))}
           </SelectContent>

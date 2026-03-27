@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.gmail-sync-inbox]
 verify_jwt = false
+
+[functions.sync-order-from-platform]
+verify_jwt = false
