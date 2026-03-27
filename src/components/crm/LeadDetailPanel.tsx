@@ -117,7 +117,7 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
     if (!newNote.trim()) return;
     // Append to lead notes + create activity
     const currentNotes = lead?.notes || "";
-    const timestamp = format(new Date(), "dd/MM/yyyy HH:mm");
+    const timestamp = safeFormat(new Date().toISOString(), "dd/MM/yyyy HH:mm");
     const updatedNotes = `[${timestamp}] ${newNote}\n${currentNotes}`;
     
     updateLead.mutate({ notes: updatedNotes });
