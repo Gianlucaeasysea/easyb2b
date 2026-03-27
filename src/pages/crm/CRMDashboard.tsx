@@ -2,15 +2,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Target, Activity, Calendar, Phone, Mail, MessageCircle, TrendingUp,
-  Euro, CreditCard, Truck, ShoppingBag, Eye, XCircle, PackagePlus, Clock
+  Euro, CreditCard, Truck, ShoppingBag, Eye, XCircle, PackagePlus, Clock,
+  AlertTriangle, RefreshCw, UserCheck
 } from "lucide-react";
-import { format, isToday, isPast } from "date-fns";
+import { format, isToday, isPast, differenceInDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const StatCard = ({ icon: Icon, label, value, color, sub }: { icon: any; label: string; value: string; color?: string; sub?: string }) => (
   <div className="glass-card-solid p-6">
@@ -53,6 +55,7 @@ const currentYearStart = `${new Date().getFullYear()}-01-01`;
 const CRMDashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const [orderDateFrom, setOrderDateFrom] = useState(currentYearStart);
   const [orderDateTo, setOrderDateTo] = useState("");
@@ -61,11 +64,15 @@ const CRMDashboard = () => {
   const [deliveryDateFrom, setDeliveryDateFrom] = useState(currentYearStart);
   const [deliveryDateTo, setDeliveryDateTo] = useState("");
 
-  // Leads
-  const { data: leads } = useQuery({
-    queryKey: ["crm-leads"],
+  // Clients for reminders
+  const { data: clients } = useQuery({
+    queryKey: ["crm-dashboard-clients"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("leads").select("*");
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, company_name, contact_name, status, status_changed_at, last_order_date, days_since_last_order, next_reorder_expected_date, total_orders_count")
+        .in("status", ["active", "onboarding", "at_risk"])
+        .order("company_name");
       if (error) throw error;
       return data;
     },
@@ -99,7 +106,23 @@ const CRMDashboard = () => {
     },
   });
 
-  // Calculate order product total (sum of line items)
+  // Log call activity
+  const logCall = useMutation({
+    mutationFn: async (clientId: string) => {
+      const { error } = await supabase.from("activities").insert({
+        client_id: clientId,
+        title: "Follow-up call",
+        type: "call",
+        created_by: user?.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Call activity logged");
+      queryClient.invalidateQueries({ queryKey: ["crm-upcoming-activities"] });
+    },
+  });
+
   const getOrderProductTotal = (order: any) => {
     if (!order.order_items?.length) return Number(order.total_amount || 0);
     return order.order_items.reduce((sum: number, item: any) => {
@@ -110,7 +133,6 @@ const CRMDashboard = () => {
     }, 0);
   };
 
-  // Filtered KPI totals
   const totalOrdered = (orders || [])
     .filter(o => {
       if (!o.created_at) return false;
@@ -141,19 +163,52 @@ const CRMDashboard = () => {
     })
     .reduce((s, o) => s + getOrderProductTotal(o), 0);
 
-  // New orders (confirmed / processing)
   const newOrders = (orders || []).filter(o => ["confirmed", "processing"].includes(o.status || ""));
-
-  const leadCount = leads?.length || 0;
-  const openLeads = leads?.filter(l => !["won", "lost"].includes(l.status || "")).length || 0;
-  const wonLeads = leads?.filter(l => l.status === "won").length || 0;
   const overdueActivities = activities?.filter(a => a.scheduled_at && isPast(new Date(a.scheduled_at))).length || 0;
 
-  const pipelineStages = ["new", "contacted", "qualified", "proposal"];
-  const pipelineCounts = pipelineStages.map(s => ({
-    stage: s,
-    count: leads?.filter(l => l.status === s).length || 0,
-  }));
+  // Pipeline stats from clients
+  const activeClients = clients?.filter(c => c.status === "active").length || 0;
+  const atRiskClients = clients?.filter(c => c.status === "at_risk").length || 0;
+  const onboardingClients = clients?.filter(c => c.status === "onboarding").length || 0;
+
+  // TODAY'S ACTIONS / REMINDERS
+  const reminders: { type: string; label: string; clientName: string; clientId: string }[] = [];
+  
+  clients?.forEach(c => {
+    // Reorder due: next_reorder within 3 days or overdue
+    if (c.next_reorder_expected_date) {
+      const daysAway = differenceInDays(new Date(c.next_reorder_expected_date), new Date());
+      if (daysAway <= 3) {
+        reminders.push({
+          type: "reorder",
+          label: daysAway < 0 ? `Reorder ${Math.abs(daysAway)}d overdue` : `Reorder due in ${daysAway}d`,
+          clientName: c.company_name,
+          clientId: c.id,
+        });
+      }
+    }
+    // At risk: active + 75d+ inactive
+    if (c.status === "active" && c.days_since_last_order && c.days_since_last_order > 75) {
+      reminders.push({
+        type: "at_risk",
+        label: `At risk — ${c.days_since_last_order}d inactive`,
+        clientName: c.company_name,
+        clientId: c.id,
+      });
+    }
+    // Onboarding stalled: in onboarding for 7+ days with no orders
+    if (c.status === "onboarding" && c.status_changed_at) {
+      const daysInOnboarding = differenceInDays(new Date(), new Date(c.status_changed_at));
+      if (daysInOnboarding > 7 && (!c.total_orders_count || c.total_orders_count === 0)) {
+        reminders.push({
+          type: "onboarding_stalled",
+          label: `Onboarding stalled — ${daysInOnboarding}d, no orders`,
+          clientName: c.company_name,
+          clientId: c.id,
+        });
+      }
+    }
+  });
 
   // Mutations for new orders
   const confirmOrder = useMutation({
@@ -204,6 +259,18 @@ const CRMDashboard = () => {
     try { return format(new Date(d), "dd/MM/yyyy HH:mm"); } catch { return "—"; }
   };
 
+  const reminderIcons: Record<string, any> = {
+    reorder: RefreshCw,
+    at_risk: AlertTriangle,
+    onboarding_stalled: UserCheck,
+  };
+
+  const reminderColors: Record<string, string> = {
+    reorder: "border-l-warning",
+    at_risk: "border-l-destructive",
+    onboarding_stalled: "border-l-chart-4",
+  };
+
   return (
     <div>
       <div className="mb-8">
@@ -211,11 +278,42 @@ const CRMDashboard = () => {
         <p className="text-sm text-muted-foreground">Overview pipeline, KPI e nuovi ordini</p>
       </div>
 
+      {/* TODAY'S ACTIONS */}
+      {reminders.length > 0 && (
+        <div className="glass-card-solid p-6 mb-8 border-l-4 border-l-warning">
+          <h2 className="font-heading font-bold text-foreground flex items-center gap-2 mb-4">
+            <AlertTriangle size={16} className="text-warning" /> Today's Actions ({reminders.length})
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {reminders.slice(0, 9).map((r, i) => {
+              const Icon = reminderIcons[r.type] || AlertTriangle;
+              return (
+                <div key={i} className={`p-3 rounded-lg border border-border bg-secondary/30 border-l-4 ${reminderColors[r.type] || "border-l-primary"}`}>
+                  <div className="flex items-start gap-2">
+                    <Icon size={14} className="text-muted-foreground mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-heading font-bold text-foreground truncate">{r.clientName}</p>
+                      <p className="text-[10px] text-muted-foreground">{r.label}</p>
+                    </div>
+                    <Button
+                      variant="ghost" size="sm" className="h-6 px-2 text-[10px] shrink-0"
+                      onClick={() => logCall.mutate(r.clientId)}
+                    >
+                      <Phone size={10} className="mr-1" /> Log Call
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Pipeline stats */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Users} label="Total Leads" value={String(leadCount)} />
-        <StatCard icon={Target} label="Open Pipeline" value={String(openLeads)} color="bg-warning" />
-        <StatCard icon={TrendingUp} label="Won" value={String(wonLeads)} color="bg-success" />
+        <StatCard icon={Users} label="Active Clients" value={String(activeClients)} color="bg-success" />
+        <StatCard icon={Target} label="Onboarding" value={String(onboardingClients)} color="bg-warning" />
+        <StatCard icon={AlertTriangle} label="At Risk" value={String(atRiskClients)} color={atRiskClients > 0 ? "bg-destructive" : "gradient-blue"} />
         <StatCard icon={Activity} label="Overdue Tasks" value={String(overdueActivities)} color={overdueActivities > 0 ? "bg-destructive" : "gradient-blue"} />
       </div>
 
@@ -357,19 +455,23 @@ const CRMDashboard = () => {
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="glass-card-solid p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-heading font-bold text-foreground">Pipeline</h2>
+            <h2 className="font-heading font-bold text-foreground">Client Lifecycle</h2>
             <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => navigate("/crm/pipeline")}>View all →</Button>
           </div>
           <div className="space-y-3">
-            {pipelineCounts.map(p => (
-              <div key={p.stage} className="flex items-center gap-3">
-                <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading w-24">{p.stage}</span>
-                <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${leadCount ? (p.count / leadCount) * 100 : 0}%` }} />
+            {["lead", "qualifying", "onboarding", "active", "at_risk", "churned"].map(s => {
+              const count = clients?.filter(c => c.status === s).length || 0;
+              const total = clients?.length || 1;
+              return (
+                <div key={s} className="flex items-center gap-3">
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading w-24">{s.replace("_", " ")}</span>
+                  <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(count / total) * 100}%` }} />
+                  </div>
+                  <span className="text-sm font-mono text-foreground w-8 text-right">{count}</span>
                 </div>
-                <span className="text-sm font-mono text-foreground w-8 text-right">{p.count}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
