@@ -359,7 +359,7 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
                           <div className="flex items-center justify-between">
                             <p className="text-xs font-heading font-semibold">{act.title}</p>
                             <span className="text-[10px] text-muted-foreground">
-                              {format(new Date(act.created_at), "dd MMM yyyy HH:mm")}
+                              {safeFormat(act.created_at, "dd MMM yyyy HH:mm")}
                             </span>
                           </div>
                           {act.body && <p className="text-xs text-muted-foreground mt-1">{act.body}</p>}
