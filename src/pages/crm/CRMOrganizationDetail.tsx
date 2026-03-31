@@ -587,6 +587,43 @@ const CRMOrganizationDetail = () => {
           </div>
         </TabsContent>
 
+          {/* TASKS linked to this org */}
+          <div className="glass-card-solid p-6 mt-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><CheckSquare size={16} /> Task</h3>
+              <Button size="sm" onClick={() => setAddTaskOpen(true)} className="gap-1"><Plus size={14} /> Nuovo Task</Button>
+            </div>
+            {!orgTasks?.length ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Nessun task collegato</p>
+            ) : (
+              <div className="space-y-2">
+                {orgTasks.map((t: any) => {
+                  const isOverdue = t.status === "pending" && t.due_date && isPast(new Date(t.due_date));
+                  return (
+                    <div key={t.id} className={`flex items-center gap-3 p-3 rounded-lg bg-secondary/50 ${isOverdue ? "border-l-2 border-l-destructive" : ""} ${t.status === "completed" ? "opacity-50" : ""}`}>
+                      <div className="flex-1">
+                        <p className={`text-sm font-semibold ${t.status === "completed" ? "line-through text-muted-foreground" : "text-foreground"}`}>{t.title}</p>
+                        <div className="flex gap-2 mt-0.5">
+                          <Badge variant="outline" className="text-[10px]">{t.type || "task"}</Badge>
+                          <Badge className={`text-[10px] border-0 ${t.priority === "high" || t.priority === "urgent" ? "bg-warning/20 text-warning" : "bg-muted text-muted-foreground"}`}>{t.priority}</Badge>
+                          {t.due_date && <span className={`text-[10px] ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>{fmtDate(t.due_date)}</span>}
+                        </div>
+                      </div>
+                      {t.status !== "completed" && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-success" onClick={async () => {
+                          await supabase.from("tasks").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", t.id);
+                          refetchTasks();
+                          queryClient.invalidateQueries({ queryKey: ["crm-overdue-tasks-count"] });
+                          toast.success("Task completato");
+                        }}><Check size={14} /></Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
         {/* DOCUMENTS */}
         <TabsContent value="documents">
           <div className="glass-card-solid p-6">
