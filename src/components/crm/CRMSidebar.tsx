@@ -22,6 +22,7 @@ const items = [
   { title: "Task", url: "/crm/tasks", icon: CheckSquare, badgeKey: "overdue_tasks" },
   { title: "Template Email", url: "/crm/email-templates", icon: MailPlus },
   { title: "Analytics", url: "/crm/analytics", icon: BarChart3 },
+  { title: "Automazioni", url: "/crm/automations", icon: Zap },
   { title: "Aiuto", url: "/crm/help", icon: HelpCircle },
 ];
 
