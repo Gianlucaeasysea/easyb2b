@@ -59,6 +59,8 @@ import CRMActivities from "./pages/crm/CRMActivities";
 import CRMOrganizations from "./pages/crm/CRMOrganizations";
 import CRMOrganizationDetail from "./pages/crm/CRMOrganizationDetail";
 import CRMContactsPeople from "./pages/crm/CRMContactsPeople";
+import CRMDeals from "./pages/crm/CRMDeals";
+import CRMDealsPipeline from "./pages/crm/CRMDealsPipeline";
 import CRMRequests from "./pages/crm/CRMRequests";
 import CRMHelp from "./pages/crm/CRMHelp";
 
@@ -133,6 +135,8 @@ const App = () => (
               <Route index element={<CRMDashboard />} />
               <Route path="requests" element={<CRMRequests />} />
               <Route path="leads" element={<CRMLeads />} />
+              <Route path="deals" element={<CRMDeals />} />
+              <Route path="deals/pipeline" element={<CRMDealsPipeline />} />
               <Route path="pipeline" element={<CRMPipeline />} />
               <Route path="activities" element={<CRMActivities />} />
               <Route path="organizations" element={<CRMOrganizations />} />

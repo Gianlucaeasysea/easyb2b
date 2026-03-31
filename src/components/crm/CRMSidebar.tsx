@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Target, Activity, Building2, HelpCircle, Inbox, UserPlus } from "lucide-react";
+import { LayoutDashboard, Users, Target, Activity, Building2, HelpCircle, Inbox, UserPlus, Handshake, KanbanSquare } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -13,7 +13,9 @@ const items = [
   { title: "Dashboard", url: "/crm", icon: LayoutDashboard },
   { title: "Richieste Dealer", url: "/crm/requests", icon: Inbox, showBadge: true },
   { title: "Leads", url: "/crm/leads", icon: UserPlus },
-  { title: "Pipeline", url: "/crm/pipeline", icon: Target },
+  { title: "Deals", url: "/crm/deals", icon: Handshake },
+  { title: "Deals Pipeline", url: "/crm/deals/pipeline", icon: KanbanSquare, indent: true },
+  { title: "Pipeline Clienti", url: "/crm/pipeline", icon: Target },
   { title: "Organizzazioni", url: "/crm/organizations", icon: Building2 },
   { title: "Contatti", url: "/crm/contacts", icon: Users },
   { title: "Attività", url: "/crm/activities", icon: Activity },
@@ -45,7 +47,7 @@ export function CRMSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} end={item.url === "/crm"} className="hover:bg-muted/50" activeClassName="bg-muted text-primary font-medium">
+                    <NavLink to={item.url} end={item.url === "/crm"} className={`hover:bg-muted/50 ${(item as any).indent ? "pl-8" : ""}`} activeClassName="bg-muted text-primary font-medium">
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && (
                         <span className="flex items-center gap-2">

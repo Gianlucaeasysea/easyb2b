@@ -521,6 +521,85 @@ export type Database = {
         }
         Relationships: []
       }
+      deals: {
+        Row: {
+          assigned_to: string | null
+          client_id: string | null
+          closed_at: string | null
+          contact_id: string | null
+          created_at: string | null
+          currency: string | null
+          expected_close_date: string | null
+          id: string
+          lead_id: string | null
+          lost_reason: string | null
+          notes: string | null
+          probability: number | null
+          stage: string
+          title: string
+          updated_at: string | null
+          value: number | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_id?: string | null
+          closed_at?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          expected_close_date?: string | null
+          id?: string
+          lead_id?: string | null
+          lost_reason?: string | null
+          notes?: string | null
+          probability?: number | null
+          stage?: string
+          title: string
+          updated_at?: string | null
+          value?: number | null
+        }
+        Update: {
+          assigned_to?: string | null
+          client_id?: string | null
+          closed_at?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          expected_close_date?: string | null
+          id?: string
+          lead_id?: string | null
+          lost_reason?: string | null
+          notes?: string | null
+          probability?: number | null
+          stage?: string
+          title?: string
+          updated_at?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discount_tiers: {
         Row: {
           created_at: string

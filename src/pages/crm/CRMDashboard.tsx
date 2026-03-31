@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Target, Activity, Calendar, Phone, Mail, MessageCircle, TrendingUp,
   Euro, CreditCard, Truck, ShoppingBag, Eye, XCircle, PackagePlus, Clock,
-  AlertTriangle, RefreshCw, UserCheck, Building2
+  AlertTriangle, RefreshCw, UserCheck, Building2, Handshake
 } from "lucide-react";
 import { format, isToday, isPast, differenceInDays, isValid } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +95,16 @@ const CRMDashboard = () => {
         .limit(8);
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Deals for KPIs
+  const { data: allDeals } = useQuery({
+    queryKey: ["crm-dashboard-deals"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("deals").select("id, stage, value, expected_close_date, closed_at, created_at").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
     },
   });
 
@@ -316,6 +326,28 @@ const CRMDashboard = () => {
         <StatCard icon={AlertTriangle} label="At Risk" value={String(atRiskClients)} color={atRiskClients > 0 ? "bg-destructive" : "gradient-blue"} />
         <StatCard icon={Activity} label="Overdue Tasks" value={String(overdueActivities)} color={overdueActivities > 0 ? "bg-destructive" : "gradient-blue"} />
       </div>
+
+      {/* Deals KPIs */}
+      {(() => {
+        const openDeals = allDeals?.filter(d => !["closed_won", "closed_lost"].includes(d.stage)) || [];
+        const pipelineValue = openDeals.reduce((s, d) => s + Number(d.value || 0), 0);
+        const wonDeals = allDeals?.filter(d => d.stage === "closed_won") || [];
+        const lostDeals = allDeals?.filter(d => d.stage === "closed_lost") || [];
+        const winRate = (wonDeals.length + lostDeals.length) > 0 ? Math.round((wonDeals.length / (wonDeals.length + lostDeals.length)) * 100) : 0;
+        const closingSoon = openDeals.filter(d => {
+          if (!d.expected_close_date) return false;
+          const days = differenceInDays(new Date(d.expected_close_date), new Date());
+          return days <= 7;
+        });
+        return (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <StatCard icon={Handshake} label="Open Deals" value={String(openDeals.length)} color="gradient-blue" />
+            <StatCard icon={Euro} label="Pipeline Value" value={`€${pipelineValue.toLocaleString("it-IT")}`} color="bg-primary" />
+            <StatCard icon={TrendingUp} label="Win Rate" value={`${winRate}%`} color={winRate >= 50 ? "bg-success" : "bg-warning"} sub={`${wonDeals.length}W / ${lostDeals.length}L`} />
+            <StatCard icon={Calendar} label="Closing This Week" value={String(closingSoon.length)} color={closingSoon.length > 0 ? "bg-warning" : "gradient-blue"} />
+          </div>
+        );
+      })()}
 
       {/* Revenue KPI Cards */}
       <div className="grid lg:grid-cols-3 gap-4 mb-8">
