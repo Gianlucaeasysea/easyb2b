@@ -241,7 +241,7 @@ const CRMContactsPeople = () => {
                     <TableCell className="text-sm text-muted-foreground">{c.email || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{c.phone || "—"}</TableCell>
                     <TableCell>
-                      <ChannelIcon size={14} className="text-muted-foreground" title={(c as any).preferred_channel || "email"} />
+                      <span title={(c as any).preferred_channel || "email"}><ChannelIcon size={14} className="text-muted-foreground" /></span>
                     </TableCell>
                     <TableCell>
                       {lastContactedAt ? (

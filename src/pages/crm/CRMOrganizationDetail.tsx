@@ -455,8 +455,8 @@ const CRMOrganizationDetail = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="font-heading font-semibold text-foreground">{c.contact_name}</p>
-                          {c.is_primary && <Star size={12} className="text-warning" title="Primary" />}
-                          {c.is_decision_maker && <Crown size={12} className="text-destructive" title="Decision Maker" />}
+                          {c.is_primary && <span title="Primary"><Star size={12} className="text-warning" /></span>}
+                          {c.is_decision_maker && <span title="Decision Maker"><Crown size={12} className="text-destructive" /></span>}
                         </div>
                         <Badge className={`border-0 text-[10px] ${contactTypeColors[c.contact_type || "general"]}`}>
                           {contactTypeLabels[c.contact_type || "general"]}
