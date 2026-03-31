@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, Search, ArrowRight, Plus, Trash2, Settings2 } from "lucide-react";
+import { Users, Search, ArrowRight, Plus, Trash2, Settings2, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
+import { differenceInDays } from "date-fns";
 
 const AdminClients = () => {
   const navigate = useNavigate();
