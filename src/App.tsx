@@ -141,7 +141,7 @@ const App = () => (
               <Route path="leads" element={<CRMLeads />} />
               <Route path="deals" element={<CRMDeals />} />
               <Route path="deals/pipeline" element={<CRMDealsPipeline />} />
-              <Route path="pipeline" element={<CRMPipeline />} />
+              {/* /crm/pipeline removed — use /crm/deals/pipeline */}
               <Route path="activities" element={<CRMActivities />} />
               <Route path="organizations" element={<CRMOrganizations />} />
               <Route path="organizations/:id" element={<CRMOrganizationDetail />} />
