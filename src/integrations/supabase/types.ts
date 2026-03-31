@@ -19,6 +19,7 @@ export type Database = {
           body: string | null
           client_id: string | null
           completed_at: string | null
+          contact_id: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -31,6 +32,7 @@ export type Database = {
           body?: string | null
           client_id?: string | null
           completed_at?: string | null
+          contact_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -43,6 +45,7 @@ export type Database = {
           body?: string | null
           client_id?: string | null
           completed_at?: string | null
+          contact_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -57,6 +60,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
             referencedColumns: ["id"]
           },
           {
@@ -110,6 +120,7 @@ export type Database = {
         Row: {
           body: string
           client_id: string
+          contact_id: string | null
           created_at: string
           direction: string
           error_message: string | null
@@ -127,6 +138,7 @@ export type Database = {
         Insert: {
           body: string
           client_id: string
+          contact_id?: string | null
           created_at?: string
           direction?: string
           error_message?: string | null
@@ -144,6 +156,7 @@ export type Database = {
         Update: {
           body?: string
           client_id?: string
+          contact_id?: string | null
           created_at?: string
           direction?: string
           error_message?: string | null
@@ -167,6 +180,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_communications_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_communications_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -177,34 +197,64 @@ export type Database = {
       }
       client_contacts: {
         Row: {
+          avatar_url: string | null
           client_id: string
           contact_name: string
+          contact_type: string | null
           created_at: string
+          department: string | null
           email: string | null
           id: string
+          is_decision_maker: boolean | null
+          is_primary: boolean | null
+          job_title: string | null
+          last_contacted_at: string | null
+          linkedin_url: string | null
           notes: string | null
           phone: string | null
+          preferred_channel: string | null
           role: string | null
+          updated_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
           client_id: string
           contact_name: string
+          contact_type?: string | null
           created_at?: string
+          department?: string | null
           email?: string | null
           id?: string
+          is_decision_maker?: boolean | null
+          is_primary?: boolean | null
+          job_title?: string | null
+          last_contacted_at?: string | null
+          linkedin_url?: string | null
           notes?: string | null
           phone?: string | null
+          preferred_channel?: string | null
           role?: string | null
+          updated_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
           client_id?: string
           contact_name?: string
+          contact_type?: string | null
           created_at?: string
+          department?: string | null
           email?: string | null
           id?: string
+          is_decision_maker?: boolean | null
+          is_primary?: boolean | null
+          job_title?: string | null
+          last_contacted_at?: string | null
+          linkedin_url?: string | null
           notes?: string | null
           phone?: string | null
+          preferred_channel?: string | null
           role?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
