@@ -41,6 +41,23 @@ const AdminClients = () => {
     },
   });
 
+  // Fetch last order and total spent per client
+  const { data: clientOrderStats } = useQuery({
+    queryKey: ["admin-clients-order-stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("orders").select("client_id, created_at, total_amount").order("created_at", { ascending: false });
+      if (error) throw error;
+      const map: Record<string, { lastOrder: string | null; totalSpent: number }> = {};
+      (data || []).forEach(o => {
+        if (!map[o.client_id]) {
+          map[o.client_id] = { lastOrder: o.created_at, totalSpent: 0 };
+        }
+        map[o.client_id].totalSpent += Number(o.total_amount || 0);
+      });
+      return map;
+    },
+  });
+
   const { data: discountTiers } = useQuery({
     queryKey: ["discount-tiers"],
     queryFn: async () => {
@@ -50,13 +67,29 @@ const AdminClients = () => {
     },
   });
 
-  const filtered = clients?.filter(c =>
-    c.company_name.toLowerCase().includes(search.toLowerCase()) ||
-    c.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
-    c.country?.toLowerCase().includes(search.toLowerCase()) ||
-    c.email?.toLowerCase().includes(search.toLowerCase()) ||
-    c.business_type?.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  const filtered = clients?.filter(c => {
+    const matchSearch =
+      c.company_name.toLowerCase().includes(search.toLowerCase()) ||
+      c.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
+      c.country?.toLowerCase().includes(search.toLowerCase()) ||
+      c.email?.toLowerCase().includes(search.toLowerCase()) ||
+      c.business_type?.toLowerCase().includes(search.toLowerCase());
+
+    if (!matchSearch) return false;
+
+    // Inactive filter
+    if (inactiveDays) {
+      const days = parseInt(inactiveDays);
+      if (!isNaN(days) && days > 0) {
+        const stats = clientOrderStats?.[c.id];
+        if (!stats?.lastOrder) return true; // Never ordered = inactive
+        const daysSince = differenceInDays(new Date(), new Date(stats.lastOrder));
+        return daysSince >= days;
+      }
+    }
+
+    return true;
+  }) || [];
 
   const createClient = useMutation({
     mutationFn: async () => {
