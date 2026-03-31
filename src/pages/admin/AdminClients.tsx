@@ -262,6 +262,23 @@ const AdminClients = () => {
                     <Badge variant="outline" className="font-mono text-[10px]">{discountTiers?.find(t => t.name === c.discount_class)?.label || c.discount_class}</Badge>
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)}>
+                    {(() => {
+                      const stats = clientOrderStats?.[c.id];
+                      if (!stats?.lastOrder) return <span className="text-xs text-muted-foreground">Mai</span>;
+                      const days = differenceInDays(new Date(), new Date(stats.lastOrder));
+                      const dateStr = new Date(stats.lastOrder).toLocaleDateString("it-IT");
+                      return (
+                        <div>
+                          <span className="text-xs">{dateStr}</span>
+                          <p className="text-[10px] text-muted-foreground">{days} giorni fa</p>
+                        </div>
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)} className="text-right">
+                    <span className="font-mono text-sm">€{(clientOrderStats?.[c.id]?.totalSpent || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</span>
+                  </TableCell>
+                  <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)}>
                     <Badge className={`border-0 text-[10px] ${
                       c.status === "active" ? "bg-success/20 text-success" :
                       c.status === "onboarding" ? "bg-chart-4/20 text-chart-4" :
