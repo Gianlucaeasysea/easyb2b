@@ -54,7 +54,7 @@ import AdminCMS from "./pages/admin/AdminCMS";
 // CRM
 import CRMDashboard from "./pages/crm/CRMDashboard";
 import CRMLeads from "./pages/crm/CRMLeads";
-import CRMPipeline from "./pages/crm/CRMPipeline";
+// CRMPipeline removed — replaced by deals pipeline
 import CRMActivities from "./pages/crm/CRMActivities";
 import CRMOrganizations from "./pages/crm/CRMOrganizations";
 import CRMOrganizationDetail from "./pages/crm/CRMOrganizationDetail";
@@ -141,7 +141,7 @@ const App = () => (
               <Route path="leads" element={<CRMLeads />} />
               <Route path="deals" element={<CRMDeals />} />
               <Route path="deals/pipeline" element={<CRMDealsPipeline />} />
-              <Route path="pipeline" element={<CRMPipeline />} />
+              {/* /crm/pipeline removed — use /crm/deals/pipeline */}
               <Route path="activities" element={<CRMActivities />} />
               <Route path="organizations" element={<CRMOrganizations />} />
               <Route path="organizations/:id" element={<CRMOrganizationDetail />} />
