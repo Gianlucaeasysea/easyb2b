@@ -65,6 +65,7 @@ import CRMRequests from "./pages/crm/CRMRequests";
 import CRMEmailTemplates from "./pages/crm/CRMEmailTemplates";
 import CRMTasks from "./pages/crm/CRMTasks";
 import CRMAnalytics from "./pages/crm/CRMAnalytics";
+import CRMAutomations from "./pages/crm/CRMAutomations";
 import CRMHelp from "./pages/crm/CRMHelp";
 
 const queryClient = new QueryClient();
