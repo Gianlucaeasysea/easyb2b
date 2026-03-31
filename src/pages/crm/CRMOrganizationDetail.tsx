@@ -166,7 +166,7 @@ const CRMOrganizationDetail = () => {
     enabled: !!id,
   });
 
-
+  const { data: documents } = useQuery({
     queryKey: ["crm-org-documents", id],
     queryFn: async () => {
       const { data: clientDocs } = await supabase.from("client_documents").select("*").eq("client_id", id!).order("created_at", { ascending: false });
