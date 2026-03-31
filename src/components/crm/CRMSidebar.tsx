@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Target, Activity, Phone, HelpCircle, Inbox } from "lucide-react";
+import { LayoutDashboard, Users, Target, Activity, Building2, HelpCircle, Inbox, UserPlus } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -11,12 +11,13 @@ import {
 
 const items = [
   { title: "Dashboard", url: "/crm", icon: LayoutDashboard },
-  { title: "Requests", url: "/crm/requests", icon: Inbox, showBadge: true },
-  { title: "Leads", url: "/crm/leads", icon: Users },
+  { title: "Richieste Dealer", url: "/crm/requests", icon: Inbox, showBadge: true },
+  { title: "Leads", url: "/crm/leads", icon: UserPlus },
   { title: "Pipeline", url: "/crm/pipeline", icon: Target },
-  { title: "Activities", url: "/crm/activities", icon: Activity },
-  { title: "Contacts", url: "/crm/contacts", icon: Phone },
-  { title: "How To", url: "/crm/help", icon: HelpCircle },
+  { title: "Organizzazioni", url: "/crm/organizations", icon: Building2 },
+  { title: "Contatti", url: "/crm/contacts", icon: Users },
+  { title: "Attività", url: "/crm/activities", icon: Activity },
+  { title: "Aiuto", url: "/crm/help", icon: HelpCircle },
 ];
 
 export function CRMSidebar() {
