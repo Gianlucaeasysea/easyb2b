@@ -157,7 +157,16 @@ const CRMOrganizationDetail = () => {
     enabled: !!id,
   });
 
-  const { data: documents } = useQuery({
+  const { data: orgTasks, refetch: refetchTasks } = useQuery({
+    queryKey: ["crm-org-tasks", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("tasks").select("*").eq("client_id", id!).order("due_date", { ascending: true });
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+
     queryKey: ["crm-org-documents", id],
     queryFn: async () => {
       const { data: clientDocs } = await supabase.from("client_documents").select("*").eq("client_id", id!).order("created_at", { ascending: false });
