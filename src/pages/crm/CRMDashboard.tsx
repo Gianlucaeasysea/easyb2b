@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Target, Activity, Calendar, Phone, Mail, MessageCircle, TrendingUp,
   Euro, CreditCard, Truck, ShoppingBag, Eye, XCircle, PackagePlus, Clock,
-  AlertTriangle, RefreshCw, UserCheck, Building2, Handshake
+  AlertTriangle, RefreshCw, UserCheck, Building2, Handshake, CheckSquare, ListTodo, Video, MailOpen
 } from "lucide-react";
 import { format, isToday, isPast, differenceInDays, isValid } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +93,21 @@ const CRMDashboard = () => {
         .is("completed_at", null)
         .order("scheduled_at", { ascending: true })
         .limit(8);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // My Tasks
+  const { data: myTasks } = useQuery({
+    queryKey: ["crm-dashboard-my-tasks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*, clients:client_id(id, company_name)")
+        .not("status", "in", '("completed","cancelled")')
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(5);
       if (error) throw error;
       return data;
     },
@@ -483,8 +498,8 @@ const CRMDashboard = () => {
         )}
       </div>
 
-      {/* Lifecycle + Activities */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      {/* Lifecycle + Activities + Tasks */}
+      <div className="grid lg:grid-cols-3 gap-6">
         <div className="glass-card-solid p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-heading font-bold text-foreground">Organization Lifecycle</h2>
@@ -538,6 +553,43 @@ const CRMDashboard = () => {
                   {a.scheduled_at && (
                     <span className={`text-xs shrink-0 ${isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
                       {isToday(new Date(a.scheduled_at)) ? safeFormat(a.scheduled_at, "HH:mm") : safeFormat(a.scheduled_at, "MMM d")}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="glass-card-solid p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-heading font-bold text-foreground flex items-center gap-2">
+              <CheckSquare size={16} /> I miei Task
+            </h2>
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => navigate("/crm/tasks")}>Vedi tutti →</Button>
+          </div>
+          <div className="space-y-2">
+            {!myTasks?.length ? (
+              <p className="text-sm text-muted-foreground">Nessun task in scadenza.</p>
+            ) : myTasks.map(t => {
+              const taskTypeIcons: Record<string, any> = { task: ListTodo, call: Phone, meeting: Video, follow_up: MailOpen, deadline: AlertTriangle };
+              const Icon = taskTypeIcons[t.type || "task"] || ListTodo;
+              const isOverdue = t.due_date && isPast(new Date(t.due_date));
+              const org = (t as any).clients;
+              return (
+                <div key={t.id} className={`flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 ${isOverdue ? "border-l-2 border-l-destructive" : ""}`}>
+                  <Icon size={14} className="text-muted-foreground shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium truncate ${isOverdue ? "text-destructive" : "text-foreground"}`}>{t.title}</p>
+                    {org && (
+                      <button className="text-xs text-primary hover:underline flex items-center gap-1" onClick={() => navigate(`/crm/organizations/${org.id}`)}>
+                        <Building2 size={10} /> {org.company_name}
+                      </button>
+                    )}
+                  </div>
+                  {t.due_date && (
+                    <span className={`text-xs shrink-0 ${isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                      {isToday(new Date(t.due_date)) ? safeFormat(t.due_date, "HH:mm") : safeFormat(t.due_date, "MMM d")}
                     </span>
                   )}
                 </div>
