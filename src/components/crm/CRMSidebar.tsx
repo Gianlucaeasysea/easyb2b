@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Target, Activity, Building2, HelpCircle, Inbox, UserPlus, Handshake, KanbanSquare, MailPlus, CheckSquare, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, Target, Activity, Building2, HelpCircle, Inbox, UserPlus, Handshake, KanbanSquare, MailPlus, CheckSquare, BarChart3, Zap } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +22,7 @@ const items = [
   { title: "Task", url: "/crm/tasks", icon: CheckSquare, badgeKey: "overdue_tasks" },
   { title: "Template Email", url: "/crm/email-templates", icon: MailPlus },
   { title: "Analytics", url: "/crm/analytics", icon: BarChart3 },
+  { title: "Automazioni", url: "/crm/automations", icon: Zap },
   { title: "Aiuto", url: "/crm/help", icon: HelpCircle },
 ];
 
