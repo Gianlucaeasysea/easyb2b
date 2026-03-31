@@ -158,9 +158,12 @@ const CRMDealsPipeline = () => {
                                   {deal.title}
                                 </p>
                                 {org && (
-                                  <p className="text-[10px] text-primary truncate flex items-center gap-1 mt-0.5">
+                                  <button
+                                    className="text-[10px] text-primary truncate flex items-center gap-1 mt-0.5 hover:underline"
+                                    onClick={(e) => { e.stopPropagation(); navigate(`/crm/organizations/${org.id}`); }}
+                                  >
                                     <Building2 size={8} /> {org.company_name}
-                                  </p>
+                                  </button>
                                 )}
                                 {contact && (
                                   <p className="text-[10px] text-muted-foreground truncate">
