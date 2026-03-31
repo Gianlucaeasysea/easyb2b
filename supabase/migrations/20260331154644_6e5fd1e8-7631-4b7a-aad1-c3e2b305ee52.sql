@@ -1,0 +1,1 @@
+UPDATE tasks SET due_date = '2026-03-31T12:00:00+00' WHERE id = '7002abf3-7284-4945-be7c-eca65998e7d3';
