@@ -450,6 +450,8 @@ const CRMOrganizationDetail = () => {
                 </div>
               )}
             </div>
+
+            <div className="lg:col-span-2">
               {/* Timeline recent events */}
               <div className="glass-card-solid p-5">
                 <h3 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2 text-sm"><Clock size={14} /> Ultimi Eventi</h3>
