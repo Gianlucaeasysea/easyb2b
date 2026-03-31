@@ -96,8 +96,9 @@ const CRMOrganizationDetail = () => {
     job_title: "", department: "", contact_type: "general",
     preferred_channel: "email", linkedin_url: "", is_primary: false, is_decision_maker: false,
   });
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [taskForm, setTaskForm] = useState({ title: "", type: "call", priority: "medium", due_date: "", description: "" });
 
-  const { data: client, isLoading } = useQuery({
     queryKey: ["crm-org", id],
     queryFn: async () => {
       const { data, error } = await supabase.from("clients").select("*").eq("id", id!).single();
