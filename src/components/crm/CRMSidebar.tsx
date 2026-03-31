@@ -19,6 +19,7 @@ const items = [
   { title: "Organizzazioni", url: "/crm/organizations", icon: Building2 },
   { title: "Contatti", url: "/crm/contacts", icon: Users },
   { title: "Attività", url: "/crm/activities", icon: Activity },
+  { title: "Template Email", url: "/crm/email-templates", icon: MailPlus },
   { title: "Aiuto", url: "/crm/help", icon: HelpCircle },
 ];
 
