@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Target, Activity, Calendar, Phone, Mail, MessageCircle, TrendingUp,
   Euro, CreditCard, Truck, ShoppingBag, Eye, XCircle, PackagePlus, Clock,
-  AlertTriangle, RefreshCw, UserCheck, Building2
+  AlertTriangle, RefreshCw, UserCheck, Building2, Handshake
 } from "lucide-react";
 import { format, isToday, isPast, differenceInDays, isValid } from "date-fns";
 import { Badge } from "@/components/ui/badge";
