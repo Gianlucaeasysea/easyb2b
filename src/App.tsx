@@ -59,6 +59,8 @@ import CRMActivities from "./pages/crm/CRMActivities";
 import CRMOrganizations from "./pages/crm/CRMOrganizations";
 import CRMOrganizationDetail from "./pages/crm/CRMOrganizationDetail";
 import CRMContactsPeople from "./pages/crm/CRMContactsPeople";
+import CRMDeals from "./pages/crm/CRMDeals";
+import CRMDealsPipeline from "./pages/crm/CRMDealsPipeline";
 import CRMRequests from "./pages/crm/CRMRequests";
 import CRMHelp from "./pages/crm/CRMHelp";
 
