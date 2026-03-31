@@ -896,6 +896,7 @@ const CRMOrganizationDetail = () => {
         </DialogContent>
       </Dialog>
 
+      <ComposeEmailDialog
         open={composeOpen}
         onOpenChange={(open) => { setComposeOpen(open); if (!open) setComposeOrderCtx(null); }}
         clientId={id!}
