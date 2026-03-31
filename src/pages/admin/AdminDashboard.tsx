@@ -1,13 +1,17 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ShoppingBag, Package, FileText, TrendingUp, Globe, Euro, CreditCard, Truck, RefreshCw } from "lucide-react";
+import { Users, ShoppingBag, Package, FileText, Euro, CreditCard, Truck, RefreshCw, Globe, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
 
 const StatCard = ({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string; sub?: string }) => (
   <div className="glass-card-solid p-6">
@@ -35,6 +39,24 @@ const statusColors: Record<string, string> = {
   lost: "bg-destructive/20 text-destructive",
   Returned: "bg-destructive/20 text-destructive",
 };
+
+const ORDER_STATUS_COLORS: Record<string, string> = {
+  draft: "#9ca3af",
+  confirmed: "#3b82f6",
+  processing: "#f59e0b",
+  "To be prepared": "#f59e0b",
+  Ready: "#3b82f6",
+  shipped: "#8b5cf6",
+  "On the road": "#8b5cf6",
+  delivered: "#22c55e",
+  Delivered: "#22c55e",
+  cancelled: "#ef4444",
+  Returned: "#ef4444",
+  lost: "#ef4444",
+  Payed: "#22c55e",
+};
+
+const CHART_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#f97316", "#ec4899", "#14b8a6", "#6366f1"];
 
 const currentYearStart = `${new Date().getFullYear()}-01-01`;
 
@@ -99,6 +121,22 @@ const AdminDashboard = () => {
     },
   });
 
+  // Top 10 products
+  const { data: topProducts } = useQuery({
+    queryKey: ["admin-top-products"],
+    queryFn: async () => {
+      const { data } = await supabase.from("order_items").select("product_id, quantity, products(name)");
+      if (!data) return [];
+      const map: Record<string, { name: string; qty: number }> = {};
+      data.forEach((item: any) => {
+        const name = item.products?.name || "Unknown";
+        if (!map[item.product_id]) map[item.product_id] = { name, qty: 0 };
+        map[item.product_id].qty += item.quantity;
+      });
+      return Object.values(map).sort((a, b) => b.qty - a.qty).slice(0, 10);
+    },
+  });
+
   // Filtered totals
   const totalOrdered = (orders || [])
     .filter(o => {
@@ -112,8 +150,8 @@ const AdminDashboard = () => {
 
   const totalPayed = (orders || [])
     .filter(o => {
-      if (!(o as any).payed_date) return false;
-      const d = String((o as any).payed_date).slice(0, 10);
+      if (!o.payed_date) return false;
+      const d = String(o.payed_date).slice(0, 10);
       if (payedDateFrom && d < payedDateFrom) return false;
       if (payedDateTo && d > payedDateTo) return false;
       return true;
@@ -122,8 +160,8 @@ const AdminDashboard = () => {
 
   const totalDelivered = (orders || [])
     .filter(o => {
-      if (!(o as any).delivery_date) return false;
-      const d = String((o as any).delivery_date).slice(0, 10);
+      if (!o.delivery_date) return false;
+      const d = String(o.delivery_date).slice(0, 10);
       if (deliveryDateFrom && d < deliveryDateFrom) return false;
       if (deliveryDateTo && d > deliveryDateTo) return false;
       return true;
@@ -133,11 +171,60 @@ const AdminDashboard = () => {
   const activeClients = clients?.filter(c => c.status === "active").length || 0;
   const countries = [...new Set(clients?.map(c => c.country).filter(Boolean))].length;
 
-  // Recent orders: filtered from start of year
   const recentOrders = (orders || []).filter(o => {
     const d = o.created_at?.slice(0, 10) || "";
     return d >= currentYearStart;
   });
+
+  // Monthly revenue chart (last 12 months)
+  const monthlyRevenue = (() => {
+    const now = new Date();
+    const months: { month: string; current: number; previous: number }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = format(d, "yyyy-MM");
+      const prevKey = format(new Date(d.getFullYear() - 1, d.getMonth(), 1), "yyyy-MM");
+      const label = format(d, "MMM yy");
+      const current = (orders || [])
+        .filter(o => o.created_at?.slice(0, 7) === key)
+        .reduce((s, o) => s + Number(o.total_amount || 0), 0);
+      const previous = (orders || [])
+        .filter(o => o.created_at?.slice(0, 7) === prevKey)
+        .reduce((s, o) => s + Number(o.total_amount || 0), 0);
+      months.push({ month: label, current, previous });
+    }
+    return months;
+  })();
+
+  // Client distribution by discount class
+  const discountDistribution = (() => {
+    const map: Record<string, number> = {};
+    (clients || []).forEach(c => {
+      const cls = c.discount_class || "Standard";
+      map[cls] = (map[cls] || 0) + 1;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  })();
+
+  // Orders by status
+  const ordersByStatus = (() => {
+    const map: Record<string, number> = {};
+    (orders || []).forEach(o => {
+      const st = o.status || "draft";
+      map[st] = (map[st] || 0) + 1;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value, fill: ORDER_STATUS_COLORS[name] || "#9ca3af" }));
+  })();
+
+  // Late payments (payment_status pending/to be paid, created > 30 days ago)
+  const latePayments = (orders || []).filter(o => {
+    const isPending = !o.payed_date && o.payment_status !== "Payed";
+    const daysOld = differenceInDays(new Date(), new Date(o.created_at));
+    return isPending && daysOld > 30 && Number(o.total_amount || 0) > 0;
+  }).map(o => ({
+    ...o,
+    daysLate: differenceInDays(new Date(), new Date(o.created_at)),
+  })).sort((a, b) => b.daysLate - a.daysLate).slice(0, 10);
 
   return (
     <div>
@@ -207,6 +294,101 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Charts Grid */}
+      <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        {/* 1. Monthly Revenue (full width) */}
+        <div className="glass-card-solid p-5 lg:col-span-2">
+          <h2 className="font-heading font-bold text-foreground mb-4">📈 Revenue Mensile (ultimi 12 mesi)</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={monthlyRevenue}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+              <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
+              <Tooltip formatter={(v: number) => [`€${v.toLocaleString("it-IT", { minimumFractionDigits: 2 })}`, ""]} />
+              <Legend />
+              <Line type="monotone" dataKey="current" name="Anno corrente" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="previous" name="Anno precedente" stroke="#9ca3af" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 2. Top 10 Products */}
+        <div className="glass-card-solid p-5">
+          <h2 className="font-heading font-bold text-foreground mb-4">🏆 Top 10 Prodotti Venduti</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={topProducts || []} layout="vertical" margin={{ left: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+              <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={80} stroke="hsl(var(--muted-foreground))" />
+              <Tooltip formatter={(v: number) => [v, "Quantità"]} />
+              <Bar dataKey="qty" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 3. Client Distribution by Discount Class */}
+        <div className="glass-card-solid p-5">
+          <h2 className="font-heading font-bold text-foreground mb-4">👥 Distribuzione Clienti per Classe Sconto</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={discountDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                {discountDistribution.map((_, i) => (
+                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(v: number) => [v, "Clienti"]} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 4. Orders by Status */}
+        <div className="glass-card-solid p-5">
+          <h2 className="font-heading font-bold text-foreground mb-4">📦 Ordini per Status</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={ordersByStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} label={({ name, value }) => `${name}: ${value}`}>
+                {ordersByStatus.map((entry, i) => (
+                  <Cell key={i} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(v: number) => [v, "Ordini"]} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 5. Late Payments Alert */}
+        <div className={`glass-card-solid p-5 ${latePayments.length > 0 ? "border-destructive/30 bg-destructive/5" : ""}`}>
+          <h2 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2">
+            <AlertTriangle size={16} className={latePayments.length > 0 ? "text-destructive" : "text-success"} />
+            Pagamenti in Ritardo ({">"}30gg)
+          </h2>
+          {latePayments.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-success font-medium">✓ Nessun pagamento in ritardo</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[250px] overflow-y-auto">
+              {latePayments.map(o => (
+                <Link
+                  key={o.id}
+                  to={`/admin/orders/${o.id}`}
+                  className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-destructive/10 border border-destructive/20"
+                >
+                  <div>
+                    <p className="text-sm font-heading font-semibold text-foreground">{(o as any).clients?.company_name}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{o.order_code || o.id.slice(0, 8)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-sm font-semibold text-destructive">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</p>
+                    <p className="text-xs text-destructive/70">{o.daysLate} giorni</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="glass-card-solid p-5">
           <div className="flex items-center justify-between mb-4">
@@ -218,7 +400,7 @@ const AdminDashboard = () => {
               <Link key={o.id} to={`/admin/orders/${o.id}`} className="flex items-center justify-between py-2 border-b border-border last:border-0 hover:bg-secondary/30 px-2 -mx-2 rounded">
                 <div>
                   <p className="text-sm font-heading font-semibold text-foreground">{(o as any).clients?.company_name}</p>
-                  <p className="text-xs text-muted-foreground font-mono">{(o as any).order_code || o.id.slice(0, 8)}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{o.order_code || o.id.slice(0, 8)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"] || "bg-muted text-muted-foreground"}`}>{o.status}</Badge>

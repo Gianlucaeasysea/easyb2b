@@ -1,13 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ShoppingBag, Search, Filter, CalendarIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ShoppingBag, Search, Filter, CalendarIcon, Download, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -33,10 +37,13 @@ const paymentColors: Record<string, string> = {
 
 const AdminOrders = () => {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState("confirmed");
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-orders"],
@@ -56,7 +63,7 @@ const AdminOrders = () => {
   const filtered = orders?.filter(o => {
     const matchSearch =
       (o as any).clients?.company_name?.toLowerCase().includes(search.toLowerCase()) ||
-      (o as any).order_code?.toLowerCase().includes(search.toLowerCase()) ||
+      o.order_code?.toLowerCase().includes(search.toLowerCase()) ||
       o.tracking_number?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || o.status === statusFilter;
     const orderDate = o.created_at?.slice(0, 10) || "";
@@ -73,6 +80,52 @@ const AdminOrders = () => {
     catch { return "—"; }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === filtered.length) setSelected(new Set());
+    else setSelected(new Set(filtered.map(o => o.id)));
+  };
+
+  const bulkUpdate = useMutation({
+    mutationFn: async () => {
+      const ids = Array.from(selected);
+      const { error } = await supabase.from("orders").update({ status: bulkStatus }).in("id", ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      toast.success(`Status aggiornato per ${count} ordini`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["admin-orders"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const exportCSV = () => {
+    const rows = filtered.map(o => ({
+      "Codice Ordine": o.order_code || o.id.slice(0, 8),
+      "Organizzazione": (o as any).clients?.company_name || "",
+      "Status": o.status || "",
+      "Totale (€)": Number(o.total_amount || 0).toFixed(2),
+      "Status Pagamento": o.payment_status || "",
+      "Data Creazione": fmtDate(o.created_at),
+      "Data Consegna": fmtDate(o.delivery_date),
+      "Tracking Number": o.tracking_number || "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ordini");
+    XLSX.writeFile(wb, `ordini_export_${format(new Date(), "yyyy-MM-dd")}.csv`, { bookType: "csv" });
+    toast.success(`${rows.length} ordini esportati`);
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -80,7 +133,34 @@ const AdminOrders = () => {
           <h1 className="font-heading text-2xl font-bold text-foreground">Orders</h1>
           <p className="text-sm text-muted-foreground">{filtered.length} ordini · Fatturato: €{totalRevenue.toLocaleString("it-IT", { minimumFractionDigits: 2 })}</p>
         </div>
+        <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1">
+          <Download size={14} /> Esporta CSV
+        </Button>
       </div>
+
+      {/* Bulk Action Bar */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
+          <span className="text-sm font-medium">{selected.size} ordini selezionati</span>
+          <Select value={bulkStatus} onValueChange={setBulkStatus}>
+            <SelectTrigger className="w-[180px] h-8 text-xs">
+              <SelectValue placeholder="Cambia status a..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+              <SelectItem value="processing">Processing</SelectItem>
+              <SelectItem value="shipped">Shipped</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={() => bulkUpdate.mutate()} disabled={bulkUpdate.isPending}>
+            Applica
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())} className="gap-1">
+            <X size={14} /> Deseleziona
+          </Button>
+        </div>
+      )}
 
       <div className="flex gap-3 mb-6 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
@@ -101,9 +181,9 @@ const AdminOrders = () => {
         </Select>
         <div className="flex items-center gap-2">
           <CalendarIcon size={14} className="text-muted-foreground" />
-          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-[150px] text-xs bg-secondary border-border rounded-lg h-9" placeholder="Da" />
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-[150px] text-xs bg-secondary border-border rounded-lg h-9" />
           <span className="text-muted-foreground text-xs">—</span>
-          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-[150px] text-xs bg-secondary border-border rounded-lg h-9" placeholder="A" />
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-[150px] text-xs bg-secondary border-border rounded-lg h-9" />
         </div>
       </div>
 
@@ -119,6 +199,9 @@ const AdminOrders = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox checked={selected.size === filtered.length && filtered.length > 0} onCheckedChange={toggleAll} />
+                </TableHead>
                 <TableHead className="text-xs">Business</TableHead>
                 <TableHead className="text-xs">Order Code</TableHead>
                 <TableHead className="text-xs">Order Date</TableHead>
@@ -132,40 +215,39 @@ const AdminOrders = () => {
             </TableHeader>
             <TableBody>
               {filtered.map(o => (
-                <TableRow
-                  key={o.id}
-                  className="cursor-pointer hover:bg-secondary/50"
-                  onClick={() => navigate(`/admin/orders/${o.id}`)}
-                >
-                  <TableCell>
+                <TableRow key={o.id} className="cursor-pointer hover:bg-secondary/50">
+                  <TableCell onClick={e => e.stopPropagation()}>
+                    <Checkbox checked={selected.has(o.id)} onCheckedChange={() => toggleSelect(o.id)} />
+                  </TableCell>
+                  <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)}>
                     <span className="font-heading font-semibold text-sm">{(o as any).clients?.company_name || "—"}</span>
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {(o as any).order_code || `#${o.id.slice(0, 8)}`}
+                  <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="font-mono text-xs text-muted-foreground">
+                    {o.order_code || `#${o.id.slice(0, 8)}`}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{fmtDate(o.created_at)}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.created_at)}</TableCell>
+                  <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)}>
                     <Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"] || "bg-muted text-muted-foreground"}`}>
                       {o.status || "—"}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    {(o as any).payment_status ? (
-                      <Badge className={`border-0 text-[10px] ${paymentColors[(o as any).payment_status] || "bg-muted text-muted-foreground"}`}>
-                        {(o as any).payment_status}
+                  <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)}>
+                    {o.payment_status ? (
+                      <Badge className={`border-0 text-[10px] ${paymentColors[o.payment_status] || "bg-muted text-muted-foreground"}`}>
+                        {o.payment_status}
                       </Badge>
                     ) : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
-                  <TableCell className="text-right font-mono text-sm font-semibold">
+                  <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-right font-mono text-sm font-semibold">
                     €{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
                   </TableCell>
-                  <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                    {Number((o as any).shipping_cost_client || 0) > 0
-                      ? `€${Number((o as any).shipping_cost_client).toLocaleString("it-IT", { minimumFractionDigits: 2 })}`
+                  <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-right font-mono text-xs text-muted-foreground">
+                    {Number(o.shipping_cost_client || 0) > 0
+                      ? `€${Number(o.shipping_cost_client).toLocaleString("it-IT", { minimumFractionDigits: 2 })}`
                       : "—"}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{fmtDate((o as any).payed_date)}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{fmtDate((o as any).delivery_date)}</TableCell>
+                  <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.payed_date)}</TableCell>
+                  <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.delivery_date)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

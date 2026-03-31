@@ -8,15 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, Search, ArrowRight, Plus, Trash2, Settings2 } from "lucide-react";
+import { Users, Search, ArrowRight, Plus, Trash2, Settings2, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
+import { differenceInDays } from "date-fns";
 
 const AdminClients = () => {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [inactiveDays, setInactiveDays] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showCreate, setShowCreate] = useState(false);
   const [showBulk, setShowBulk] = useState(false);
@@ -39,6 +41,23 @@ const AdminClients = () => {
     },
   });
 
+  // Fetch last order and total spent per client
+  const { data: clientOrderStats } = useQuery({
+    queryKey: ["admin-clients-order-stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("orders").select("client_id, created_at, total_amount").order("created_at", { ascending: false });
+      if (error) throw error;
+      const map: Record<string, { lastOrder: string | null; totalSpent: number }> = {};
+      (data || []).forEach(o => {
+        if (!map[o.client_id]) {
+          map[o.client_id] = { lastOrder: o.created_at, totalSpent: 0 };
+        }
+        map[o.client_id].totalSpent += Number(o.total_amount || 0);
+      });
+      return map;
+    },
+  });
+
   const { data: discountTiers } = useQuery({
     queryKey: ["discount-tiers"],
     queryFn: async () => {
@@ -48,13 +67,29 @@ const AdminClients = () => {
     },
   });
 
-  const filtered = clients?.filter(c =>
-    c.company_name.toLowerCase().includes(search.toLowerCase()) ||
-    c.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
-    c.country?.toLowerCase().includes(search.toLowerCase()) ||
-    c.email?.toLowerCase().includes(search.toLowerCase()) ||
-    c.business_type?.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  const filtered = clients?.filter(c => {
+    const matchSearch =
+      c.company_name.toLowerCase().includes(search.toLowerCase()) ||
+      c.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
+      c.country?.toLowerCase().includes(search.toLowerCase()) ||
+      c.email?.toLowerCase().includes(search.toLowerCase()) ||
+      c.business_type?.toLowerCase().includes(search.toLowerCase());
+
+    if (!matchSearch) return false;
+
+    // Inactive filter
+    if (inactiveDays) {
+      const days = parseInt(inactiveDays);
+      if (!isNaN(days) && days > 0) {
+        const stats = clientOrderStats?.[c.id];
+        if (!stats?.lastOrder) return true; // Never ordered = inactive
+        const daysSince = differenceInDays(new Date(), new Date(stats.lastOrder));
+        return daysSince >= days;
+      }
+    }
+
+    return true;
+  }) || [];
 
   const createClient = useMutation({
     mutationFn: async () => {
@@ -160,9 +195,24 @@ const AdminClients = () => {
         </div>
       </div>
 
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-        <Input placeholder="Cerca per azienda, contatto, paese, tipo..." className="pl-10 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex gap-3 mb-6 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+          <Input placeholder="Cerca per azienda, contatto, paese, tipo..." className="pl-10 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock size={14} className="text-muted-foreground" />
+          <Input
+            type="number"
+            placeholder="Inattivi da X giorni"
+            value={inactiveDays}
+            onChange={e => setInactiveDays(e.target.value)}
+            className="w-[180px] text-xs bg-secondary border-border rounded-lg h-9"
+          />
+          {inactiveDays && (
+            <Button variant="ghost" size="sm" onClick={() => setInactiveDays("")} className="h-8 px-2 text-xs">✕</Button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -184,6 +234,8 @@ const AdminClients = () => {
                 <TableHead>Tipo</TableHead>
                 <TableHead>Paese</TableHead>
                 <TableHead>Sconto</TableHead>
+                <TableHead>Ultimo Ordine</TableHead>
+                <TableHead className="text-right">Totale Speso</TableHead>
                 <TableHead>Stato</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -208,6 +260,23 @@ const AdminClients = () => {
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)}>
                     <Badge variant="outline" className="font-mono text-[10px]">{discountTiers?.find(t => t.name === c.discount_class)?.label || c.discount_class}</Badge>
+                  </TableCell>
+                  <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)}>
+                    {(() => {
+                      const stats = clientOrderStats?.[c.id];
+                      if (!stats?.lastOrder) return <span className="text-xs text-muted-foreground">Mai</span>;
+                      const days = differenceInDays(new Date(), new Date(stats.lastOrder));
+                      const dateStr = new Date(stats.lastOrder).toLocaleDateString("it-IT");
+                      return (
+                        <div>
+                          <span className="text-xs">{dateStr}</span>
+                          <p className="text-[10px] text-muted-foreground">{days} giorni fa</p>
+                        </div>
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)} className="text-right">
+                    <span className="font-mono text-sm">€{(clientOrderStats?.[c.id]?.totalSpent || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</span>
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)}>
                     <Badge className={`border-0 text-[10px] ${
