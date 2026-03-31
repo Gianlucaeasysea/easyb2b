@@ -874,10 +874,10 @@ function DealsTab({ clientId, clientName, contacts, navigate }: { clientId: stri
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] uppercase text-muted-foreground">Contatto</Label>
-                  <Select value={form.contact_id} onValueChange={v => setForm(f => ({ ...f, contact_id: v }))}>
+                  <Select value={form.contact_id || "__none__"} onValueChange={v => setForm(f => ({ ...f, contact_id: v === "__none__" ? "" : v }))}>
                     <SelectTrigger className="h-9 bg-secondary border-border"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nessuno</SelectItem>
+                      <SelectItem value="__none__">Nessuno</SelectItem>
                       {contacts.map(c => <SelectItem key={c.id} value={c.id}>{c.contact_name}</SelectItem>)}
                     </SelectContent>
                   </Select>
