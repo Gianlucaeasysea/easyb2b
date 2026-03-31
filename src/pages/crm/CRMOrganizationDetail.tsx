@@ -479,6 +479,11 @@ const CRMOrganizationDetail = () => {
           </div>
         </TabsContent>
 
+        {/* DEALS */}
+        <TabsContent value="deals">
+          <DealsTab clientId={id!} clientName={client?.company_name || ""} contacts={contacts || []} navigate={navigate} />
+        </TabsContent>
+
         {/* ORDERS */}
         <TabsContent value="orders">
           <div className="glass-card-solid overflow-hidden">
