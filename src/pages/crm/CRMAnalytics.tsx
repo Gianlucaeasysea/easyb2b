@@ -456,6 +456,9 @@ const CRMAnalytics = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Live Order Details Table */}
+      <OrderDetailsTable title="Dettaglio Ordini (Live Sync)" />
     </div>
   );
 };
