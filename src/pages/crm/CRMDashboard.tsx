@@ -98,6 +98,21 @@ const CRMDashboard = () => {
     },
   });
 
+  // My Tasks
+  const { data: myTasks } = useQuery({
+    queryKey: ["crm-dashboard-my-tasks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*, clients:client_id(id, company_name)")
+        .not("status", "in", '("completed","cancelled")')
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Deals for KPIs
   const { data: allDeals } = useQuery({
     queryKey: ["crm-dashboard-deals"],
