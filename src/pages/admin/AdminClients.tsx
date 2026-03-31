@@ -234,6 +234,8 @@ const AdminClients = () => {
                 <TableHead>Tipo</TableHead>
                 <TableHead>Paese</TableHead>
                 <TableHead>Sconto</TableHead>
+                <TableHead>Ultimo Ordine</TableHead>
+                <TableHead className="text-right">Totale Speso</TableHead>
                 <TableHead>Stato</TableHead>
                 <TableHead></TableHead>
               </TableRow>
