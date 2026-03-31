@@ -3,9 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import LeadDetailPanel from "@/components/crm/LeadDetailPanel";
 import { Badge } from "@/components/ui/badge";
-import { differenceInDays, format } from "date-fns";
+import { differenceInDays, format, isValid } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import { Building2 } from "lucide-react";
+
+const safeFormat = (d: string | null | undefined, fmt: string) => {
+  if (!d) return "—";
+  const dt = new Date(d);
+  return isValid(dt) ? format(dt, fmt) : "—";
+};
 
 const stages = ["lead", "qualifying", "onboarding", "active", "at_risk"];
 const stageLabels: Record<string, string> = {
@@ -27,7 +34,7 @@ const cardAccents: Record<string, string> = {
 const CRMPipeline = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const navigate = useNavigate();
 
   const { data: clients } = useQuery({
     queryKey: ["crm-pipeline-clients"],
@@ -35,14 +42,13 @@ const CRMPipeline = () => {
       const { data, error } = await supabase
         .from("clients")
         .select("id, company_name, contact_name, status, status_changed_at, last_order_date, days_since_last_order, zone")
-        .in("status", ["lead", "qualifying", "onboarding", "active", "at_risk"])
+        .in("status", stages)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
-  // Fetch last activity per client
   const { data: lastActivities } = useQuery({
     queryKey: ["crm-pipeline-last-activities"],
     queryFn: async () => {
@@ -51,7 +57,6 @@ const CRMPipeline = () => {
         .select("client_id, created_at, title")
         .not("client_id", "is", null)
         .order("created_at", { ascending: false });
-      // Group by client_id, take first
       const map: Record<string, { created_at: string; title: string }> = {};
       data?.forEach(a => {
         if (a.client_id && !map[a.client_id]) {
@@ -112,7 +117,7 @@ const CRMPipeline = () => {
       <div className="mb-6">
         <h1 className="font-heading text-2xl font-bold text-foreground">Client Pipeline</h1>
         <p className="text-sm text-muted-foreground">
-          Drag and drop clients between lifecycle stages • Churned and Disqualified are terminal states
+          Drag and drop organizations between lifecycle stages
         </p>
       </div>
 
@@ -150,40 +155,39 @@ const CRMPipeline = () => {
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              onClick={() => setSelectedClient(client)}
+                              onClick={() => navigate(`/crm/organizations/${client.id}`)}
                               className={`glass-card-solid p-3 border-l-2 ${cardAccents[stage]} cursor-pointer hover:shadow-md transition-all ${
                                 snapshot.isDragging ? "shadow-lg ring-2 ring-primary/30 rotate-1" : ""
                               }`}
                             >
-                              <p className="text-xs font-heading font-semibold text-foreground truncate">
-                                {client.company_name}
-                              </p>
+                              <div className="flex items-center gap-1.5">
+                                <Building2 size={10} className="text-muted-foreground shrink-0" />
+                                <p className="text-xs font-heading font-semibold text-foreground truncate">
+                                  {client.company_name}
+                                </p>
+                              </div>
                               <p className="text-[10px] text-muted-foreground truncate">
                                 {client.contact_name || "—"}
                               </p>
                               
-                              {/* Days in stage */}
                               {daysInStage !== null && (
                                 <p className="text-[10px] text-muted-foreground/70 mt-1">
                                   ⏱ {daysInStage}d in stage
                                 </p>
                               )}
 
-                              {/* Active: show last order info */}
                               {stage === "active" && client.last_order_date && (
                                 <p className="text-[10px] text-success mt-0.5 truncate">
-                                  🛒 Last order: {format(new Date(client.last_order_date), "dd/MM")} ({client.days_since_last_order || 0}d ago)
+                                  🛒 Last order: {safeFormat(client.last_order_date, "dd/MM")} ({client.days_since_last_order || 0}d ago)
                                 </p>
                               )}
 
-                              {/* At Risk: days inactive in red */}
                               {stage === "at_risk" && (
                                 <p className="text-[10px] text-destructive font-semibold mt-0.5">
                                   ⚠ {client.days_since_last_order || "?"}d inactive
                                 </p>
                               )}
 
-                              {/* Last activity */}
                               {lastAct && (
                                 <p className="text-[10px] text-muted-foreground/50 truncate mt-0.5">
                                   📌 {lastAct.title}
@@ -202,13 +206,6 @@ const CRMPipeline = () => {
           ))}
         </div>
       </DragDropContext>
-
-      {/* Reuse LeadDetailPanel for quick view - it works for clients too */}
-      <LeadDetailPanel
-        lead={selectedClient}
-        open={!!selectedClient}
-        onClose={() => setSelectedClient(null)}
-      />
     </div>
   );
 };

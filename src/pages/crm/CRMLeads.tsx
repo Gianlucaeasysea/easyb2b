@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Plus, Phone, Mail, MessageCircle, Search, ChevronRight, Trash2, Filter } from "lucide-react";
+import { Users, Plus, Phone, Mail, MessageCircle, Search, Trash2, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,18 +15,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import LeadDetailPanel from "@/components/crm/LeadDetailPanel";
 
 const statusColors: Record<string, string> = {
-  lead: "border-primary text-primary",
-  qualifying: "border-warning text-warning",
-  onboarding: "border-chart-4 text-chart-4",
-  active: "bg-success/20 text-success border-0",
-  at_risk: "bg-destructive/20 text-destructive border-0",
-  churned: "bg-muted text-muted-foreground border-0",
-  disqualified: "bg-muted text-muted-foreground border-0",
-  // Legacy statuses
   new: "border-primary text-primary",
   contacted: "border-warning text-warning",
   qualified: "border-success text-success",
-  proposal: "border-primary text-primary",
+  proposal: "border-chart-4 text-chart-4",
   won: "bg-success/20 text-success border-0",
   lost: "bg-destructive/20 text-destructive border-0",
 };
@@ -65,9 +57,48 @@ const CRMLeads = () => {
     },
   });
 
+  // Convert lead to organization (client)
+  const convertToOrg = useMutation({
+    mutationFn: async (lead: any) => {
+      // Create client from lead data
+      const { data: newClient, error: clientErr } = await supabase.from("clients").insert({
+        company_name: lead.company_name,
+        contact_name: lead.contact_name,
+        email: lead.email,
+        phone: lead.phone,
+        zone: lead.zone,
+        status: "qualifying",
+      }).select().single();
+      if (clientErr) throw clientErr;
+
+      // Create primary contact if there's a contact name
+      if (lead.contact_name) {
+        await supabase.from("client_contacts").insert({
+          client_id: newClient.id,
+          contact_name: lead.contact_name,
+          email: lead.email,
+          phone: lead.phone,
+          is_primary: true,
+        });
+      }
+
+      // Move activities from lead to client
+      await supabase.from("activities").update({ client_id: newClient.id }).eq("lead_id", lead.id);
+
+      // Update lead status
+      await supabase.from("leads").update({ status: "won" }).eq("id", lead.id);
+
+      return newClient;
+    },
+    onSuccess: (newClient) => {
+      queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
+      toast({ title: "Lead convertito in organizzazione", description: newClient.company_name });
+    },
+    onError: (e: any) => toast({ title: "Errore", description: e.message, variant: "destructive" }),
+  });
+
   const deleteLeads = useMutation({
     mutationFn: async (ids: string[]) => {
-      // Delete related activities first
       for (const id of ids) {
         await supabase.from("activities").delete().eq("lead_id", id);
       }
@@ -87,11 +118,6 @@ const CRMLeads = () => {
     window.open(`https://wa.me/${clean.replace("+", "")}?text=${encodeURIComponent(`Hi ${name}, this is the Easysea sales team.`)}`, "_blank");
   };
 
-  const openEmail = (email: string, name: string) => {
-    window.open(`mailto:${email}?subject=${encodeURIComponent("Easysea — Follow-up")}&body=${encodeURIComponent(`Hi ${name},\n\nThank you for your interest in Easysea products.\n\nBest regards,\nEasysea Sales Team`)}`, "_blank");
-  };
-
-  // Get unique zones for filter
   const zones = [...new Set(leads?.map(l => l.zone).filter(Boolean) || [])].sort();
 
   const filtered = leads?.filter(l => {
@@ -122,7 +148,7 @@ const CRMLeads = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">Leads</h1>
-          <p className="text-sm text-muted-foreground">Manage and qualify potential dealers</p>
+          <p className="text-sm text-muted-foreground">Pre-qualification contacts — convert to Organizations when qualified</p>
         </div>
         <div className="flex items-center gap-2">
           {selected.size > 0 && (
@@ -188,7 +214,7 @@ const CRMLeads = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            {["lead", "qualifying", "onboarding", "active", "at_risk", "churned", "disqualified", "new", "contacted", "qualified", "proposal", "won", "lost"].map(s => (
+            {["new", "contacted", "qualified", "proposal", "won", "lost"].map(s => (
               <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
             ))}
           </SelectContent>
@@ -245,6 +271,13 @@ const CRMLeads = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                      {l.status !== "won" && l.status !== "lost" && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-success" onClick={() => {
+                          if (confirm(`Convertire "${l.company_name}" in organizzazione?`)) convertToOrg.mutate(l);
+                        }} title="Convert to Organization">
+                          <ArrowRight size={14} />
+                        </Button>
+                      )}
                       {l.phone && (
                         <>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-success" onClick={() => openWhatsApp(l.phone!, l.contact_name || l.company_name)} title="WhatsApp">
@@ -256,7 +289,7 @@ const CRMLeads = () => {
                         </>
                       )}
                       {l.email && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-warning" onClick={() => openEmail(l.email!, l.contact_name || l.company_name)} title="Email">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-warning" onClick={() => window.open(`mailto:${l.email}?subject=${encodeURIComponent("Easysea — Follow-up")}`, "_blank")} title="Email">
                           <Mail size={16} />
                         </Button>
                       )}
@@ -274,7 +307,6 @@ const CRMLeads = () => {
         </div>
       )}
 
-      {/* Lead Detail Panel */}
       <LeadDetailPanel
         lead={detailLead}
         open={!!detailLead}
