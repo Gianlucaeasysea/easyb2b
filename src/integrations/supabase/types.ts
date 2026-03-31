@@ -130,6 +130,7 @@ export type Database = {
           metadata: Json | null
           order_id: string | null
           recipient_email: string
+          scheduled_at: string | null
           sent_by: string
           status: string
           subject: string
@@ -148,6 +149,7 @@ export type Database = {
           metadata?: Json | null
           order_id?: string | null
           recipient_email: string
+          scheduled_at?: string | null
           sent_by: string
           status?: string
           subject: string
@@ -166,6 +168,7 @@ export type Database = {
           metadata?: Json | null
           order_id?: string | null
           recipient_email?: string
+          scheduled_at?: string | null
           sent_by?: string
           status?: string
           subject?: string
@@ -729,6 +732,39 @@ export type Database = {
           send_delay_ms?: number
           transactional_email_ttl_minutes?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          body: string
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+          subject: string
+          updated_at: string | null
+        }
+        Insert: {
+          body: string
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+          subject: string
+          updated_at?: string | null
+        }
+        Update: {
+          body?: string
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+          subject?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
