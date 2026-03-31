@@ -803,3 +803,141 @@ const CRMOrganizationDetail = () => {
 };
 
 export default CRMOrganizationDetail;
+
+// Deals sub-tab component
+const stageColors: Record<string, string> = {
+  ...statusColors,
+  qualification: "bg-primary/20 text-primary",
+  proposal: "bg-warning/20 text-warning",
+  negotiation: "bg-chart-4/20 text-chart-4",
+  closed_won: "bg-success/20 text-success",
+  closed_lost: "bg-destructive/20 text-destructive",
+};
+const stageLabels: Record<string, string> = {
+  qualification: "Qualification", proposal: "Proposal", negotiation: "Negotiation",
+  closed_won: "Won", closed_lost: "Lost",
+};
+
+function DealsTab({ clientId, clientName, contacts, navigate }: { clientId: string; clientName: string; contacts: any[]; navigate: any }) {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({ title: "", contact_id: "", value: "", stage: "qualification", probability: "20", expected_close_date: "", notes: "" });
+
+  const { data: deals } = useQuery({
+    queryKey: ["crm-org-deals", clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("deals").select("*, contact:contact_id(contact_name)").eq("client_id", clientId).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clientId,
+  });
+
+  const createDeal = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("deals").insert({
+        title: form.title, client_id: clientId, contact_id: form.contact_id || null,
+        value: parseFloat(form.value) || 0, stage: form.stage, probability: parseInt(form.probability) || 20,
+        expected_close_date: form.expected_close_date || null, notes: form.notes || null, assigned_to: user?.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-org-deals", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
+      toast.success("Deal creato");
+      setCreateOpen(false);
+      setForm({ title: "", contact_id: "", value: "", stage: "qualification", probability: "20", expected_close_date: "", notes: "" });
+    },
+  });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-heading font-bold text-foreground">Deals ({deals?.length || 0})</h3>
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <Button size="sm" className="gap-1 bg-foreground text-background" onClick={() => setCreateOpen(true)}>
+            <Plus size={14} /> Nuovo Deal
+          </Button>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader><DialogTitle className="font-heading">Nuovo Deal per {clientName}</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase text-muted-foreground">Titolo *</Label>
+                <Input className="h-9 bg-secondary border-border" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase text-muted-foreground">Valore (€)</Label>
+                  <Input type="number" className="h-9 bg-secondary border-border" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase text-muted-foreground">Contatto</Label>
+                  <Select value={form.contact_id} onValueChange={v => setForm(f => ({ ...f, contact_id: v }))}>
+                    <SelectTrigger className="h-9 bg-secondary border-border"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Nessuno</SelectItem>
+                      {contacts.map(c => <SelectItem key={c.id} value={c.id}>{c.contact_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase text-muted-foreground">Stage</Label>
+                  <Select value={form.stage} onValueChange={v => setForm(f => ({ ...f, stage: v, probability: String({ qualification: 20, proposal: 50, negotiation: 75, closed_won: 100, closed_lost: 0 }[v] ?? 20) }))}>
+                    <SelectTrigger className="h-9 bg-secondary border-border"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(stageLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase text-muted-foreground">Chiusura prevista</Label>
+                  <Input type="date" className="h-9 bg-secondary border-border" value={form.expected_close_date} onChange={e => setForm(f => ({ ...f, expected_close_date: e.target.value }))} />
+                </div>
+              </div>
+              <Button onClick={() => createDeal.mutate()} disabled={!form.title} className="w-full bg-foreground text-background">Crea Deal</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+      {!deals?.length ? (
+        <div className="text-center py-10 glass-card-solid">
+          <Handshake className="mx-auto text-muted-foreground mb-3 opacity-30" size={36} />
+          <p className="text-sm text-muted-foreground">Nessun deal per questa organizzazione</p>
+        </div>
+      ) : (
+        <div className="glass-card-solid overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Titolo</TableHead>
+                <TableHead>Stage</TableHead>
+                <TableHead className="text-right">Valore</TableHead>
+                <TableHead>Contatto</TableHead>
+                <TableHead>Chiusura</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {deals.map(d => (
+                <TableRow key={d.id} className="cursor-pointer" onClick={() => navigate("/crm/deals")}>
+                  <TableCell className="font-heading font-semibold text-sm">{d.title}</TableCell>
+                  <TableCell>
+                    <Badge className={`border-0 text-[10px] ${stageColors[d.stage] || "bg-muted text-muted-foreground"}`}>
+                      {stageLabels[d.stage] || d.stage}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-mono">€{Number(d.value || 0).toLocaleString("it-IT")}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{(d as any).contact?.contact_name || "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{fmtDate(d.expected_close_date)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
