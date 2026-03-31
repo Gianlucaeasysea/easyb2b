@@ -147,6 +147,7 @@ const App = () => (
               <Route path="contacts" element={<CRMContactsPeople />} />
               <Route path="email-templates" element={<CRMEmailTemplates />} />
               <Route path="tasks" element={<CRMTasks />} />
+              <Route path="analytics" element={<CRMAnalytics />} />
               <Route path="help" element={<CRMHelp />} />
             </Route>
 
