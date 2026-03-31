@@ -422,9 +422,34 @@ const CRMOrganizationDetail = () => {
                   ))}
                 </div>
               )}
-            </div>
 
-            <div className="lg:col-span-2">
+              {/* Deals Summary Widget */}
+              {orgDeals && orgDeals.length > 0 && (
+                <div className="glass-card-solid p-5">
+                  <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm"><Handshake size={14} /> Deals Attivi</h3>
+                  <div className="space-y-2">
+                    {orgDeals.filter((d: any) => !["closed_won", "closed_lost"].includes(d.stage)).slice(0, 3).map((d: any) => (
+                      <div key={d.id} className="flex items-center justify-between p-2 bg-secondary/50 rounded-lg">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-heading font-semibold text-foreground truncate">{d.title}</p>
+                          <p className="text-[10px] text-muted-foreground">{(d as any).contact?.contact_name || "—"}</p>
+                        </div>
+                        <div className="text-right shrink-0 ml-2">
+                          <p className="text-xs font-mono font-bold text-foreground">€{Number(d.value || 0).toLocaleString("it-IT")}</p>
+                          <Badge className={`border-0 text-[10px] ${stageColors[d.stage] || "bg-muted text-muted-foreground"}`}>
+                            {stageLabels[d.stage] || d.stage}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
+                    <span>Pipeline: €{orgDeals.filter((d: any) => !["closed_won", "closed_lost"].includes(d.stage)).reduce((s: number, d: any) => s + Number(d.value || 0), 0).toLocaleString("it-IT")}</span>
+                    <span>{orgDeals.filter((d: any) => d.stage === "closed_won").length} vinti · {orgDeals.filter((d: any) => d.stage === "closed_lost").length} persi</span>
+                  </div>
+                </div>
+              )}
+            </div>
               {/* Timeline recent events */}
               <div className="glass-card-solid p-5">
                 <h3 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2 text-sm"><Clock size={14} /> Ultimi Eventi</h3>
