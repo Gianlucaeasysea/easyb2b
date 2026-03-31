@@ -164,10 +164,10 @@ const CRMActivities = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Organization</Label>
-                  <Select value={form.client_id} onValueChange={v => setForm(f => ({ ...f, client_id: v, contact_id: "" }))}>
+                  <Select value={form.client_id || "__none__"} onValueChange={v => setForm(f => ({ ...f, client_id: v === "__none__" ? "" : v, contact_id: "" }))}>
                     <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Select..." /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="__none__">None</SelectItem>
                       {orgOptions?.map(o => (
                         <SelectItem key={o.id} value={o.id}>{o.company_name}</SelectItem>
                       ))}
