@@ -327,6 +327,28 @@ const CRMDashboard = () => {
         <StatCard icon={Activity} label="Overdue Tasks" value={String(overdueActivities)} color={overdueActivities > 0 ? "bg-destructive" : "gradient-blue"} />
       </div>
 
+      {/* Deals KPIs */}
+      {(() => {
+        const openDeals = allDeals?.filter(d => !["closed_won", "closed_lost"].includes(d.stage)) || [];
+        const pipelineValue = openDeals.reduce((s, d) => s + Number(d.value || 0), 0);
+        const wonDeals = allDeals?.filter(d => d.stage === "closed_won") || [];
+        const lostDeals = allDeals?.filter(d => d.stage === "closed_lost") || [];
+        const winRate = (wonDeals.length + lostDeals.length) > 0 ? Math.round((wonDeals.length / (wonDeals.length + lostDeals.length)) * 100) : 0;
+        const closingSoon = openDeals.filter(d => {
+          if (!d.expected_close_date) return false;
+          const days = differenceInDays(new Date(d.expected_close_date), new Date());
+          return days <= 7;
+        });
+        return (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <StatCard icon={Handshake} label="Open Deals" value={String(openDeals.length)} color="gradient-blue" />
+            <StatCard icon={Euro} label="Pipeline Value" value={`€${pipelineValue.toLocaleString("it-IT")}`} color="bg-primary" />
+            <StatCard icon={TrendingUp} label="Win Rate" value={`${winRate}%`} color={winRate >= 50 ? "bg-success" : "bg-warning"} sub={`${wonDeals.length}W / ${lostDeals.length}L`} />
+            <StatCard icon={Calendar} label="Closing This Week" value={String(closingSoon.length)} color={closingSoon.length > 0 ? "bg-warning" : "gradient-blue"} />
+          </div>
+        );
+      })()}
+
       {/* Revenue KPI Cards */}
       <div className="grid lg:grid-cols-3 gap-4 mb-8">
         <div className="glass-card-solid p-5">
