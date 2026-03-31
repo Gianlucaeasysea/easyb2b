@@ -64,6 +64,7 @@ import CRMDealsPipeline from "./pages/crm/CRMDealsPipeline";
 import CRMRequests from "./pages/crm/CRMRequests";
 import CRMEmailTemplates from "./pages/crm/CRMEmailTemplates";
 import CRMTasks from "./pages/crm/CRMTasks";
+import CRMAnalytics from "./pages/crm/CRMAnalytics";
 import CRMHelp from "./pages/crm/CRMHelp";
 
 const queryClient = new QueryClient();
@@ -146,6 +147,7 @@ const App = () => (
               <Route path="contacts" element={<CRMContactsPeople />} />
               <Route path="email-templates" element={<CRMEmailTemplates />} />
               <Route path="tasks" element={<CRMTasks />} />
+              <Route path="analytics" element={<CRMAnalytics />} />
               <Route path="help" element={<CRMHelp />} />
             </Route>
 
