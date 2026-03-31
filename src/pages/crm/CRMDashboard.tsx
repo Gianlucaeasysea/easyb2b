@@ -3,9 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Target, Activity, Calendar, Phone, Mail, MessageCircle, TrendingUp,
   Euro, CreditCard, Truck, ShoppingBag, Eye, XCircle, PackagePlus, Clock,
-  AlertTriangle, RefreshCw, UserCheck
+  AlertTriangle, RefreshCw, UserCheck, Building2
 } from "lucide-react";
-import { format, isToday, isPast, differenceInDays } from "date-fns";
+import { format, isToday, isPast, differenceInDays, isValid } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,12 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+
+const safeFormat = (d: string | null | undefined, fmt: string) => {
+  if (!d) return "—";
+  const dt = new Date(d);
+  return isValid(dt) ? format(dt, fmt) : "—";
+};
 
 const StatCard = ({ icon: Icon, label, value, color, sub }: { icon: any; label: string; value: string; color?: string; sub?: string }) => (
   <div className="glass-card-solid p-6">
@@ -64,27 +70,26 @@ const CRMDashboard = () => {
   const [deliveryDateFrom, setDeliveryDateFrom] = useState(currentYearStart);
   const [deliveryDateTo, setDeliveryDateTo] = useState("");
 
-  // Clients for reminders
-  const { data: clients } = useQuery({
-    queryKey: ["crm-dashboard-clients"],
+  // All clients for lifecycle stats
+  const { data: allClients } = useQuery({
+    queryKey: ["crm-dashboard-all-clients"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, company_name, contact_name, status, status_changed_at, last_order_date, days_since_last_order, next_reorder_expected_date, total_orders_count")
-        .in("status", ["active", "onboarding", "at_risk"])
+        .select("id, company_name, status, status_changed_at, last_order_date, days_since_last_order, next_reorder_expected_date, total_orders_count")
         .order("company_name");
       if (error) throw error;
       return data;
     },
   });
 
-  // Activities
+  // Activities with client/org context
   const { data: activities } = useQuery({
     queryKey: ["crm-upcoming-activities"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("activities")
-        .select("*, leads(company_name, contact_name)")
+        .select("*, leads(company_name, contact_name), clients:client_id(id, company_name)")
         .is("completed_at", null)
         .order("scheduled_at", { ascending: true })
         .limit(8);
@@ -93,7 +98,6 @@ const CRMDashboard = () => {
     },
   });
 
-  // All orders (excluding B2C)
   const { data: orders } = useQuery({
     queryKey: ["crm-orders-dash"],
     queryFn: async () => {
@@ -106,7 +110,6 @@ const CRMDashboard = () => {
     },
   });
 
-  // Log call activity
   const logCall = useMutation({
     mutationFn: async (clientId: string) => {
       const { error } = await supabase.from("activities").insert({
@@ -166,16 +169,16 @@ const CRMDashboard = () => {
   const newOrders = (orders || []).filter(o => ["confirmed", "processing"].includes(o.status || ""));
   const overdueActivities = activities?.filter(a => a.scheduled_at && isPast(new Date(a.scheduled_at))).length || 0;
 
-  // Pipeline stats from clients
-  const activeClients = clients?.filter(c => c.status === "active").length || 0;
-  const atRiskClients = clients?.filter(c => c.status === "at_risk").length || 0;
-  const onboardingClients = clients?.filter(c => c.status === "onboarding").length || 0;
+  // Pipeline stats
+  const activeClients = allClients?.filter(c => c.status === "active").length || 0;
+  const atRiskClients = allClients?.filter(c => c.status === "at_risk").length || 0;
+  const onboardingClients = allClients?.filter(c => c.status === "onboarding").length || 0;
+  const totalOrgs = allClients?.length || 0;
 
   // TODAY'S ACTIONS / REMINDERS
   const reminders: { type: string; label: string; clientName: string; clientId: string }[] = [];
   
-  clients?.forEach(c => {
-    // Reorder due: next_reorder within 3 days or overdue
+  allClients?.forEach(c => {
     if (c.next_reorder_expected_date) {
       const daysAway = differenceInDays(new Date(c.next_reorder_expected_date), new Date());
       if (daysAway <= 3) {
@@ -187,7 +190,6 @@ const CRMDashboard = () => {
         });
       }
     }
-    // At risk: active + 75d+ inactive
     if (c.status === "active" && c.days_since_last_order && c.days_since_last_order > 75) {
       reminders.push({
         type: "at_risk",
@@ -196,7 +198,6 @@ const CRMDashboard = () => {
         clientId: c.id,
       });
     }
-    // Onboarding stalled: in onboarding for 7+ days with no orders
     if (c.status === "onboarding" && c.status_changed_at) {
       const daysInOnboarding = differenceInDays(new Date(), new Date(c.status_changed_at));
       if (daysInOnboarding > 7 && (!c.total_orders_count || c.total_orders_count === 0)) {
@@ -210,7 +211,6 @@ const CRMDashboard = () => {
     }
   });
 
-  // Mutations for new orders
   const confirmOrder = useMutation({
     mutationFn: async ({ id, orderCode }: { id: string; orderCode: string }) => {
       const { error } = await supabase.from("orders").update({ status: "processing" }).eq("id", id);
@@ -254,11 +254,6 @@ const CRMDashboard = () => {
   const hasInvoiceOrConfirmation = (docs: any[]) =>
     docs?.some((d: any) => d.doc_type === "invoice" || d.doc_type === "order_confirmation");
 
-  const fmtDate = (d: string | null | undefined) => {
-    if (!d) return "—";
-    try { return format(new Date(d), "dd/MM/yyyy HH:mm"); } catch { return "—"; }
-  };
-
   const reminderIcons: Record<string, any> = {
     reorder: RefreshCw,
     at_risk: AlertTriangle,
@@ -292,7 +287,12 @@ const CRMDashboard = () => {
                   <div className="flex items-start gap-2">
                     <Icon size={14} className="text-muted-foreground mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-heading font-bold text-foreground truncate">{r.clientName}</p>
+                      <button
+                        className="text-xs font-heading font-bold text-foreground truncate hover:text-primary transition-colors text-left"
+                        onClick={() => navigate(`/crm/organizations/${r.clientId}`)}
+                      >
+                        {r.clientName}
+                      </button>
                       <p className="text-[10px] text-muted-foreground">{r.label}</p>
                     </div>
                     <Button
@@ -311,7 +311,7 @@ const CRMDashboard = () => {
 
       {/* Pipeline stats */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Users} label="Active Clients" value={String(activeClients)} color="bg-success" />
+        <StatCard icon={Building2} label="Organizations" value={String(totalOrgs)} color="gradient-blue" sub={`${activeClients} active`} />
         <StatCard icon={Target} label="Onboarding" value={String(onboardingClients)} color="bg-warning" />
         <StatCard icon={AlertTriangle} label="At Risk" value={String(atRiskClients)} color={atRiskClients > 0 ? "bg-destructive" : "gradient-blue"} />
         <StatCard icon={Activity} label="Overdue Tasks" value={String(overdueActivities)} color={overdueActivities > 0 ? "bg-destructive" : "gradient-blue"} />
@@ -397,7 +397,7 @@ const CRMDashboard = () => {
                         {(o as any).clients?.company_name || "—"}
                         {(o as any).clients?.country && <span className="ml-1">({(o as any).clients.country})</span>}
                         <span className="mx-1">·</span>
-                        {fmtDate(o.created_at)}
+                        {safeFormat(o.created_at, "dd/MM/yyyy HH:mm")}
                       </p>
                       {o.notes && <p className="text-xs text-muted-foreground mt-1 italic">"{o.notes}"</p>}
                     </div>
@@ -451,17 +451,17 @@ const CRMDashboard = () => {
         )}
       </div>
 
-      {/* Pipeline + Activities */}
+      {/* Lifecycle + Activities */}
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="glass-card-solid p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-heading font-bold text-foreground">Client Lifecycle</h2>
+            <h2 className="font-heading font-bold text-foreground">Organization Lifecycle</h2>
             <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => navigate("/crm/pipeline")}>View all →</Button>
           </div>
           <div className="space-y-3">
             {["lead", "qualifying", "onboarding", "active", "at_risk", "churned"].map(s => {
-              const count = clients?.filter(c => c.status === s).length || 0;
-              const total = clients?.length || 1;
+              const count = allClients?.filter(c => c.status === s).length || 0;
+              const total = totalOrgs || 1;
               return (
                 <div key={s} className="flex items-center gap-3">
                   <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading w-24">{s.replace("_", " ")}</span>
@@ -486,17 +486,26 @@ const CRMDashboard = () => {
             ) : activities.map(a => {
               const Icon = typeIcons[a.type || "note"] || Activity;
               const isOverdue = a.scheduled_at && isPast(new Date(a.scheduled_at));
-              const lead = a.leads as any;
+              const org = (a as any).clients;
+              const lead = (a as any).leads;
+              const orgName = org?.company_name || lead?.company_name;
               return (
                 <div key={a.id} className={`flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 ${isOverdue ? "border-l-2 border-l-destructive" : ""}`}>
                   <Icon size={14} className="text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{a.title}</p>
-                    {lead && <p className="text-xs text-primary">{lead.company_name}</p>}
+                    {orgName && (
+                      <button
+                        className="text-xs text-primary hover:underline flex items-center gap-1"
+                        onClick={() => org?.id && navigate(`/crm/organizations/${org.id}`)}
+                      >
+                        <Building2 size={10} /> {orgName}
+                      </button>
+                    )}
                   </div>
                   {a.scheduled_at && (
                     <span className={`text-xs shrink-0 ${isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
-                      {isToday(new Date(a.scheduled_at)) ? format(new Date(a.scheduled_at), "HH:mm") : format(new Date(a.scheduled_at), "MMM d")}
+                      {isToday(new Date(a.scheduled_at)) ? safeFormat(a.scheduled_at, "HH:mm") : safeFormat(a.scheduled_at, "MMM d")}
                     </span>
                   )}
                 </div>
