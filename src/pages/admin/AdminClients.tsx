@@ -195,9 +195,24 @@ const AdminClients = () => {
         </div>
       </div>
 
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-        <Input placeholder="Cerca per azienda, contatto, paese, tipo..." className="pl-10 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex gap-3 mb-6 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+          <Input placeholder="Cerca per azienda, contatto, paese, tipo..." className="pl-10 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock size={14} className="text-muted-foreground" />
+          <Input
+            type="number"
+            placeholder="Inattivi da X giorni"
+            value={inactiveDays}
+            onChange={e => setInactiveDays(e.target.value)}
+            className="w-[180px] text-xs bg-secondary border-border rounded-lg h-9"
+          />
+          {inactiveDays && (
+            <Button variant="ghost" size="sm" onClick={() => setInactiveDays("")} className="h-8 px-2 text-xs">✕</Button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
