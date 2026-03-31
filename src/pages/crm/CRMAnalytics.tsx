@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import OrderDetailsTable from "@/components/crm/OrderDetailsTable";
 import { BarChart3, TrendingUp, Users, Target, Euro, ShoppingBag, PieChart, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, differenceInDays } from "date-fns";
 import { it } from "date-fns/locale";
