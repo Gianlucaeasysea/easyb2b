@@ -220,8 +220,8 @@ const CRMContactsPeople = () => {
                     <TableCell className="font-heading font-semibold">
                       <div className="flex items-center gap-1.5">
                         {c.contact_name}
-                        {(c as any).is_decision_maker && <Crown size={12} className="text-destructive" title="Decision Maker" />}
-                        {(c as any).is_primary && <Star size={12} className="text-warning" title="Primary" />}
+                        {(c as any).is_decision_maker && <span title="Decision Maker"><Crown size={12} className="text-destructive" /></span>}
+                        {(c as any).is_primary && <span title="Primary"><Star size={12} className="text-warning" /></span>}
                       </div>
                     </TableCell>
                     <TableCell>
