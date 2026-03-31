@@ -143,6 +143,7 @@ const App = () => (
               <Route path="organizations" element={<CRMOrganizations />} />
               <Route path="organizations/:id" element={<CRMOrganizationDetail />} />
               <Route path="contacts" element={<CRMContactsPeople />} />
+              <Route path="email-templates" element={<CRMEmailTemplates />} />
               <Route path="help" element={<CRMHelp />} />
             </Route>
 
