@@ -265,10 +265,10 @@ const CRMDeals = () => {
                 {!form.client_id && (
                   <div className="space-y-2">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">Oppure Lead</Label>
-                    <Select value={form.lead_id} onValueChange={v => setForm(f => ({ ...f, lead_id: v }))}>
+                    <Select value={form.lead_id || "__none__"} onValueChange={v => setForm(f => ({ ...f, lead_id: v === "__none__" ? "" : v }))}>
                       <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nessuno</SelectItem>
+                        <SelectItem value="__none__">Nessuno</SelectItem>
                         {leads?.map(l => <SelectItem key={l.id} value={l.id}>{l.company_name}</SelectItem>)}
                       </SelectContent>
                     </Select>
