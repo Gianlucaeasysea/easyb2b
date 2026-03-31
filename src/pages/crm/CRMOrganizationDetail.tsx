@@ -157,10 +157,19 @@ const CRMOrganizationDetail = () => {
     enabled: !!id,
   });
 
-  const { data: orgTasks, refetch: refetchTasks } = useQuery({
+   const { data: orgTasks, refetch: refetchTasks } = useQuery({
     queryKey: ["crm-org-tasks", id],
     queryFn: async () => {
       const { data } = await supabase.from("tasks").select("*").eq("client_id", id!).order("due_date", { ascending: true });
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: orgDeals } = useQuery({
+    queryKey: ["crm-org-deals", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("deals").select("*, contact:contact_id(contact_name)").eq("client_id", id!).order("created_at", { ascending: false });
       return data || [];
     },
     enabled: !!id,
@@ -411,6 +420,33 @@ const CRMOrganizationDetail = () => {
                       <p className="text-xs text-muted-foreground">{[a.address_line, a.city, a.province, a.postal_code, a.country].filter(Boolean).join(", ")}</p>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Deals Summary Widget */}
+              {orgDeals && orgDeals.length > 0 && (
+                <div className="glass-card-solid p-5">
+                  <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm"><Handshake size={14} /> Deals Attivi</h3>
+                  <div className="space-y-2">
+                    {orgDeals.filter((d: any) => !["closed_won", "closed_lost"].includes(d.stage)).slice(0, 3).map((d: any) => (
+                      <div key={d.id} className="flex items-center justify-between p-2 bg-secondary/50 rounded-lg">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-heading font-semibold text-foreground truncate">{d.title}</p>
+                          <p className="text-[10px] text-muted-foreground">{(d as any).contact?.contact_name || "—"}</p>
+                        </div>
+                        <div className="text-right shrink-0 ml-2">
+                          <p className="text-xs font-mono font-bold text-foreground">€{Number(d.value || 0).toLocaleString("it-IT")}</p>
+                          <Badge className={`border-0 text-[10px] ${stageColors[d.stage] || "bg-muted text-muted-foreground"}`}>
+                            {stageLabels[d.stage] || d.stage}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
+                    <span>Pipeline: €{orgDeals.filter((d: any) => !["closed_won", "closed_lost"].includes(d.stage)).reduce((s: number, d: any) => s + Number(d.value || 0), 0).toLocaleString("it-IT")}</span>
+                    <span>{orgDeals.filter((d: any) => d.stage === "closed_won").length} vinti · {orgDeals.filter((d: any) => d.stage === "closed_lost").length} persi</span>
+                  </div>
                 </div>
               )}
             </div>
