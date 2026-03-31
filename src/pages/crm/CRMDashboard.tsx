@@ -5,6 +5,7 @@ import {
   Euro, CreditCard, Truck, ShoppingBag, Eye, XCircle, PackagePlus, Clock,
   AlertTriangle, RefreshCw, UserCheck, Building2, Handshake, CheckSquare, ListTodo, Video, MailOpen
 } from "lucide-react";
+import OrderDetailsTable from "@/components/crm/OrderDetailsTable";
 import { format, isToday, isPast, differenceInDays, isValid } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
