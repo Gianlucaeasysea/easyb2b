@@ -829,7 +829,73 @@ const CRMOrganizationDetail = () => {
         </DialogContent>
       </Dialog>
 
-      <ComposeEmailDialog
+      {/* Add Task Dialog */}
+      <Dialog open={addTaskOpen} onOpenChange={setAddTaskOpen}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader><DialogTitle className="font-heading">Nuovo Task</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs uppercase text-muted-foreground">Titolo *</Label>
+              <Input className="bg-secondary border-border" value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs uppercase text-muted-foreground">Tipo</Label>
+                <Select value={taskForm.type} onValueChange={v => setTaskForm(f => ({ ...f, type: v }))}>
+                  <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="call">Call</SelectItem>
+                    <SelectItem value="meeting">Meeting</SelectItem>
+                    <SelectItem value="follow_up">Follow-up</SelectItem>
+                    <SelectItem value="task">Task</SelectItem>
+                    <SelectItem value="deadline">Deadline</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs uppercase text-muted-foreground">Priorità</Label>
+                <Select value={taskForm.priority} onValueChange={v => setTaskForm(f => ({ ...f, priority: v }))}>
+                  <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs uppercase text-muted-foreground">Scadenza</Label>
+              <Input type="datetime-local" className="bg-secondary border-border" value={taskForm.due_date} onChange={e => setTaskForm(f => ({ ...f, due_date: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs uppercase text-muted-foreground">Descrizione</Label>
+              <Textarea className="bg-secondary border-border min-h-[60px]" value={taskForm.description} onChange={e => setTaskForm(f => ({ ...f, description: e.target.value }))} />
+            </div>
+            <Button disabled={!taskForm.title.trim()} className="w-full" onClick={async () => {
+              const { error } = await supabase.from("tasks").insert({
+                title: taskForm.title,
+                type: taskForm.type,
+                priority: taskForm.priority,
+                due_date: taskForm.due_date || null,
+                description: taskForm.description || null,
+                client_id: id!,
+                assigned_to: user?.id,
+                created_by: user?.id,
+              });
+              if (error) { toast.error(error.message); return; }
+              toast.success("Task creato");
+              setAddTaskOpen(false);
+              setTaskForm({ title: "", type: "call", priority: "medium", due_date: "", description: "" });
+              refetchTasks();
+              queryClient.invalidateQueries({ queryKey: ["crm-tasks"] });
+              queryClient.invalidateQueries({ queryKey: ["crm-overdue-tasks-count"] });
+            }}>Crea Task</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
         open={composeOpen}
         onOpenChange={(open) => { setComposeOpen(open); if (!open) setComposeOrderCtx(null); }}
         clientId={id!}
