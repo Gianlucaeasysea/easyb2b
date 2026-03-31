@@ -598,6 +598,11 @@ const CRMDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Live Order Details */}
+      <div className="mt-8">
+        <OrderDetailsTable title="Dettaglio Ordini (Live Sync)" />
+      </div>
     </div>
   );
 };
