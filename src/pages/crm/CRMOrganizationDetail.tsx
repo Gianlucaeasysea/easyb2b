@@ -157,10 +157,19 @@ const CRMOrganizationDetail = () => {
     enabled: !!id,
   });
 
-  const { data: orgTasks, refetch: refetchTasks } = useQuery({
+   const { data: orgTasks, refetch: refetchTasks } = useQuery({
     queryKey: ["crm-org-tasks", id],
     queryFn: async () => {
       const { data } = await supabase.from("tasks").select("*").eq("client_id", id!).order("due_date", { ascending: true });
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: orgDeals } = useQuery({
+    queryKey: ["crm-org-deals", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("deals").select("*, contact:contact_id(contact_name)").eq("client_id", id!).order("created_at", { ascending: false });
       return data || [];
     },
     enabled: !!id,
