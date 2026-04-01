@@ -62,9 +62,16 @@ const CRMDealsPipeline = () => {
       }
       const { error } = await supabase.from("deals").update(updates).eq("id", id);
       if (error) throw error;
+      return { id, stage };
     },
-    onSuccess: () => {
+    onSuccess: ({ id, stage }) => {
       queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
+      const deal = deals?.find((d: any) => d.id === id);
+      if (deal) {
+        checkAndRunAutomations("deal_stage_changed", {
+          deal_id: id, to_stage: stage, deal_title: deal.title, client_id: deal.client_id || undefined,
+        });
+      }
     },
   });
 
