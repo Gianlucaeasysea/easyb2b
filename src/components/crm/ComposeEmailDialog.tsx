@@ -125,6 +125,7 @@ export const ComposeEmailDialog = ({
       setSelectedTemplateId("__none__");
       setScheduleDate(undefined);
       setShowSchedule(false);
+      setAttachments([]);
       if (initialSubject) {
         setSubject(initialSubject);
         setBody("");
