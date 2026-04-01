@@ -619,6 +619,24 @@ const CRMDeals = () => {
                   </div>
                 )}
 
+                {/* Activities linked to this deal */}
+                {detailActivities && detailActivities.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground mb-2">Attività collegate</p>
+                    <div className="space-y-1">
+                      {detailActivities.map(a => (
+                        <div key={a.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/50 text-xs">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[9px]">{a.type || "note"}</Badge>
+                            <span className="font-medium">{a.title}</span>
+                          </div>
+                          <span className="text-muted-foreground">{fmtDate(a.scheduled_at || a.created_at)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Organization orders */}
                 {detailOrders && detailOrders.length > 0 && (
                   <div>
