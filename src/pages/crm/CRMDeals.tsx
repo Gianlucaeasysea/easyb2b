@@ -214,7 +214,49 @@ const CRMDeals = () => {
       if (!d.title.toLowerCase().includes(s) && !(d as any).clients?.company_name?.toLowerCase().includes(s)) return false;
     }
     if (filterStage !== "all" && d.stage !== filterStage) return false;
+    if (filterOrg !== "all" && d.client_id !== filterOrg) return false;
+    if (filterDateFrom) {
+      const from = new Date(filterDateFrom);
+      if (new Date(d.created_at!) < from) return false;
+    }
+    if (filterDateTo) {
+      const to = new Date(filterDateTo);
+      to.setHours(23, 59, 59);
+      if (new Date(d.created_at!) > to) return false;
+    }
     return true;
+  });
+
+  const bulkUpdateStage = useMutation({
+    mutationFn: async (stage: string) => {
+      const ids = Array.from(selected);
+      const updates: any = { stage, probability: stageConfig[stage]?.prob ?? 20 };
+      if (stage === "closed_won" || stage === "closed_lost") updates.closed_at = new Date().toISOString();
+      const { error } = await supabase.from("deals").update(updates).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
+      setSelected(new Set());
+      setBulkStage("");
+      toast.success("Stage aggiornato");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const bulkAssign = useMutation({
+    mutationFn: async (assignTo: string) => {
+      const ids = Array.from(selected);
+      const { error } = await supabase.from("deals").update({ assigned_to: assignTo }).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
+      setSelected(new Set());
+      setBulkAssignTo("");
+      toast.success("Assegnazione aggiornata");
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const toggleSelect = (id: string) => {
