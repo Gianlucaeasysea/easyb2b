@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Tag, Crown, RefreshCw, Search, Package, Save, Upload, FileSpreadsheet, ArrowRight, Check, X, Pencil, Users } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Plus, Trash2, Tag, Crown, RefreshCw, Search, Package, Save, Upload,
+  FileSpreadsheet, ArrowRight, Check, X, Pencil, Users, ChevronRight,
+  Percent, ShoppingBag, BarChart3, Eye
+} from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
@@ -29,6 +35,8 @@ const AdminPriceLists = () => {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [showManageClients, setShowManageClients] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
+  const [itemSearch, setItemSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("items");
 
   // Import state
   const [importStep, setImportStep] = useState<"idle" | "mapping">("idle");
@@ -88,7 +96,30 @@ const AdminPriceLists = () => {
     },
   });
 
-  // Price list clients (junction table)
+  // All items counts per list
+  const { data: allListItemCounts } = useQuery({
+    queryKey: ["price-list-item-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("price_list_items").select("price_list_id");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      data.forEach(i => { counts[i.price_list_id] = (counts[i.price_list_id] || 0) + 1; });
+      return counts;
+    },
+  });
+
+  // All client assignments counts per list
+  const { data: allListClientCounts } = useQuery({
+    queryKey: ["price-list-client-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("price_list_clients").select("price_list_id");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      data.forEach(i => { counts[i.price_list_id] = (counts[i.price_list_id] || 0) + 1; });
+      return counts;
+    },
+  });
+
   const { data: priceListClients } = useQuery({
     queryKey: ["price-list-clients", activeListId],
     enabled: !!activeListId,
@@ -162,20 +193,17 @@ const AdminPriceLists = () => {
       };
       const { data, error } = await supabase.from("price_lists").insert(payload).select().single();
       if (error) throw error;
-
-      // Also add to junction table if client selected
       if (listForm.client_id) {
         await supabase.from("price_list_clients").insert({
           price_list_id: data.id,
           client_id: listForm.client_id,
         } as any);
       }
-
       return data;
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["price-lists"] });
-
+      qc.invalidateQueries({ queryKey: ["price-list-client-counts"] });
       if (listForm.base_discount_pct > 0 && products) {
         const discountFraction = 1 - listForm.base_discount_pct / 100;
         const items = products.filter(p => p.active_b2b && p.price).map(p => ({
@@ -188,14 +216,15 @@ const AdminPriceLists = () => {
             if (error) toast.error("Errore applicazione sconto: " + error.message);
             else {
               qc.invalidateQueries({ queryKey: ["price-list-items"] });
+              qc.invalidateQueries({ queryKey: ["price-list-item-counts"] });
               toast.success(`Sconto ${listForm.base_discount_pct}% applicato a ${items.length} prodotti`);
             }
           });
         }
       }
-
       setShowNewList(false);
       setListForm({ name: "", description: "", discount_tier_id: "", client_id: "", base_discount_pct: 0 });
+      setActiveListId(data.id);
       toast.success("Listino prezzi creato");
     },
     onError: (e: any) => toast.error(e.message),
@@ -227,12 +256,14 @@ const AdminPriceLists = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["price-lists"] });
+      qc.invalidateQueries({ queryKey: ["price-list-item-counts"] });
+      qc.invalidateQueries({ queryKey: ["price-list-client-counts"] });
       if (activeListId) setActiveListId(null);
       toast.success("Listino eliminato");
     },
   });
 
-  // ─── Client management for price list ───
+  // ─── Client management ───
   const addClientToList = async (clientId: string) => {
     if (!activeListId) return;
     const { error } = await supabase.from("price_list_clients").insert({
@@ -244,6 +275,7 @@ const AdminPriceLists = () => {
       else toast.error(error.message);
     } else {
       qc.invalidateQueries({ queryKey: ["price-list-clients", activeListId] });
+      qc.invalidateQueries({ queryKey: ["price-list-client-counts"] });
       toast.success("Cliente aggiunto al listino");
     }
   };
@@ -257,6 +289,7 @@ const AdminPriceLists = () => {
     if (error) toast.error(error.message);
     else {
       qc.invalidateQueries({ queryKey: ["price-list-clients", activeListId] });
+      qc.invalidateQueries({ queryKey: ["price-list-client-counts"] });
       toast.success("Cliente rimosso dal listino");
     }
   };
@@ -266,7 +299,6 @@ const AdminPriceLists = () => {
     if (!activeListId || selectedProducts.size === 0) return;
     const tier = tiers?.find(t => t.id === activeList?.discount_tier_id);
     const discountFraction = tier ? 1 - tier.discount_pct / 100 : 1;
-
     const items = Array.from(selectedProducts).map(pid => {
       const prod = products?.find(p => p.id === pid);
       return {
@@ -275,26 +307,69 @@ const AdminPriceLists = () => {
         custom_price: Math.round((prod?.price || 0) * discountFraction * 100) / 100,
       };
     });
-
     const { error } = await supabase.from("price_list_items").upsert(items as any, { onConflict: "price_list_id,product_id" });
     if (error) toast.error(error.message);
     else {
       qc.invalidateQueries({ queryKey: ["price-list-items", activeListId] });
+      qc.invalidateQueries({ queryKey: ["price-list-item-counts"] });
       setSelectedProducts(new Set());
       toast.success(`${items.length} prodotti aggiunti`);
+    }
+  };
+
+  const addAllB2BProducts = async () => {
+    if (!activeListId) return;
+    const tier = tiers?.find(t => t.id === activeList?.discount_tier_id);
+    const discountFraction = tier ? 1 - tier.discount_pct / 100 : 1;
+    const available = products?.filter(p => p.active_b2b && p.price && !itemProductIds.has(p.id)) || [];
+    if (available.length === 0) { toast.info("Nessun prodotto da aggiungere"); return; }
+    const items = available.map(p => ({
+      price_list_id: activeListId,
+      product_id: p.id,
+      custom_price: Math.round((p.price || 0) * discountFraction * 100) / 100,
+    }));
+    const { error } = await supabase.from("price_list_items").upsert(items as any, { onConflict: "price_list_id,product_id" });
+    if (error) toast.error(error.message);
+    else {
+      qc.invalidateQueries({ queryKey: ["price-list-items", activeListId] });
+      qc.invalidateQueries({ queryKey: ["price-list-item-counts"] });
+      toast.success(`${items.length} prodotti aggiunti al listino`);
     }
   };
 
   const removeProductFromList = async (itemId: string) => {
     const { error } = await supabase.from("price_list_items").delete().eq("id", itemId);
     if (error) toast.error(error.message);
-    else qc.invalidateQueries({ queryKey: ["price-list-items", activeListId] });
+    else {
+      qc.invalidateQueries({ queryKey: ["price-list-items", activeListId] });
+      qc.invalidateQueries({ queryKey: ["price-list-item-counts"] });
+    }
   };
 
   const updateItemPrice = async (itemId: string, newPrice: number) => {
     const { error } = await supabase.from("price_list_items").update({ custom_price: newPrice } as any).eq("id", itemId);
     if (error) toast.error(error.message);
     else qc.invalidateQueries({ queryKey: ["price-list-items", activeListId] });
+  };
+
+  // ─── Bulk discount on existing items ───
+  const [bulkDiscount, setBulkDiscount] = useState("");
+  const applyBulkDiscount = async () => {
+    if (!activeListId || !bulkDiscount || !priceListItems?.length) return;
+    const pct = parseFloat(bulkDiscount);
+    if (isNaN(pct) || pct < 0 || pct > 100) { toast.error("Sconto non valido"); return; }
+    const fraction = 1 - pct / 100;
+    let updated = 0;
+    for (const item of priceListItems) {
+      const prod = products?.find(p => p.id === item.product_id);
+      if (!prod?.price) continue;
+      const newPrice = Math.round(prod.price * fraction * 100) / 100;
+      const { error } = await supabase.from("price_list_items").update({ custom_price: newPrice } as any).eq("id", item.id);
+      if (!error) updated++;
+    }
+    qc.invalidateQueries({ queryKey: ["price-list-items", activeListId] });
+    toast.success(`Sconto ${pct}% applicato a ${updated} prodotti`);
+    setBulkDiscount("");
   };
 
   // ─── Import CSV/XLSX ───
@@ -328,7 +403,6 @@ const AdminPriceLists = () => {
     const priceCol = fieldMapping.price;
     if (!priceCol) { toast.error("Mappa almeno il campo Prezzo"); return; }
     if (!nameCol && !skuCol) { toast.error("Mappa almeno Nome Prodotto o SKU"); return; }
-
     let matched = 0;
     const items: any[] = [];
     for (const row of importData) {
@@ -344,6 +418,7 @@ const AdminPriceLists = () => {
     if (error) toast.error(error.message);
     else {
       qc.invalidateQueries({ queryKey: ["price-list-items"] });
+      qc.invalidateQueries({ queryKey: ["price-list-item-counts"] });
       toast.success(`Importati ${matched} prodotti nel listino`);
       setImportStep("idle");
       setImportData([]);
@@ -351,10 +426,10 @@ const AdminPriceLists = () => {
   };
 
   const tierColors: Record<string, string> = {
-    gold: "bg-yellow-500/20 text-yellow-600",
-    silver: "bg-gray-300/30 text-gray-600",
-    bronze: "bg-orange-400/20 text-orange-600",
-    standard: "bg-muted text-muted-foreground",
+    gold: "bg-yellow-500/20 text-yellow-600 border-yellow-500/30",
+    silver: "bg-gray-300/30 text-gray-600 border-gray-400/30",
+    bronze: "bg-orange-400/20 text-orange-600 border-orange-400/30",
+    standard: "bg-muted text-muted-foreground border-border",
   };
 
   const filteredProducts = products?.filter(p =>
@@ -365,6 +440,16 @@ const AdminPriceLists = () => {
   const activeList = priceLists?.find(pl => pl.id === activeListId);
   const itemProductIds = new Set(priceListItems?.map(i => i.product_id) || []);
   const assignedClientIds = new Set(priceListClients?.map(c => c.client_id) || []);
+
+  const filteredItems = useMemo(() => {
+    if (!priceListItems) return [];
+    if (!itemSearch) return priceListItems;
+    const q = itemSearch.toLowerCase();
+    return priceListItems.filter(item => {
+      const prod = products?.find(p => p.id === item.product_id);
+      return prod?.name.toLowerCase().includes(q) || prod?.sku?.toLowerCase().includes(q);
+    });
+  }, [priceListItems, itemSearch, products]);
 
   const toggleProductSelection = (id: string) => {
     setSelectedProducts(prev => {
@@ -380,12 +465,7 @@ const AdminPriceLists = () => {
   };
 
   const openEdit = (pl: any) => {
-    setEditForm({
-      id: pl.id,
-      name: pl.name,
-      description: pl.description || "",
-      discount_tier_id: pl.discount_tier_id || "",
-    });
+    setEditForm({ id: pl.id, name: pl.name, description: pl.description || "", discount_tier_id: pl.discount_tier_id || "" });
     setShowEditList(true);
   };
 
@@ -393,38 +473,47 @@ const AdminPriceLists = () => {
     c.company_name.toLowerCase().includes(clientSearch.toLowerCase())
   ) || [];
 
+  // Stats for active list
+  const activeListStats = useMemo(() => {
+    if (!priceListItems || !products) return { avgDiscount: 0, totalValue: 0 };
+    let totalDiscount = 0, count = 0, totalValue = 0;
+    priceListItems.forEach(item => {
+      const prod = products.find(p => p.id === item.product_id);
+      if (prod?.price && prod.price > 0) {
+        totalDiscount += (1 - item.custom_price / prod.price) * 100;
+        count++;
+      }
+      totalValue += item.custom_price;
+    });
+    return { avgDiscount: count > 0 ? Math.round(totalDiscount / count) : 0, totalValue };
+  }, [priceListItems, products]);
+
   return (
-    <div>
-      <h1 className="font-heading text-2xl font-bold text-foreground mb-2">Listini & Classi di Sconto</h1>
-      <p className="text-sm text-muted-foreground mb-8">Gestisci classi di sconto, listini prezzi e sincronizza prodotti da Shopify</p>
-
-      {/* Shopify Sync */}
-      <Card className="mb-8">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Package className="h-5 w-5 text-primary" />
-            Prodotti Shopify
-          </CardTitle>
-          <Button onClick={syncShopify} disabled={syncing} size="sm">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-foreground">Listini & Sconti</h1>
+          <p className="text-sm text-muted-foreground mt-1">Gestisci classi di sconto, listini prezzi e prodotti</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={syncShopify} disabled={syncing}>
             <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "Sincronizzazione..." : "Sincronizza da Shopify"}
+            {syncing ? "Sync..." : "Sync Shopify"}
           </Button>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">{products?.length || 0} prodotti nel database.</p>
-        </CardContent>
-      </Card>
+          <span className="text-xs text-muted-foreground">{products?.length || 0} prodotti</span>
+        </div>
+      </div>
 
-      {/* Discount Tiers */}
-      <Card className="mb-8">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Crown className="h-5 w-5 text-primary" />
+      {/* Discount Tiers - compact */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Crown className="h-4 w-4 text-primary" />
             Classi di Sconto
           </CardTitle>
           <Dialog open={showNewTier} onOpenChange={setShowNewTier}>
             <DialogTrigger asChild>
-              <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nuova Classe</Button>
+              <Button size="sm" variant="outline"><Plus className="h-3 w-3 mr-1" /> Nuova</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Nuova Classe di Sconto</DialogTitle></DialogHeader>
@@ -439,113 +528,369 @@ const AdminPriceLists = () => {
           </Dialog>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader><TableRow><TableHead>Classe</TableHead><TableHead>Sconto</TableHead><TableHead>Ordine</TableHead><TableHead></TableHead></TableRow></TableHeader>
-            <TableBody>
-              {tiers?.map(t => (
-                <TableRow key={t.id}>
-                  <TableCell><Badge className={tierColors[t.name] || "bg-muted text-muted-foreground"}>{t.label}</Badge></TableCell>
-                  <TableCell className="font-mono">{t.discount_pct}%</TableCell>
-                  <TableCell className="text-muted-foreground">{t.sort_order}</TableCell>
-                  <TableCell><Button variant="ghost" size="icon" onClick={() => deleteTier.mutate(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="flex flex-wrap gap-3">
+            {tiers?.map(t => (
+              <div key={t.id} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border ${tierColors[t.name] || "bg-muted text-muted-foreground border-border"}`}>
+                <div>
+                  <span className="font-semibold text-sm">{t.label}</span>
+                  <span className="ml-2 font-mono text-sm font-bold">-{t.discount_pct}%</span>
+                </div>
+                <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-destructive/20" onClick={() => deleteTier.mutate(t.id)}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+            {!tiers?.length && <p className="text-sm text-muted-foreground">Nessuna classe di sconto.</p>}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Price Lists */}
-      <Card className="mb-8">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Tag className="h-5 w-5 text-primary" />
-            Listini Prezzi
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} />
-            <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="h-4 w-4 mr-1" /> Importa CSV/XLSX
-            </Button>
-            <Dialog open={showNewList} onOpenChange={setShowNewList}>
-              <DialogTrigger asChild>
-                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nuovo Listino</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Nuovo Listino Prezzi</DialogTitle></DialogHeader>
-                <div className="space-y-4">
-                  <div><Label>Nome</Label><Input value={listForm.name} onChange={e => setListForm(f => ({ ...f, name: e.target.value }))} placeholder="es. Listino Gold 2024" /></div>
-                  <div><Label>Descrizione</Label><Textarea value={listForm.description} onChange={e => setListForm(f => ({ ...f, description: e.target.value }))} /></div>
-                  <div>
-                    <Label>Classe di Sconto (opzionale)</Label>
-                    <Select value={listForm.discount_tier_id || "__none__"} onValueChange={v => setListForm(f => ({ ...f, discount_tier_id: v === "__none__" ? "" : v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— Nessuna —</SelectItem>
-                        {tiers?.map(t => <SelectItem key={t.id} value={t.id}>{t.label} ({t.discount_pct}%)</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+      {/* Main layout: list selector + detail */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left: Price Lists */}
+        <div className="lg:col-span-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-base flex items-center gap-2">
+              <Tag className="h-4 w-4 text-primary" /> Listini Prezzi
+            </h2>
+            <div className="flex items-center gap-1">
+              <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} />
+              <Button size="icon" variant="ghost" onClick={() => fileInputRef.current?.click()} title="Importa CSV/XLSX">
+                <Upload className="h-4 w-4" />
+              </Button>
+              <Dialog open={showNewList} onOpenChange={setShowNewList}>
+                <DialogTrigger asChild>
+                  <Button size="sm"><Plus className="h-3 w-3 mr-1" /> Nuovo</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>Nuovo Listino Prezzi</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <div><Label>Nome</Label><Input value={listForm.name} onChange={e => setListForm(f => ({ ...f, name: e.target.value }))} placeholder="es. Listino Gold 2024" /></div>
+                    <div><Label>Descrizione</Label><Textarea value={listForm.description} onChange={e => setListForm(f => ({ ...f, description: e.target.value }))} /></div>
+                    <div>
+                      <Label>Classe di Sconto</Label>
+                      <Select value={listForm.discount_tier_id || "__none__"} onValueChange={v => setListForm(f => ({ ...f, discount_tier_id: v === "__none__" ? "" : v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— Nessuna —</SelectItem>
+                          {tiers?.map(t => <SelectItem key={t.id} value={t.id}>{t.label} ({t.discount_pct}%)</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Sconto Base % (auto su tutti i prodotti B2B)</Label>
+                      <Input type="number" min={0} max={100} value={listForm.base_discount_pct} onChange={e => setListForm(f => ({ ...f, base_discount_pct: Number(e.target.value) }))} placeholder="es. 20" />
+                    </div>
+                    <div>
+                      <Label>Primo cliente (opzionale)</Label>
+                      <Select value={listForm.client_id || "__none__"} onValueChange={v => setListForm(f => ({ ...f, client_id: v === "__none__" ? "" : v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— Nessuno —</SelectItem>
+                          {clients?.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={() => createList.mutate()} disabled={!listForm.name} className="w-full">Crea Listino</Button>
                   </div>
-                  <div>
-                    <Label>Sconto Base % (applicato su tutti i prodotti)</Label>
-                    <Input type="number" min={0} max={100} value={listForm.base_discount_pct} onChange={e => setListForm(f => ({ ...f, base_discount_pct: Number(e.target.value) }))} placeholder="es. 20" />
-                    <p className="text-xs text-muted-foreground mt-1">Se impostato, applica automaticamente questo sconto a tutti i prodotti B2B attivi</p>
-                  </div>
-                  <div>
-                    <Label>Primo cliente da assegnare (opzionale)</Label>
-                    <Select value={listForm.client_id || "__none__"} onValueChange={v => setListForm(f => ({ ...f, client_id: v === "__none__" ? "" : v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— Nessuno —</SelectItem>
-                        {clients?.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-1">Potrai aggiungere altri clienti dopo la creazione</p>
-                  </div>
-                  <Button onClick={() => createList.mutate()} disabled={!listForm.name}>Crea Listino</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          {!priceLists?.length ? (
-            <p className="text-center text-muted-foreground py-8">Nessun listino prezzi ancora creato.</p>
+
+          <div className="space-y-2">
+            {priceLists?.map(pl => {
+              const tier = tiers?.find(t => t.id === pl.discount_tier_id);
+              const isActive = activeListId === pl.id;
+              const itemCount = allListItemCounts?.[pl.id] || 0;
+              const clientCount = allListClientCounts?.[pl.id] || 0;
+              return (
+                <Card
+                  key={pl.id}
+                  className={`cursor-pointer transition-all hover:shadow-md ${isActive ? "ring-2 ring-primary bg-primary/5" : "hover:bg-secondary/30"}`}
+                  onClick={() => { setActiveListId(isActive ? null : pl.id); setSelectedProducts(new Set()); setItemSearch(""); setActiveTab("items"); }}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm truncate">{pl.name}</span>
+                          {isActive && <ChevronRight className="h-4 w-4 text-primary shrink-0" />}
+                        </div>
+                        {pl.description && <p className="text-xs text-muted-foreground mt-0.5 truncate">{pl.description}</p>}
+                        <div className="flex items-center gap-3 mt-2">
+                          {tier && (
+                            <Badge variant="outline" className={`text-[10px] ${tierColors[tier.name] || ""}`}>
+                              {tier.label} -{tier.discount_pct}%
+                            </Badge>
+                          )}
+                          <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                            <Package className="h-3 w-3" /> {itemCount}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                            <Users className="h-3 w-3" /> {clientCount}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(pl)}>
+                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteList.mutate(pl.id)}>
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {!priceLists?.length && (
+              <div className="text-center py-12 text-muted-foreground">
+                <Tag className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nessun listino creato</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Detail view */}
+        <div className="lg:col-span-8">
+          {!activeListId || !activeList ? (
+            <Card className="flex items-center justify-center min-h-[400px]">
+              <div className="text-center text-muted-foreground">
+                <Eye className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">Seleziona un listino per visualizzare e gestire i prodotti</p>
+              </div>
+            </Card>
           ) : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Classe</TableHead><TableHead>Prodotti</TableHead><TableHead>Creato</TableHead><TableHead></TableHead></TableRow></TableHeader>
-              <TableBody>
-                {priceLists.map(pl => {
-                  const tier = tiers?.find(t => t.id === pl.discount_tier_id);
-                  return (
-                    <TableRow key={pl.id} className={`cursor-pointer ${activeListId === pl.id ? "bg-primary/10" : "hover:bg-secondary/50"}`} onClick={() => { setActiveListId(activeListId === pl.id ? null : pl.id); setSelectedProducts(new Set()); }}>
-                      <TableCell>
-                        <span className="font-medium">{pl.name}</span>
-                        {pl.description && <p className="text-xs text-muted-foreground">{pl.description}</p>}
-                      </TableCell>
-                      <TableCell>
-                        {tier ? <Badge className={tierColors[tier.name] || "bg-muted text-muted-foreground"}>{tier.label} (-{tier.discount_pct}%)</Badge> : <span className="text-xs text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">—</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(pl.created_at).toLocaleDateString("it-IT")}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(pl)} title="Modifica">
-                            <Pencil className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteList.mutate(pl.id)} title="Elimina">
-                            <Trash2 className="h-4 w-4 text-destructive" />
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">{activeList.name}</CardTitle>
+                    {activeList.description && <p className="text-xs text-muted-foreground mt-0.5">{activeList.description}</p>}
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => setShowManageClients(true)} className="gap-1.5">
+                    <Users className="h-3.5 w-3.5" /> {assignedClientIds.size} Clienti
+                  </Button>
+                </div>
+                {/* Stats row */}
+                <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border">
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <Package className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-medium">{priceListItems?.length || 0}</span>
+                    <span className="text-muted-foreground">prodotti</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <Percent className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-medium">{activeListStats.avgDiscount}%</span>
+                    <span className="text-muted-foreground">sconto medio</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-medium">€{activeListStats.totalValue.toFixed(0)}</span>
+                    <span className="text-muted-foreground">valore totale</span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Assigned clients chips */}
+                {assignedClientIds.size > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {Array.from(assignedClientIds).map(cid => {
+                      const cl = clients?.find(c => c.id === cid);
+                      return cl ? (
+                        <Badge key={cid} variant="outline" className="text-xs gap-1 pr-1">
+                          {cl.company_name}
+                          <button onClick={() => removeClientFromList(cid)} className="ml-0.5 hover:text-destructive rounded-full p-0.5">
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                )}
+
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="items" className="gap-1.5">
+                      <ShoppingBag className="h-3.5 w-3.5" />
+                      Prodotti in listino ({priceListItems?.length || 0})
+                    </TabsTrigger>
+                    <TabsTrigger value="add" className="gap-1.5">
+                      <Plus className="h-3.5 w-3.5" />
+                      Aggiungi prodotti
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="items" className="space-y-4">
+                    {/* Bulk actions bar */}
+                    {priceListItems && priceListItems.length > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="relative flex-1 min-w-[200px]">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                          <Input
+                            placeholder="Cerca nel listino..."
+                            className="pl-9 h-9"
+                            value={itemSearch}
+                            onChange={e => setItemSearch(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="number"
+                            placeholder="Sconto %"
+                            className="w-24 h-9"
+                            value={bulkDiscount}
+                            onChange={e => setBulkDiscount(e.target.value)}
+                          />
+                          <Button size="sm" variant="secondary" onClick={applyBulkDiscount} disabled={!bulkDiscount} className="h-9 gap-1">
+                            <Percent className="h-3 w-3" /> Applica a tutti
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                      </div>
+                    )}
+
+                    {!priceListItems?.length ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Package className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                        <p className="text-sm mb-3">Nessun prodotto nel listino</p>
+                        <Button size="sm" variant="outline" onClick={() => setActiveTab("add")}>
+                          <Plus className="h-3 w-3 mr-1" /> Aggiungi prodotti
+                        </Button>
+                      </div>
+                    ) : (
+                      <ScrollArea className="max-h-[500px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs w-[35%]">Prodotto</TableHead>
+                              <TableHead className="text-xs w-[12%]">SKU</TableHead>
+                              <TableHead className="text-xs w-[12%] text-right">Base</TableHead>
+                              <TableHead className="text-xs w-[18%]">Prezzo Listino</TableHead>
+                              <TableHead className="text-xs w-[12%] text-center">Sconto</TableHead>
+                              <TableHead className="text-xs w-[5%]"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredItems.map(item => {
+                              const prod = products?.find(p => p.id === item.product_id);
+                              const shopifyPrice = prod?.price || 0;
+                              const discount = shopifyPrice > 0 ? Math.round((1 - item.custom_price / shopifyPrice) * 100) : 0;
+                              return (
+                                <TableRow key={item.id}>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      {prod?.images?.[0] && (
+                                        <img src={prod.images[0]} alt="" className="h-8 w-8 rounded object-cover bg-secondary" />
+                                      )}
+                                      <span className="text-sm font-medium truncate">{prod?.name || "—"}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-xs font-mono text-muted-foreground">{prod?.sku || "—"}</TableCell>
+                                  <TableCell className="text-sm text-right text-muted-foreground">€{shopifyPrice.toFixed(2)}</TableCell>
+                                  <TableCell>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      className="w-28 h-8 text-sm font-medium"
+                                      defaultValue={item.custom_price}
+                                      onBlur={e => {
+                                        const val = parseFloat(e.target.value);
+                                        if (!isNaN(val) && val !== item.custom_price) updateItemPrice(item.id, val);
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <Badge variant="outline" className={`text-xs ${discount > 0 ? "bg-green-500/10 text-green-600 border-green-500/30" : ""}`}>
+                                      {discount > 0 ? `-${discount}%` : "—"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeProductFromList(item.id)}>
+                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="add" className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                        <Input placeholder="Cerca per nome o SKU..." className="pl-9 h-9" value={shopifySearch} onChange={e => setShopifySearch(e.target.value)} />
+                      </div>
+                      <Button size="sm" variant="outline" onClick={selectAllFiltered} className="text-xs h-9 whitespace-nowrap">
+                        Seleziona visibili
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={addAllB2BProducts} className="text-xs h-9 whitespace-nowrap gap-1">
+                        <Package className="h-3 w-3" /> Tutti B2B
+                      </Button>
+                    </div>
+
+                    {selectedProducts.size > 0 && (
+                      <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-4 py-2.5">
+                        <span className="text-sm font-medium">{selectedProducts.size} prodotti selezionati</span>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="ghost" onClick={() => setSelectedProducts(new Set())} className="text-xs h-8">
+                            Deseleziona
+                          </Button>
+                          <Button size="sm" onClick={addSelectedProducts} className="gap-1 h-8">
+                            <Plus className="h-3 w-3" /> Aggiungi al listino
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    <ScrollArea className="max-h-[450px]">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {filteredProducts?.filter(p => !itemProductIds.has(p.id)).slice(0, 80).map(p => {
+                          const isSelected = selectedProducts.has(p.id);
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => toggleProductSelection(p.id)}
+                              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? "border-primary bg-primary/10 shadow-sm" : "border-border hover:bg-secondary/50"}`}
+                            >
+                              <Checkbox checked={isSelected} className="pointer-events-none shrink-0" />
+                              {p.images?.[0] && (
+                                <img src={p.images[0]} alt="" className="h-10 w-10 rounded object-cover bg-secondary shrink-0" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{p.name}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  {p.sku && <span className="font-mono">{p.sku}</span>}
+                                  <span className="font-medium text-foreground">€{p.price?.toFixed(2) || "—"}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {(filteredProducts?.filter(p => !itemProductIds.has(p.id)).length || 0) > 80 && (
+                        <p className="text-xs text-muted-foreground mt-3 text-center">Mostrando 80 risultati. Usa la ricerca per filtrare.</p>
+                      )}
+                      {filteredProducts?.filter(p => !itemProductIds.has(p.id)).length === 0 && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Check className="h-6 w-6 mx-auto mb-2 text-green-500" />
+                          <p className="text-sm">Tutti i prodotti sono già nel listino</p>
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Edit List Dialog */}
       <Dialog open={showEditList} onOpenChange={setShowEditList}>
@@ -564,7 +909,7 @@ const AdminPriceLists = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={() => updateList.mutate()} disabled={!editForm.name}>
+            <Button onClick={() => updateList.mutate()} disabled={!editForm.name} className="w-full">
               <Save className="h-4 w-4 mr-1" /> Salva Modifiche
             </Button>
           </div>
@@ -593,8 +938,8 @@ const AdminPriceLists = () => {
                 </Select>
               </div>
               <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-foreground">Mappa i campi del file</h3>
-                <p className="text-xs text-muted-foreground">Trovate {importData.length} righe con {importHeaders.length} colonne</p>
+                <h3 className="font-semibold text-sm">Mappa i campi del file</h3>
+                <p className="text-xs text-muted-foreground">{importData.length} righe · {importHeaders.length} colonne</p>
                 {["product_name", "sku", "price"].map(field => (
                   <div key={field} className="flex items-center gap-3">
                     <Label className="w-40 text-sm">
@@ -612,7 +957,7 @@ const AdminPriceLists = () => {
                 ))}
               </div>
               <div>
-                <h3 className="font-semibold text-sm text-foreground mb-2">Anteprima dati ({Math.min(5, importData.length)} righe)</h3>
+                <h3 className="font-semibold text-sm mb-2">Anteprima ({Math.min(5, importData.length)} righe)</h3>
                 <div className="overflow-x-auto border border-border rounded-lg">
                   <Table>
                     <TableHeader>
@@ -652,146 +997,19 @@ const AdminPriceLists = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Active List Editor */}
-      {activeListId && activeList && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">
-                Gestisci — {activeList.name}
-              </CardTitle>
-              <Button size="sm" variant="outline" onClick={() => setShowManageClients(true)} className="gap-1">
-                <Users className="h-4 w-4" /> Clienti assegnati ({assignedClientIds.size})
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Assigned Clients Summary */}
-            {assignedClientIds.size > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {Array.from(assignedClientIds).map(cid => {
-                  const cl = clients?.find(c => c.id === cid);
-                  return cl ? (
-                    <Badge key={cid} variant="outline" className="text-xs gap-1">
-                      {cl.company_name}
-                      <button onClick={() => removeClientFromList(cid)} className="ml-1 hover:text-destructive">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ) : null;
-                })}
-              </div>
-            )}
-
-            {/* Current items */}
-            {priceListItems && priceListItems.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-foreground mb-3">Prodotti nel listino ({priceListItems.length})</h4>
-                <div className="overflow-x-auto max-h-96">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs">Prodotto</TableHead>
-                        <TableHead className="text-xs">SKU</TableHead>
-                        <TableHead className="text-xs">Prezzo Base</TableHead>
-                        <TableHead className="text-xs">Prezzo Listino</TableHead>
-                        <TableHead className="text-xs">Sconto</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {priceListItems.map(item => {
-                        const prod = products?.find(p => p.id === item.product_id);
-                        const shopifyPrice = prod?.price || 0;
-                        const discount = shopifyPrice > 0 ? Math.round((1 - item.custom_price / shopifyPrice) * 100) : 0;
-                        return (
-                          <TableRow key={item.id}>
-                            <TableCell className="text-sm">{prod?.name || "—"}</TableCell>
-                            <TableCell className="text-xs font-mono">{prod?.sku || "—"}</TableCell>
-                            <TableCell className="text-sm">€{shopifyPrice.toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Input type="number" step="0.01" className="w-28 h-8 text-sm" defaultValue={item.custom_price}
-                                onBlur={e => { const val = parseFloat(e.target.value); if (!isNaN(val) && val !== item.custom_price) updateItemPrice(item.id, val); }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={`text-xs ${discount > 0 ? "bg-success/20 text-success" : ""}`}>
-                                {discount > 0 ? `-${discount}%` : "—"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="icon" onClick={() => removeProductFromList(item.id)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
-
-            {/* Add products */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-semibold text-foreground">Aggiungi Prodotti al Listino</h4>
-                <div className="flex items-center gap-2">
-                  {selectedProducts.size > 0 && (
-                    <Button size="sm" onClick={addSelectedProducts} className="gap-1">
-                      <Plus className="h-3 w-3" /> Aggiungi {selectedProducts.size} selezionati
-                    </Button>
-                  )}
-                  <Button size="sm" variant="outline" onClick={selectAllFiltered} className="text-xs">Seleziona tutti</Button>
-                </div>
-              </div>
-              <div className="relative mb-3">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-                <Input placeholder="Cerca per nome o SKU..." className="pl-9 h-9" value={shopifySearch} onChange={e => setShopifySearch(e.target.value)} />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1">
-                {filteredProducts?.filter(p => !itemProductIds.has(p.id)).slice(0, 60).map(p => {
-                  const isSelected = selectedProducts.has(p.id);
-                  return (
-                    <div key={p.id} onClick={() => toggleProductSelection(p.id)}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? "border-primary bg-primary/10" : "border-border bg-secondary/30 hover:bg-secondary/60"}`}
-                    >
-                      <Checkbox checked={isSelected} className="pointer-events-none" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          {p.sku && <span className="font-mono">{p.sku}</span>}
-                          <span>€{p.price?.toFixed(2) || "—"}</span>
-                          <span>Stock: {p.stock_quantity ?? "—"}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {(filteredProducts?.filter(p => !itemProductIds.has(p.id)).length || 0) > 60 && (
-                <p className="text-xs text-muted-foreground mt-2">Mostrando 60 risultati. Usa la ricerca per filtrare.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Manage Clients Dialog */}
       <Dialog open={showManageClients} onOpenChange={setShowManageClients}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Gestisci Clienti — {activeList?.name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            {/* Currently assigned */}
             {assignedClientIds.size > 0 && (
               <div>
-                <Label className="text-xs text-muted-foreground">Clienti assegnati</Label>
+                <Label className="text-xs text-muted-foreground">Clienti assegnati ({assignedClientIds.size})</Label>
                 <div className="space-y-1 mt-2">
                   {Array.from(assignedClientIds).map(cid => {
                     const cl = clients?.find(c => c.id === cid);
                     return cl ? (
-                      <div key={cid} className="flex items-center justify-between p-2 rounded-lg bg-secondary/50">
+                      <div key={cid} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/50">
                         <span className="text-sm font-medium">{cl.company_name}</span>
                         <Button variant="ghost" size="sm" onClick={() => removeClientFromList(cid)} className="text-destructive h-7">
                           <X className="h-3 w-3 mr-1" /> Rimuovi
@@ -802,25 +1020,25 @@ const AdminPriceLists = () => {
                 </div>
               </div>
             )}
-
-            {/* Add clients */}
             <div>
               <Label className="text-xs text-muted-foreground">Aggiungi clienti</Label>
               <div className="relative mt-2 mb-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
                 <Input placeholder="Cerca cliente..." className="pl-9 h-9" value={clientSearch} onChange={e => setClientSearch(e.target.value)} />
               </div>
-              <div className="space-y-1 max-h-60 overflow-y-auto">
-                {filteredClients.filter(c => !assignedClientIds.has(c.id)).map(c => (
-                  <div key={c.id} className="flex items-center justify-between p-2 rounded-lg border border-border hover:bg-secondary/50 cursor-pointer" onClick={() => addClientToList(c.id)}>
-                    <div>
-                      <span className="text-sm font-medium">{c.company_name}</span>
-                      <span className="text-xs text-muted-foreground ml-2">{c.discount_class}</span>
+              <ScrollArea className="max-h-60">
+                <div className="space-y-1">
+                  {filteredClients.filter(c => !assignedClientIds.has(c.id)).map(c => (
+                    <div key={c.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border hover:bg-secondary/50 cursor-pointer" onClick={() => addClientToList(c.id)}>
+                      <div>
+                        <span className="text-sm font-medium">{c.company_name}</span>
+                        {c.discount_class && <span className="text-xs text-muted-foreground ml-2">{c.discount_class}</span>}
+                      </div>
+                      <Plus className="h-4 w-4 text-primary" />
                     </div>
-                    <Plus className="h-4 w-4 text-primary" />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
           </div>
         </DialogContent>
