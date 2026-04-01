@@ -394,8 +394,43 @@ const CRMDeals = () => {
             {Object.entries(stageConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={filterOrg} onValueChange={setFilterOrg}>
+          <SelectTrigger className="w-44 bg-secondary border-border rounded-lg"><SelectValue placeholder="Organizzazione" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutte le org.</SelectItem>
+            {orgs?.map(o => <SelectItem key={o.id} value={o.id}>{o.company_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Input type="date" placeholder="Da" className="w-36 bg-secondary border-border rounded-lg text-xs" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} />
+        <Input type="date" placeholder="A" className="w-36 bg-secondary border-border rounded-lg text-xs" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} />
         <Badge variant="outline" className="text-xs">{filtered?.length || 0} deals</Badge>
       </div>
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-muted rounded-lg border border-border">
+          <span className="text-sm font-medium">{selected.size} selezionati</span>
+          <Select value={bulkStage} onValueChange={v => { setBulkStage(v); bulkUpdateStage.mutate(v); }}>
+            <SelectTrigger className="w-40 h-8 text-xs bg-background"><SelectValue placeholder="Cambia stage" /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(stageConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {salesReps && salesReps.length > 0 && (
+            <Select value={bulkAssignTo} onValueChange={v => { setBulkAssignTo(v); bulkAssign.mutate(v); }}>
+              <SelectTrigger className="w-44 h-8 text-xs bg-background"><SelectValue placeholder="Assegna a" /></SelectTrigger>
+              <SelectContent>
+                {salesReps.map(r => <SelectItem key={r.user_id} value={r.user_id}>{r.contact_name || r.email || r.user_id.slice(0, 8)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Button variant="destructive" size="sm" className="gap-1 h-8 text-xs" onClick={() => {
+            if (confirm(`Eliminare ${selected.size} deal?`)) deleteDeal.mutate(Array.from(selected));
+          }}>
+            <Trash2 size={12} /> Elimina
+          </Button>
+        </div>
+      )}
 
       {/* Table */}
       {isLoading ? (
