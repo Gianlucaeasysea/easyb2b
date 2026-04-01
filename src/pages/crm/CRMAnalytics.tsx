@@ -1,53 +1,95 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import OrderDetailsTable from "@/components/crm/OrderDetailsTable";
-import { BarChart3, TrendingUp, Users, Target, Euro, ShoppingBag, PieChart, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, differenceInDays } from "date-fns";
+import { BarChart3, TrendingUp, Users, Target, Euro, Clock, ArrowUpRight, ArrowDownRight, Calendar } from "lucide-react";
+import { format, subDays, subMonths, startOfMonth, endOfMonth, startOfYear, eachMonthOfInterval, differenceInDays } from "date-fns";
 import { it } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import {
   ChartContainer, ChartTooltip, ChartTooltipContent
 } from "@/components/ui/chart";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
-  LineChart, Line, AreaChart, Area, PieChart as RPieChart, Pie, Cell, Tooltip, Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  LineChart, Line, PieChart as RPieChart, Pie, Cell, Tooltip, Legend
 } from "recharts";
 import { useMemo, useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
+
+const ACTIVITY_COLORS: Record<string, string> = {
+  call: "hsl(var(--chart-1))",
+  email: "hsl(var(--chart-4))",
+  meeting: "hsl(var(--chart-3))",
+  note: "hsl(var(--muted-foreground))",
+};
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  call: "Chiamate",
+  email: "Email",
+  meeting: "Meeting",
+  note: "Note",
+};
 
 const CRMAnalytics = () => {
-  const [period, setPeriod] = useState("6");
-  const monthsBack = parseInt(period);
+  const navigate = useNavigate();
+  const [periodKey, setPeriodKey] = useState("30d");
+  const [customFrom, setCustomFrom] = useState<Date | undefined>();
+  const [customTo, setCustomTo] = useState<Date | undefined>();
 
-  // Fetch orders
+  // Compute date range from period key
+  const { rangeStart, rangeEnd, prevStart, prevEnd } = useMemo(() => {
+    const now = new Date();
+    let start: Date;
+    let end = now;
+
+    switch (periodKey) {
+      case "7d": start = subDays(now, 7); break;
+      case "30d": start = subDays(now, 30); break;
+      case "90d": start = subDays(now, 90); break;
+      case "year": start = startOfYear(now); break;
+      case "custom":
+        start = customFrom || subDays(now, 30);
+        end = customTo || now;
+        break;
+      default: start = subDays(now, 30);
+    }
+
+    const duration = end.getTime() - start.getTime();
+    const prevEnd2 = new Date(start.getTime() - 1);
+    const prevStart2 = new Date(prevEnd2.getTime() - duration);
+
+    return { rangeStart: start, rangeEnd: end, prevStart: prevStart2, prevEnd: prevEnd2 };
+  }, [periodKey, customFrom, customTo]);
+
+  // Fetch all data
   const { data: orders } = useQuery({
     queryKey: ["analytics-orders"],
     queryFn: async () => {
-      const { data } = await supabase.from("orders").select("id, created_at, total_amount, status, client_id, payed_date, delivery_date").order("created_at", { ascending: true });
+      const { data } = await supabase.from("orders").select("id, created_at, total_amount, status, client_id, payed_date, delivery_date, payment_status").order("created_at", { ascending: true });
       return data || [];
     },
   });
 
-  // Fetch clients
   const { data: clients } = useQuery({
     queryKey: ["analytics-clients"],
     queryFn: async () => {
-      const { data } = await supabase.from("clients").select("id, company_name, status, total_orders_value, total_orders_count, last_order_date, created_at, zone, days_since_last_order");
+      const { data } = await supabase.from("clients").select("id, company_name, status, total_orders_value, total_orders_count, last_order_date, days_since_last_order, discount_class");
       return data || [];
     },
   });
 
-  // Fetch deals
   const { data: deals } = useQuery({
     queryKey: ["analytics-deals"],
     queryFn: async () => {
-      const { data } = await supabase.from("deals").select("id, stage, value, created_at, expected_close_date, probability");
+      const { data } = await supabase.from("deals").select("id, stage, value, created_at, closed_at, expected_close_date, probability, client_id");
       return data || [];
     },
   });
 
-  // Fetch leads
   const { data: leads } = useQuery({
     queryKey: ["analytics-leads"],
     queryFn: async () => {
@@ -56,34 +98,90 @@ const CRMAnalytics = () => {
     },
   });
 
-  // Monthly revenue data
-  const monthlyRevenue = useMemo(() => {
-    if (!orders) return [];
+  const { data: activities } = useQuery({
+    queryKey: ["analytics-activities"],
+    queryFn: async () => {
+      const { data } = await supabase.from("activities").select("id, type, created_at");
+      return data || [];
+    },
+  });
+
+  const inRange = (dateStr: string | null, start: Date, end: Date) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return d >= start && d <= end;
+  };
+
+  // ── KPI 1: Revenue chiuso (delivered/completed in period)
+  const revenueChiuso = useMemo(() => {
+    if (!orders) return { current: 0, prev: 0 };
+    const delivered = ["delivered", "completed"];
+    const current = orders.filter(o => delivered.includes(o.status || "") && inRange(o.created_at, rangeStart, rangeEnd)).reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+    const prev = orders.filter(o => delivered.includes(o.status || "") && inRange(o.created_at, prevStart, prevEnd)).reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+    return { current, prev };
+  }, [orders, rangeStart, rangeEnd, prevStart, prevEnd]);
+
+  // ── KPI 2: Revenue pipeline (weighted)
+  const revenuePipeline = useMemo(() => {
+    if (!deals) return 0;
+    return deals.filter(d => !["closed_won", "closed_lost"].includes(d.stage)).reduce((s, d) => s + (Number(d.value) || 0) * ((d.probability || 20) / 100), 0);
+  }, [deals]);
+
+  // ── KPI 3: Nuovi lead
+  const newLeads = useMemo(() => {
+    if (!leads) return { current: 0, prev: 0 };
+    const current = leads.filter(l => inRange(l.created_at, rangeStart, rangeEnd)).length;
+    const prev = leads.filter(l => inRange(l.created_at, prevStart, prevEnd)).length;
+    return { current, prev };
+  }, [leads, rangeStart, rangeEnd, prevStart, prevEnd]);
+
+  // ── KPI 4: Conversion rate (last 90 days)
+  const conversionRate = useMemo(() => {
+    if (!leads) return 0;
+    const recent = leads.filter(l => inRange(l.created_at, subDays(new Date(), 90), new Date()));
+    if (!recent.length) return 0;
+    return Math.round((recent.filter(l => l.status === "won" || l.status === "converted").length / recent.length) * 100);
+  }, [leads]);
+
+  // ── KPI 5: Deal size medio (closed_won in period)
+  const avgDealSize = useMemo(() => {
+    if (!deals) return 0;
+    const won = deals.filter(d => d.stage === "closed_won" && inRange(d.closed_at, rangeStart, rangeEnd));
+    if (!won.length) return 0;
+    return Math.round(won.reduce((s, d) => s + (Number(d.value) || 0), 0) / won.length);
+  }, [deals, rangeStart, rangeEnd]);
+
+  // ── KPI 6: Ciclo di vendita medio (days created→closed for closed_won)
+  const avgSalesCycle = useMemo(() => {
+    if (!deals) return 0;
+    const won = deals.filter(d => d.stage === "closed_won" && d.closed_at && inRange(d.closed_at, rangeStart, rangeEnd));
+    if (!won.length) return 0;
+    const totalDays = won.reduce((s, d) => s + differenceInDays(new Date(d.closed_at!), new Date(d.created_at!)), 0);
+    return Math.round(totalDays / won.length);
+  }, [deals, rangeStart, rangeEnd]);
+
+  const pctChange = (current: number, prev: number) => {
+    if (prev === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - prev) / prev) * 100);
+  };
+
+  // ── Chart 1: Revenue trend (line, 6 months, 2 lines)
+  const revenueTrend = useMemo(() => {
+    if (!orders || !deals) return [];
     const now = new Date();
-    const months = eachMonthOfInterval({ start: subMonths(startOfMonth(now), monthsBack - 1), end: now });
+    const months = eachMonthOfInterval({ start: subMonths(startOfMonth(now), 5), end: now });
     return months.map(m => {
       const start = startOfMonth(m);
       const end = endOfMonth(m);
-      const monthOrders = orders.filter(o => {
-        const d = new Date(o.created_at);
-        return d >= start && d <= end && o.status !== "cancelled";
-      });
-      const revenue = monthOrders.reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
-      const paid = orders.filter(o => {
-        if (!o.payed_date) return false;
-        const d = new Date(o.payed_date);
-        return d >= start && d <= end;
-      }).reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
-      return {
-        month: format(m, "MMM yy", { locale: it }),
-        ordinato: Math.round(revenue),
-        incassato: Math.round(paid),
-        ordini: monthOrders.length,
-      };
+      const rev = orders.filter(o => ["delivered", "completed"].includes(o.status || "") && inRange(o.created_at, start, end))
+        .reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+      const pipe = deals.filter(d => !["closed_won", "closed_lost"].includes(d.stage) && inRange(d.created_at, start, end))
+        .reduce((s, d) => s + (Number(d.value) || 0) * ((d.probability || 20) / 100), 0);
+      return { month: format(m, "MMM yy", { locale: it }), revenue: Math.round(rev), pipeline: Math.round(pipe) };
     });
-  }, [orders, monthsBack]);
+  }, [orders, deals]);
 
-  // Pipeline funnel
+  // ── Chart 2: Pipeline funnel
   const pipelineFunnel = useMemo(() => {
     if (!deals) return [];
     const stages = [
@@ -91,7 +189,6 @@ const CRMAnalytics = () => {
       { key: "proposal", label: "Proposta", color: "hsl(var(--chart-2))" },
       { key: "negotiation", label: "Negoziazione", color: "hsl(var(--chart-3))" },
       { key: "closed_won", label: "Vinto", color: "hsl(var(--chart-4))" },
-      { key: "closed_lost", label: "Perso", color: "hsl(var(--destructive))" },
     ];
     return stages.map(s => ({
       ...s,
@@ -100,363 +197,324 @@ const CRMAnalytics = () => {
     }));
   }, [deals]);
 
-  // Client status distribution
-  const clientDistribution = useMemo(() => {
-    if (!clients) return [];
-    const statuses: Record<string, { label: string; color: string }> = {
-      lead: { label: "Lead", color: "hsl(var(--chart-1))" },
-      prospect: { label: "Prospect", color: "hsl(var(--chart-2))" },
-      onboarding: { label: "Onboarding", color: "hsl(var(--chart-3))" },
-      active: { label: "Attivo", color: "hsl(var(--chart-4))" },
-      at_risk: { label: "A Rischio", color: "hsl(var(--warning))" },
-      churned: { label: "Perso", color: "hsl(var(--destructive))" },
-    };
-    return Object.entries(statuses).map(([key, cfg]) => ({
-      name: cfg.label,
-      value: clients.filter(c => c.status === key).length,
-      color: cfg.color,
-    })).filter(d => d.value > 0);
-  }, [clients]);
-
-  // Lead sources
-  const leadSources = useMemo(() => {
-    if (!leads) return [];
-    const sources: Record<string, number> = {};
-    leads.forEach(l => {
-      const src = l.source || "Altro";
-      sources[src] = (sources[src] || 0) + 1;
+  // ── Chart 3: Deals won vs lost per month
+  const wonVsLost = useMemo(() => {
+    if (!deals) return [];
+    const now = new Date();
+    const months = eachMonthOfInterval({ start: subMonths(startOfMonth(now), 5), end: now });
+    return months.map(m => {
+      const start = startOfMonth(m);
+      const end = endOfMonth(m);
+      const won = deals.filter(d => d.stage === "closed_won" && inRange(d.closed_at, start, end)).length;
+      const lost = deals.filter(d => d.stage === "closed_lost" && inRange(d.closed_at, start, end)).length;
+      return { month: format(m, "MMM yy", { locale: it }), won, lost };
     });
-    return Object.entries(sources).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [leads]);
-
-  // Forecasting — weighted pipeline
-  const forecastData = useMemo(() => {
-    if (!deals) return { weighted: 0, bestCase: 0, count: 0 };
-    const open = deals.filter(d => !["closed_won", "closed_lost"].includes(d.stage));
-    const weighted = open.reduce((s, d) => s + (Number(d.value) || 0) * ((d.probability || 20) / 100), 0);
-    const bestCase = open.reduce((s, d) => s + (Number(d.value) || 0), 0);
-    return { weighted: Math.round(weighted), bestCase: Math.round(bestCase), count: open.length };
   }, [deals]);
 
-  // Top clients
-  const topClients = useMemo(() => {
+  // ── Chart 4: Top 5 organizzazioni per revenue
+  const topOrgs = useMemo(() => {
     if (!clients) return [];
-    return [...clients].sort((a, b) => (Number(b.total_orders_value) || 0) - (Number(a.total_orders_value) || 0)).slice(0, 8);
+    return [...clients]
+      .sort((a, b) => (Number(b.total_orders_value) || 0) - (Number(a.total_orders_value) || 0))
+      .slice(0, 5)
+      .map(c => ({ id: c.id, name: c.company_name, value: Number(c.total_orders_value) || 0 }));
   }, [clients]);
 
-  // KPIs
-  const totalRevenue = orders?.filter(o => o.status !== "cancelled").reduce((s, o) => s + (Number(o.total_amount) || 0), 0) || 0;
-  const activeClients = clients?.filter(c => c.status === "active").length || 0;
-  const totalDealsValue = deals?.filter(d => d.stage === "closed_won").reduce((s, d) => s + (Number(d.value) || 0), 0) || 0;
-  const conversionRate = leads?.length ? Math.round((leads.filter(l => l.status === "converted").length / leads.length) * 100) : 0;
+  // ── Chart 5: Attività per tipo
+  const activityByType = useMemo(() => {
+    if (!activities) return [];
+    const counts: Record<string, number> = {};
+    activities.filter(a => inRange(a.created_at, rangeStart, rangeEnd)).forEach(a => {
+      const t = a.type || "note";
+      counts[t] = (counts[t] || 0) + 1;
+    });
+    return Object.entries(counts).map(([type, count]) => ({
+      name: ACTIVITY_LABELS[type] || type,
+      value: count,
+      color: ACTIVITY_COLORS[type] || "hsl(var(--chart-5))",
+    }));
+  }, [activities, rangeStart, rangeEnd]);
 
-  // Month-over-month growth
-  const lastMonthRev = monthlyRevenue.length >= 2 ? monthlyRevenue[monthlyRevenue.length - 2]?.ordinato || 0 : 0;
-  const thisMonthRev = monthlyRevenue.length >= 1 ? monthlyRevenue[monthlyRevenue.length - 1]?.ordinato || 0 : 0;
-  const growthPct = lastMonthRev > 0 ? Math.round(((thisMonthRev - lastMonthRev) / lastMonthRev) * 100) : 0;
+  // ── Churn risk
+  const churnRisk = useMemo(() => {
+    if (!clients) return [];
+    return clients.filter(c => c.status === "active" && (c.days_since_last_order || 0) > 60)
+      .sort((a, b) => (b.days_since_last_order || 0) - (a.days_since_last_order || 0)).slice(0, 6);
+  }, [clients]);
+
+  const revGrowth = pctChange(revenueChiuso.current, revenueChiuso.prev);
+  const leadGrowth = pctChange(newLeads.current, newLeads.prev);
 
   const revenueConfig = {
-    ordinato: { label: "Ordinato", color: "hsl(var(--chart-1))" },
-    incassato: { label: "Incassato", color: "hsl(var(--chart-4))" },
+    revenue: { label: "Revenue Ordini", color: "hsl(var(--chart-1))" },
+    pipeline: { label: "Pipeline Pesato", color: "hsl(var(--chart-3))" },
   };
 
-  const ordersConfig = {
-    ordini: { label: "Ordini", color: "hsl(var(--chart-2))" },
+  const wonLostConfig = {
+    won: { label: "Vinti", color: "hsl(var(--chart-4))" },
+    lost: { label: "Persi", color: "hsl(var(--destructive))" },
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header + Period Filter */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
             <BarChart3 size={24} /> Analytics & Forecasting
           </h1>
           <p className="text-muted-foreground text-sm">Panoramica performance commerciale e previsioni</p>
         </div>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="3">Ultimi 3 mesi</SelectItem>
-            <SelectItem value="6">Ultimi 6 mesi</SelectItem>
-            <SelectItem value="12">Ultimo anno</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={periodKey} onValueChange={setPeriodKey}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Ultimi 7 giorni</SelectItem>
+              <SelectItem value="30d">Ultimi 30 giorni</SelectItem>
+              <SelectItem value="90d">Ultimi 90 giorni</SelectItem>
+              <SelectItem value="year">Quest'anno</SelectItem>
+              <SelectItem value="custom">Custom range</SelectItem>
+            </SelectContent>
+          </Select>
+          {periodKey === "custom" && (
+            <div className="flex items-center gap-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("w-[130px] text-xs", !customFrom && "text-muted-foreground")}>
+                    <Calendar className="mr-1 h-3 w-3" />
+                    {customFrom ? format(customFrom, "dd/MM/yyyy") : "Da"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent mode="single" selected={customFrom} onSelect={setCustomFrom} className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("w-[130px] text-xs", !customTo && "text-muted-foreground")}>
+                    <Calendar className="mr-1 h-3 w-3" />
+                    {customTo ? format(customTo, "dd/MM/yyyy") : "A"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent mode="single" selected={customTo} onSelect={setCustomTo} className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 6 KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {/* 1. Revenue chiuso */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Fatturato Totale</p>
-                <p className="text-2xl font-bold font-heading mt-1">€{totalRevenue.toLocaleString("it-IT")}</p>
-              </div>
-              <div className={`flex items-center gap-1 text-sm ${growthPct >= 0 ? "text-chart-4" : "text-destructive"}`}>
-                {growthPct >= 0 ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                {Math.abs(growthPct)}%
-              </div>
+          <CardContent className="pt-5 pb-4">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Revenue Chiuso</p>
+            <p className="text-xl font-bold font-heading mt-1">€{Math.round(revenueChiuso.current).toLocaleString("it-IT")}</p>
+            <div className={`flex items-center gap-0.5 text-xs mt-1 ${revGrowth >= 0 ? "text-chart-4" : "text-destructive"}`}>
+              {revGrowth >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+              {Math.abs(revGrowth)}%
             </div>
           </CardContent>
         </Card>
+        {/* 2. Revenue pipeline */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Clienti Attivi</p>
-                <p className="text-2xl font-bold font-heading mt-1">{activeClients}</p>
-              </div>
-              <Users className="text-muted-foreground" size={20} />
+          <CardContent className="pt-5 pb-4">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Revenue Pipeline</p>
+            <p className="text-xl font-bold font-heading mt-1">€{Math.round(revenuePipeline).toLocaleString("it-IT")}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">ponderato per probabilità</p>
+          </CardContent>
+        </Card>
+        {/* 3. Nuovi lead */}
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Nuovi Lead</p>
+            <p className="text-xl font-bold font-heading mt-1">{newLeads.current}</p>
+            <div className={`flex items-center gap-0.5 text-xs mt-1 ${leadGrowth >= 0 ? "text-chart-4" : "text-destructive"}`}>
+              {leadGrowth >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+              {Math.abs(leadGrowth)}%
             </div>
           </CardContent>
         </Card>
+        {/* 4. Conversion rate */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Deals Chiusi (Vinti)</p>
-                <p className="text-2xl font-bold font-heading mt-1">€{totalDealsValue.toLocaleString("it-IT")}</p>
-              </div>
-              <Target className="text-muted-foreground" size={20} />
-            </div>
+          <CardContent className="pt-5 pb-4">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Conversion Rate</p>
+            <p className="text-xl font-bold font-heading mt-1">{conversionRate}%</p>
+            <p className="text-[10px] text-muted-foreground mt-1">ultimi 90 giorni</p>
           </CardContent>
         </Card>
+        {/* 5. Deal size medio */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Conversione Lead</p>
-                <p className="text-2xl font-bold font-heading mt-1">{conversionRate}%</p>
-              </div>
-              <TrendingUp className="text-muted-foreground" size={20} />
-            </div>
+          <CardContent className="pt-5 pb-4">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Deal Size Medio</p>
+            <p className="text-xl font-bold font-heading mt-1">€{avgDealSize.toLocaleString("it-IT")}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">closed_won nel periodo</p>
+          </CardContent>
+        </Card>
+        {/* 6. Ciclo di vendita */}
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Ciclo di Vendita</p>
+            <p className="text-xl font-bold font-heading mt-1">{avgSalesCycle} <span className="text-sm font-normal">gg</span></p>
+            <p className="text-[10px] text-muted-foreground mt-1">media giorni</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts */}
-      <Tabs defaultValue="revenue" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="revenue">Fatturato</TabsTrigger>
-          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-          <TabsTrigger value="clients">Clienti</TabsTrigger>
-          <TabsTrigger value="forecast">Previsioni</TabsTrigger>
-        </TabsList>
+      {/* Charts Grid — 2 columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Revenue Trend — spans 2 cols */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Revenue Trend (ultimi 6 mesi)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={revenueConfig} className="h-[300px] w-full">
+              <LineChart data={revenueTrend}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                <XAxis dataKey="month" className="text-xs" />
+                <YAxis className="text-xs" tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Line type="monotone" dataKey="revenue" stroke="var(--color-revenue)" strokeWidth={2} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="pipeline" stroke="var(--color-pipeline)" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="5 5" />
+                <Legend />
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
-        {/* Revenue Tab */}
-        <TabsContent value="revenue" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-base">Andamento Fatturato</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={revenueConfig} className="h-[320px] w-full">
-                  <BarChart data={monthlyRevenue}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                    <XAxis dataKey="month" className="text-xs" />
-                    <YAxis className="text-xs" tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="ordinato" fill="var(--color-ordinato)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="incassato" fill="var(--color-incassato)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Volume Ordini</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={ordersConfig} className="h-[320px] w-full">
-                  <AreaChart data={monthlyRevenue}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                    <XAxis dataKey="month" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Area type="monotone" dataKey="ordini" fill="var(--color-ordini)" fillOpacity={0.3} stroke="var(--color-ordini)" strokeWidth={2} />
-                  </AreaChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+        {/* Pipeline Funnel */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Pipeline Funnel</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pipelineFunnel.map((stage) => {
+                const maxCount = Math.max(...pipelineFunnel.map(s => s.count), 1);
+                const pct = (stage.count / maxCount) * 100;
+                return (
+                  <div key={stage.key} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">{stage.label}</span>
+                      <span className="text-muted-foreground">{stage.count} deals · €{stage.value.toLocaleString("it-IT")}</span>
+                    </div>
+                    <div className="h-6 bg-muted rounded-md overflow-hidden">
+                      <div className="h-full rounded-md transition-all" style={{ width: `${pct}%`, backgroundColor: stage.color }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Pipeline Tab */}
-        <TabsContent value="pipeline" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Funnel Pipeline</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {pipelineFunnel.map((stage, i) => {
-                    const maxCount = Math.max(...pipelineFunnel.map(s => s.count), 1);
-                    const pct = (stage.count / maxCount) * 100;
-                    return (
-                      <div key={stage.key} className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span className="font-medium">{stage.label}</span>
-                          <span className="text-muted-foreground">{stage.count} deals · €{stage.value.toLocaleString("it-IT")}</span>
-                        </div>
-                        <div className="h-6 bg-muted rounded-md overflow-hidden">
-                          <div className="h-full rounded-md transition-all" style={{ width: `${pct}%`, backgroundColor: stage.color }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Sorgenti Lead</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {leadSources.length > 0 ? (
-                  <div className="space-y-3">
-                    {leadSources.map((src, i) => (
-                      <div key={src.name} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(var(--chart-${(i % 5) + 1}))` }} />
-                          <span className="text-sm">{src.name}</span>
-                        </div>
-                        <span className="text-sm font-medium">{src.value}</span>
-                      </div>
+        {/* Deals Won vs Lost */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Deals Vinti vs Persi (6 mesi)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={wonLostConfig} className="h-[260px] w-full">
+              <BarChart data={wonVsLost}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                <XAxis dataKey="month" className="text-xs" />
+                <YAxis className="text-xs" allowDecimals={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="won" fill="var(--color-won)" radius={[4, 4, 0, 0]} label={{ position: "top", className: "text-[10px] fill-foreground" }} />
+                <Bar dataKey="lost" fill="var(--color-lost)" radius={[4, 4, 0, 0]} label={{ position: "top", className: "text-[10px] fill-foreground" }} />
+                <Legend />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* Top 5 Organizzazioni */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Top 5 Organizzazioni per Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={{}} className="h-[260px] w-full">
+              <BarChart data={topOrgs} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                <XAxis type="number" className="text-xs" tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
+                <YAxis type="category" dataKey="name" className="text-xs" width={120} tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v: number) => `€${v.toLocaleString("it-IT")}`} />
+                <Bar
+                  dataKey="value"
+                  fill="hsl(var(--chart-2))"
+                  radius={[0, 4, 4, 0]}
+                  cursor="pointer"
+                  onClick={(data: any) => {
+                    if (data?.id) navigate(`/crm/organizations/${data.id}`);
+                  }}
+                />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* Attività per Tipo */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Attività per Tipo</CardTitle>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            {activityByType.length > 0 ? (
+              <ChartContainer config={{}} className="h-[260px] w-full max-w-[360px]">
+                <RPieChart>
+                  <Pie
+                    data={activityByType}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={95}
+                    label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {activityByType.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
                     ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-8">Nessun lead registrato</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Clients Tab */}
-        <TabsContent value="clients" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Distribuzione Clienti per Status</CardTitle>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                {clientDistribution.length > 0 ? (
-                  <ChartContainer config={{}} className="h-[300px] w-full max-w-[400px]">
-                    <RPieChart>
-                      <Pie data={clientDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, value }) => `${name}: ${value}`}>
-                        {clientDistribution.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </RPieChart>
-                  </ChartContainer>
-                ) : (
-                  <p className="text-sm text-muted-foreground py-8">Nessun dato</p>
-                )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Top 8 Clienti per Fatturato</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {topClients.map((c, i) => (
-                    <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground font-mono w-5">{i + 1}.</span>
-                        <span className="text-sm font-medium truncate max-w-[180px]">{c.company_name}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold">€{(Number(c.total_orders_value) || 0).toLocaleString("it-IT")}</span>
-                        <span className="text-xs text-muted-foreground ml-2">({c.total_orders_count || 0} ordini)</span>
-                      </div>
-                    </div>
-                  ))}
-                  {topClients.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nessun dato</p>}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Forecast Tab */}
-        <TabsContent value="forecast" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-chart-1/30 bg-chart-1/5">
-              <CardContent className="pt-6 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Pipeline Aperta</p>
-                <p className="text-3xl font-bold font-heading">€{forecastData.bestCase.toLocaleString("it-IT")}</p>
-                <p className="text-xs text-muted-foreground mt-1">{forecastData.count} deal attivi</p>
-              </CardContent>
-            </Card>
-            <Card className="border-chart-4/30 bg-chart-4/5">
-              <CardContent className="pt-6 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Forecast Ponderato</p>
-                <p className="text-3xl font-bold font-heading text-chart-4">€{forecastData.weighted.toLocaleString("it-IT")}</p>
-                <p className="text-xs text-muted-foreground mt-1">basato su probabilità deal</p>
-              </CardContent>
-            </Card>
-            <Card className="border-primary/30 bg-primary/5">
-              <CardContent className="pt-6 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Trend MoM</p>
-                <p className={`text-3xl font-bold font-heading ${growthPct >= 0 ? "text-chart-4" : "text-destructive"}`}>
-                  {growthPct >= 0 ? "+" : ""}{growthPct}%
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">variazione mese corrente</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Revenue trend with forecast line */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Trend Ricavi e Proiezione</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={revenueConfig} className="h-[320px] w-full">
-                <LineChart data={monthlyRevenue}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis className="text-xs" tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line type="monotone" dataKey="ordinato" stroke="var(--color-ordinato)" strokeWidth={2} dot={{ r: 4 }} />
-                  <Line type="monotone" dataKey="incassato" stroke="var(--color-incassato)" strokeWidth={2} dot={{ r: 4 }} strokeDasharray="5 5" />
-                </LineChart>
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </RPieChart>
               </ChartContainer>
-            </CardContent>
-          </Card>
+            ) : (
+              <p className="text-sm text-muted-foreground py-8">Nessuna attività nel periodo</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* Clients at risk */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">⚠️ Clienti a Rischio Churn</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {clients?.filter(c => c.status === "active" && (c.days_since_last_order || 0) > 60).sort((a, b) => (b.days_since_last_order || 0) - (a.days_since_last_order || 0)).slice(0, 6).map(c => (
-                  <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
-                    <span className="text-sm font-medium">{c.company_name}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground">Ultimo ordine: {c.last_order_date || "mai"}</span>
-                      <span className="text-sm font-bold text-destructive">{c.days_since_last_order || "∞"} giorni</span>
-                    </div>
-                  </div>
-                ))}
-                {(!clients || clients.filter(c => c.status === "active" && (c.days_since_last_order || 0) > 60).length === 0) && (
-                  <p className="text-sm text-muted-foreground text-center py-4">Nessun cliente a rischio 🎉</p>
-                )}
+      {/* Churn Risk */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">⚠️ Clienti a Rischio Churn</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {churnRisk.map(c => (
+              <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                <span className="text-sm font-medium cursor-pointer hover:text-primary" onClick={() => navigate(`/crm/organizations/${c.id}`)}>{c.company_name}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">Ultimo ordine: {c.last_order_date || "mai"}</span>
+                  <span className="text-sm font-bold text-destructive">{c.days_since_last_order || "∞"} giorni</span>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            ))}
+            {churnRisk.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">Nessun cliente a rischio 🎉</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Live Order Details Table */}
       <OrderDetailsTable title="Dettaglio Ordini (Live Sync)" />
