@@ -128,6 +128,7 @@ const App = () => (
               <Route path="system-map" element={<AdminSystemMap />} />
               <Route path="marketing" element={<AdminMarketing />} />
               <Route path="cms" element={<AdminCMS />} />
+              <Route path="automations" element={<CRMAutomations />} />
             </Route>
 
             {/* CRM */}
