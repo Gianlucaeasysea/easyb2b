@@ -88,10 +88,17 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
     mutationFn: async (status: string) => {
       const { error } = await supabase.from("leads").update({ status }).eq("id", lead.id);
       if (error) throw error;
+      return status;
     },
-    onSuccess: () => {
+    onSuccess: (newStatus) => {
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       toast({ title: "Status updated" });
+      checkAndRunAutomations("lead_stage_changed", {
+        lead_id: lead.id,
+        from_stage: lead.status,
+        to_stage: newStatus,
+        client_name: lead.company_name,
+      });
     },
   });
 
