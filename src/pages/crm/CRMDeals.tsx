@@ -167,11 +167,20 @@ const CRMDeals = () => {
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
       const { error } = await supabase.from("deals").update(updates).eq("id", id);
       if (error) throw error;
+      return { id, updates };
     },
-    onSuccess: () => {
+    onSuccess: ({ id, updates }) => {
       queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
       toast.success("Deal aggiornato");
       setEditing(false);
+      if (updates.stage && detailDeal) {
+        checkAndRunAutomations("deal_stage_changed", {
+          deal_id: id,
+          to_stage: updates.stage,
+          deal_title: detailDeal.title,
+          client_id: detailDeal.client_id || undefined,
+        });
+      }
       if (detailDeal) {
         const updated = deals?.find(d => d.id === detailDeal.id);
         if (updated) setDetailDeal({ ...updated, ...editForm });
