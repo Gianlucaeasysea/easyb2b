@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { checkAndRunAutomations } from "@/hooks/useAutomations";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,14 +47,16 @@ const CRMLeads = () => {
 
   const addLead = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("leads").insert({ ...form, assigned_to: user?.id });
+      const { data, error } = await supabase.from("leads").insert({ ...form, assigned_to: user?.id }).select().single();
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       toast({ title: "Lead added" });
       setOpen(false);
       setForm({ company_name: "", contact_name: "", email: "", phone: "", zone: "", source: "" });
+      checkAndRunAutomations("lead_created", { lead_id: data.id, client_name: data.company_name });
     },
   });
 

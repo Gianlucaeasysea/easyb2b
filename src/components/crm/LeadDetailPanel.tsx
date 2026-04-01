@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { checkAndRunAutomations } from "@/hooks/useAutomations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,10 +88,17 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
     mutationFn: async (status: string) => {
       const { error } = await supabase.from("leads").update({ status }).eq("id", lead.id);
       if (error) throw error;
+      return status;
     },
-    onSuccess: () => {
+    onSuccess: (newStatus) => {
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       toast({ title: "Status updated" });
+      checkAndRunAutomations("lead_stage_changed", {
+        lead_id: lead.id,
+        from_stage: lead.status,
+        to_stage: newStatus,
+        client_name: lead.company_name,
+      });
     },
   });
 

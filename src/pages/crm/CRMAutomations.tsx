@@ -1,433 +1,533 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, ArrowRightLeft, Bell, CalendarClock, CheckCircle2, Clock, Play, RefreshCw, Settings2, Zap } from "lucide-react";
-import { differenceInDays, format } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { Copy, Pencil, Plus, Trash2, Zap, ArrowRight } from "lucide-react";
+import { format } from "date-fns";
 
-/* ── Automation Rule Definitions ── */
-interface AutomationRule {
+/* ── Constants ── */
+const triggerTypes: Record<string, string> = {
+  lead_created: "Un nuovo lead viene creato",
+  lead_stage_changed: "Un lead cambia stage",
+  deal_stage_changed: "Un deal cambia stage",
+  order_created: "Un nuovo ordine viene creato",
+  order_status_changed: "Un ordine cambia status",
+  client_inactive_days: "Un cliente è inattivo da X giorni",
+  deal_close_date_approaching: "Un deal è in scadenza tra X giorni",
+};
+
+const actionTypes: Record<string, string> = {
+  create_task: "Crea un task",
+  create_activity: "Crea un'attività",
+  send_email: "Invia un'email",
+  change_stage: "Cambia stage/status",
+  assign_to: "Assegna a",
+  create_notification: "Crea notifica",
+};
+
+const leadStages = ["new", "contacted", "qualified", "proposal", "won", "lost"];
+const dealStages = ["qualification", "proposal", "negotiation", "closed_won", "closed_lost"];
+const orderStatuses = ["draft", "pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
+const taskTypes = ["call", "follow_up", "email", "meeting", "task"];
+const priorities = ["low", "medium", "high", "urgent"];
+
+type AutoRule = {
   id: string;
   name: string;
-  description: string;
-  category: "status" | "followup" | "notification";
-  icon: React.ReactNode;
-  enabled: boolean;
-  lastRun?: string;
-  affectedCount?: number;
-}
+  description: string | null;
+  trigger_type: string;
+  trigger_config: Record<string, any>;
+  action_type: string;
+  action_config: Record<string, any>;
+  is_active: boolean;
+  created_at: string;
+};
 
 const CRMAutomations = () => {
-  const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [step, setStep] = useState(1);
+  const [editingRule, setEditingRule] = useState<AutoRule | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  // ── Data queries ──
-  const { data: clients = [] } = useQuery({
-    queryKey: ["automation-clients"],
+  // Wizard form state
+  const [triggerType, setTriggerType] = useState("");
+  const [triggerConfig, setTriggerConfig] = useState<Record<string, any>>({});
+  const [actionType, setActionType] = useState("");
+  const [actionConfig, setActionConfig] = useState<Record<string, any>>({});
+  const [ruleName, setRuleName] = useState("");
+  const [ruleDesc, setRuleDesc] = useState("");
+  const [ruleActive, setRuleActive] = useState(true);
+
+  /* ── Queries ── */
+  const { data: rules = [], isLoading } = useQuery({
+    queryKey: ["automation-rules"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("clients")
-        .select("id, company_name, status, days_since_last_order, last_order_date, avg_order_frequency_days, next_reorder_expected_date, email, contact_name")
-        .not("status", "in", "(churned,disqualified)");
+        .from("automation_rules")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
+      return (data || []) as AutoRule[];
+    },
+  });
+
+  const { data: emailTemplates = [] } = useQuery({
+    queryKey: ["email-templates-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("email_templates").select("id, name");
       return data || [];
     },
   });
 
-  const { data: pendingTasks = [] } = useQuery({
-    queryKey: ["automation-pending-tasks"],
+  const { data: salesReps = [] } = useQuery({
+    queryKey: ["crm-sales-reps-auto"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("id, title, client_id, due_date, status, type")
-        .eq("status", "pending");
-      if (error) throw error;
-      return data || [];
+      const { data: roles } = await supabase.from("user_roles").select("user_id, role").in("role", ["admin", "sales"]);
+      if (!roles?.length) return [];
+      const ids = roles.map(r => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("user_id, email, contact_name").in("user_id", ids);
+      return profiles || [];
     },
   });
 
-  // ── Local state for rule toggles ──
-  const [enabledRules, setEnabledRules] = useState<Record<string, boolean>>({
-    auto_at_risk: true,
-    auto_active_on_order: true,
-    followup_reorder: true,
-    followup_onboarding: true,
-    notify_at_risk: true,
-    notify_overdue_task: true,
+  /* ── Mutations ── */
+  const toggleActive = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      const { error } = await supabase.from("automation_rules").update({ is_active: active }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["automation-rules"] }),
   });
 
-  const toggleRule = (ruleId: string) => {
-    setEnabledRules(prev => ({ ...prev, [ruleId]: !prev[ruleId] }));
-  };
-
-  // ── Computed: clients that should be at_risk ──
-  const atRiskCandidates = useMemo(() => {
-    return clients.filter(c =>
-      c.status === "active" &&
-      c.days_since_last_order != null &&
-      c.days_since_last_order >= 75
-    );
-  }, [clients]);
-
-  // ── Computed: clients approaching reorder date (within 7 days) ──
-  const reorderDueSoon = useMemo(() => {
-    return clients.filter(c => {
-      if (!c.next_reorder_expected_date || c.status !== "active") return false;
-      const daysUntil = differenceInDays(new Date(c.next_reorder_expected_date), new Date());
-      return daysUntil >= 0 && daysUntil <= 7;
-    });
-  }, [clients]);
-
-  // ── Computed: onboarding clients without recent tasks ──
-  const onboardingNoTask = useMemo(() => {
-    const onboarding = clients.filter(c => c.status === "onboarding");
-    return onboarding.filter(c => !pendingTasks.some(t => t.client_id === c.id));
-  }, [clients, pendingTasks]);
-
-  // ── Computed: overdue tasks ──
-  const overdueTasks = useMemo(() => {
-    return pendingTasks.filter(t => t.due_date && new Date(t.due_date) < new Date());
-  }, [pendingTasks]);
-
-  // ── Mutations ──
-  const moveToAtRisk = useMutation({
+  const saveRule = useMutation({
     mutationFn: async () => {
-      const ids = atRiskCandidates.map(c => c.id);
-      if (ids.length === 0) throw new Error("Nessun cliente da spostare");
-      for (const id of ids) {
-        const { error } = await supabase.from("clients").update({ status: "at_risk" }).eq("id", id);
+      const payload = {
+        name: ruleName,
+        description: ruleDesc || null,
+        trigger_type: triggerType,
+        trigger_config: triggerConfig,
+        action_type: actionType,
+        action_config: actionConfig,
+        is_active: ruleActive,
+        created_by: user?.id,
+        updated_at: new Date().toISOString(),
+      };
+      if (editingRule) {
+        const { error } = await supabase.from("automation_rules").update(payload).eq("id", editingRule.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("automation_rules").insert(payload);
         if (error) throw error;
       }
-      return ids.length;
     },
-    onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["automation-clients"] });
-      toast({ title: `${count} clienti spostati a "At Risk"` });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["automation-rules"] });
+      toast.success(editingRule ? "Regola aggiornata" : "Regola creata");
+      closeWizard();
     },
-    onError: () => toast({ title: "Errore aggiornamento status", variant: "destructive" }),
+    onError: (e: any) => toast.error(e.message),
   });
 
-  const createFollowUpTasks = useMutation({
-    mutationFn: async (targetClients: typeof clients) => {
-      if (targetClients.length === 0) throw new Error("Nessun cliente");
-      const { data: { user } } = await supabase.auth.getUser();
-      const tasks = targetClients.map(c => ({
-        title: `Follow-up riordino: ${c.company_name}`,
-        description: `Il cliente si avvicina alla data prevista di riordino. Contattare per verificare necessità.`,
-        type: "call",
-        priority: "high",
-        status: "pending",
-        client_id: c.id,
-        due_date: c.next_reorder_expected_date || new Date().toISOString(),
-        created_by: user?.id,
-      }));
-      const { error } = await supabase.from("tasks").insert(tasks);
+  const deleteRule = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("automation_rules").delete().eq("id", id);
       if (error) throw error;
-      return tasks.length;
     },
-    onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["automation-pending-tasks"] });
-      toast({ title: `${count} task di follow-up creati` });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["automation-rules"] });
+      toast.success("Regola eliminata");
+      setDeleteId(null);
     },
-    onError: () => toast({ title: "Errore creazione task", variant: "destructive" }),
   });
 
-  const createOnboardingTasks = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const tasks = onboardingNoTask.map(c => ({
-        title: `Onboarding check: ${c.company_name}`,
-        description: `Verificare lo stato dell'onboarding e pianificare prossimi step.`,
-        type: "task",
-        priority: "medium",
-        status: "pending",
-        client_id: c.id,
-        due_date: new Date(Date.now() + 3 * 86400000).toISOString(),
+  const duplicateRule = useMutation({
+    mutationFn: async (rule: AutoRule) => {
+      const { error } = await supabase.from("automation_rules").insert({
+        name: `${rule.name} (copia)`,
+        description: rule.description,
+        trigger_type: rule.trigger_type,
+        trigger_config: rule.trigger_config,
+        action_type: rule.action_type,
+        action_config: rule.action_config,
+        is_active: false,
         created_by: user?.id,
-      }));
-      if (tasks.length === 0) throw new Error("Nessun cliente in onboarding senza task");
-      const { error } = await supabase.from("tasks").insert(tasks);
+      });
       if (error) throw error;
-      return tasks.length;
     },
-    onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["automation-pending-tasks"] });
-      toast({ title: `${count} task onboarding creati` });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["automation-rules"] });
+      toast.success("Regola duplicata");
     },
-    onError: () => toast({ title: "Errore creazione task", variant: "destructive" }),
   });
 
-  // ── Rule definitions ──
-  const rules: AutomationRule[] = [
-    {
-      id: "auto_at_risk",
-      name: "Auto → At Risk",
-      description: "Sposta automaticamente i clienti attivi inattivi da 75+ giorni allo status 'At Risk'",
-      category: "status",
-      icon: <AlertTriangle className="h-5 w-5 text-destructive" />,
-      enabled: enabledRules.auto_at_risk,
-      affectedCount: atRiskCandidates.length,
-    },
-    {
-      id: "auto_active_on_order",
-      name: "Auto → Active su nuovo ordine",
-      description: "Quando un cliente in onboarding/at_risk effettua un ordine, viene riportato ad 'Active'",
-      category: "status",
-      icon: <CheckCircle2 className="h-5 w-5 text-success" />,
-      enabled: enabledRules.auto_active_on_order,
-    },
-    {
-      id: "followup_reorder",
-      name: "Follow-up Riordino",
-      description: "Crea task di follow-up per clienti che si avvicinano alla data prevista di riordino (entro 7gg)",
-      category: "followup",
-      icon: <CalendarClock className="h-5 w-5 text-warning" />,
-      enabled: enabledRules.followup_reorder,
-      affectedCount: reorderDueSoon.length,
-    },
-    {
-      id: "followup_onboarding",
-      name: "Check Onboarding",
-      description: "Crea task di verifica per clienti in fase onboarding senza task attivi",
-      category: "followup",
-      icon: <RefreshCw className="h-5 w-5 text-chart-4" />,
-      enabled: enabledRules.followup_onboarding,
-      affectedCount: onboardingNoTask.length,
-    },
-    {
-      id: "notify_at_risk",
-      name: "Alert Clienti At Risk",
-      description: "Notifica il sales team quando un cliente entra nello status 'At Risk'",
-      category: "notification",
-      icon: <Bell className="h-5 w-5 text-destructive" />,
-      enabled: enabledRules.notify_at_risk,
-    },
-    {
-      id: "notify_overdue_task",
-      name: "Alert Task Scaduti",
-      description: "Evidenzia i task scaduti che richiedono attenzione immediata",
-      category: "notification",
-      icon: <Clock className="h-5 w-5 text-warning" />,
-      enabled: enabledRules.notify_overdue_task,
-      affectedCount: overdueTasks.length,
-    },
-  ];
+  /* ── Helpers ── */
+  const closeWizard = () => {
+    setWizardOpen(false);
+    setStep(1);
+    setEditingRule(null);
+    setTriggerType("");
+    setTriggerConfig({});
+    setActionType("");
+    setActionConfig({});
+    setRuleName("");
+    setRuleDesc("");
+    setRuleActive(true);
+  };
 
-  const runAutomation = (ruleId: string) => {
-    switch (ruleId) {
-      case "auto_at_risk":
-        moveToAtRisk.mutate();
-        break;
-      case "followup_reorder":
-        createFollowUpTasks.mutate(reorderDueSoon);
-        break;
-      case "followup_onboarding":
-        createOnboardingTasks.mutate();
-        break;
+  const openCreate = () => {
+    closeWizard();
+    setWizardOpen(true);
+  };
+
+  const openEdit = (rule: AutoRule) => {
+    setEditingRule(rule);
+    setTriggerType(rule.trigger_type);
+    setTriggerConfig(rule.trigger_config || {});
+    setActionType(rule.action_type);
+    setActionConfig(rule.action_config || {});
+    setRuleName(rule.name);
+    setRuleDesc(rule.description || "");
+    setRuleActive(rule.is_active);
+    setStep(1);
+    setWizardOpen(true);
+  };
+
+  const autoGenerateName = () => {
+    if (!triggerType || !actionType) return "";
+    return `${triggerTypes[triggerType]} → ${actionTypes[actionType]}`;
+  };
+
+  const goToStep2 = () => {
+    if (!triggerType) return;
+    setStep(2);
+  };
+
+  const goToStep3 = () => {
+    if (!actionType) return;
+    if (!ruleName) setRuleName(autoGenerateName());
+    setStep(3);
+  };
+
+  /* ── Render trigger config fields ── */
+  const renderTriggerFields = () => {
+    switch (triggerType) {
+      case "lead_stage_changed":
+        return (
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Da stage (opzionale)</Label>
+              <Select value={triggerConfig.from_stage || ""} onValueChange={v => setTriggerConfig(p => ({ ...p, from_stage: v }))}>
+                <SelectTrigger className="bg-secondary"><SelectValue placeholder="Qualsiasi" /></SelectTrigger>
+                <SelectContent>
+                  {leadStages.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">A stage</Label>
+              <Select value={triggerConfig.to_stage || ""} onValueChange={v => setTriggerConfig(p => ({ ...p, to_stage: v }))}>
+                <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                <SelectContent>
+                  {leadStages.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+      case "deal_stage_changed":
+        return (
+          <div className="mt-3 space-y-1">
+            <Label className="text-xs text-muted-foreground">A stage</Label>
+            <Select value={triggerConfig.to_stage || ""} onValueChange={v => setTriggerConfig(p => ({ ...p, to_stage: v }))}>
+              <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona" /></SelectTrigger>
+              <SelectContent>
+                {dealStages.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      case "order_status_changed":
+        return (
+          <div className="mt-3 space-y-1">
+            <Label className="text-xs text-muted-foreground">A status</Label>
+            <Select value={triggerConfig.to_status || ""} onValueChange={v => setTriggerConfig(p => ({ ...p, to_status: v }))}>
+              <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona" /></SelectTrigger>
+              <SelectContent>
+                {orderStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      case "client_inactive_days":
+        return (
+          <div className="mt-3 space-y-1">
+            <Label className="text-xs text-muted-foreground">Giorni di inattività</Label>
+            <Input type="number" min={1} className="bg-secondary w-32" value={triggerConfig.days || ""} onChange={e => setTriggerConfig(p => ({ ...p, days: parseInt(e.target.value) || 0 }))} />
+          </div>
+        );
+      case "deal_close_date_approaching":
+        return (
+          <div className="mt-3 space-y-1">
+            <Label className="text-xs text-muted-foreground">Giorni prima della scadenza</Label>
+            <Input type="number" min={1} className="bg-secondary w-32" value={triggerConfig.days_before || ""} onChange={e => setTriggerConfig(p => ({ ...p, days_before: parseInt(e.target.value) || 0 }))} />
+          </div>
+        );
       default:
-        toast({ title: "Regola eseguita (simulazione)", description: "Questa automazione verrà eseguita al prossimo ciclo." });
+        return null;
     }
   };
 
-  const categoryLabels: Record<string, { label: string; desc: string }> = {
-    status: { label: "Transizioni Status", desc: "Regole per il cambio automatico dello status dei clienti" },
-    followup: { label: "Follow-up Automatici", desc: "Creazione automatica di task e promemoria" },
-    notification: { label: "Notifiche & Alert", desc: "Avvisi automatici per il team commerciale" },
-  };
-
-  const renderRuleCard = (rule: AutomationRule) => (
-    <Card key={rule.id} className={`border transition-all ${rule.enabled ? "border-border" : "border-border/40 opacity-60"}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 flex-1">
-            <div className="mt-0.5">{rule.icon}</div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="text-sm font-heading font-semibold text-foreground">{rule.name}</h4>
-                {rule.affectedCount != null && rule.affectedCount > 0 && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                    {rule.affectedCount} da processare
-                  </Badge>
-                )}
+  /* ── Render action config fields ── */
+  const renderActionFields = () => {
+    switch (actionType) {
+      case "create_task":
+        return (
+          <div className="space-y-3 mt-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Titolo task</Label>
+              <Input className="bg-secondary" value={actionConfig.title || ""} onChange={e => setActionConfig(p => ({ ...p, title: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Tipo</Label>
+                <Select value={actionConfig.type || "task"} onValueChange={v => setActionConfig(p => ({ ...p, type: v }))}>
+                  <SelectTrigger className="bg-secondary"><SelectValue /></SelectTrigger>
+                  <SelectContent>{taskTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
-              <p className="text-xs text-muted-foreground">{rule.description}</p>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Priorità</Label>
+                <Select value={actionConfig.priority || "medium"} onValueChange={v => setActionConfig(p => ({ ...p, priority: v }))}>
+                  <SelectTrigger className="bg-secondary"><SelectValue /></SelectTrigger>
+                  <SelectContent>{priorities.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Scadenza (gg)</Label>
+                <Input type="number" min={0} className="bg-secondary" value={actionConfig.due_days_offset ?? 1} onChange={e => setActionConfig(p => ({ ...p, due_days_offset: parseInt(e.target.value) || 0 }))} />
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {rule.enabled && rule.affectedCount != null && rule.affectedCount > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs gap-1"
-                onClick={() => runAutomation(rule.id)}
-              >
-                <Play className="h-3 w-3" />
-                Esegui ora
-              </Button>
-            )}
-            <Switch checked={rule.enabled} onCheckedChange={() => toggleRule(rule.id)} />
+        );
+      case "create_activity":
+        return (
+          <div className="space-y-3 mt-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Titolo</Label>
+              <Input className="bg-secondary" value={actionConfig.title || ""} onChange={e => setActionConfig(p => ({ ...p, title: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Tipo</Label>
+              <Select value={actionConfig.type || "note"} onValueChange={v => setActionConfig(p => ({ ...p, type: v }))}>
+                <SelectTrigger className="bg-secondary"><SelectValue /></SelectTrigger>
+                <SelectContent>{["call", "email", "meeting", "note"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Dettaglio</Label>
+              <Textarea className="bg-secondary" value={actionConfig.body || ""} onChange={e => setActionConfig(p => ({ ...p, body: e.target.value }))} />
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  // ── Summary stats ──
-  const totalEnabled = Object.values(enabledRules).filter(Boolean).length;
-  const totalAffected = atRiskCandidates.length + reorderDueSoon.length + onboardingNoTask.length + overdueTasks.length;
+        );
+      case "send_email":
+        return (
+          <div className="mt-3 space-y-1">
+            <Label className="text-xs text-muted-foreground">Template email</Label>
+            <Select value={actionConfig.template_id || ""} onValueChange={v => setActionConfig(p => ({ ...p, template_id: v }))}>
+              <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona template" /></SelectTrigger>
+              <SelectContent>
+                {emailTemplates.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      case "change_stage":
+        return (
+          <div className="mt-3 space-y-1">
+            <Label className="text-xs text-muted-foreground">Nuovo stage/status</Label>
+            <Input className="bg-secondary" placeholder="es. at_risk, qualified..." value={actionConfig.new_stage || ""} onChange={e => setActionConfig(p => ({ ...p, new_stage: e.target.value }))} />
+          </div>
+        );
+      case "assign_to":
+        return (
+          <div className="mt-3 space-y-1">
+            <Label className="text-xs text-muted-foreground">Assegna a</Label>
+            <Select value={actionConfig.user_id || ""} onValueChange={v => setActionConfig(p => ({ ...p, user_id: v }))}>
+              <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona utente" /></SelectTrigger>
+              <SelectContent>
+                {salesReps.map((r: any) => <SelectItem key={r.user_id} value={r.user_id}>{r.contact_name || r.email}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      case "create_notification":
+        return (
+          <div className="space-y-3 mt-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Titolo</Label>
+              <Input className="bg-secondary" value={actionConfig.title || ""} onChange={e => setActionConfig(p => ({ ...p, title: e.target.value }))} placeholder="Es: Deal in scadenza" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Body (variabili: {"{{deal_title}}"}, {"{{client_name}}"})</Label>
+              <Textarea className="bg-secondary" value={actionConfig.body || ""} onChange={e => setActionConfig(p => ({ ...p, body: e.target.value }))} />
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl font-bold text-foreground">Automazioni & Workflow</h1>
-        <p className="text-sm text-muted-foreground">
-          Gestisci le regole automatiche per follow-up, transizioni status e notifiche
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-foreground">Automazioni & Workflow</h1>
+          <p className="text-sm text-muted-foreground">Crea regole automatiche: "Quando X succede → fai Y"</p>
+        </div>
+        <Button onClick={openCreate} className="gap-2 bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">
+          <Plus size={16} /> Nuova Regola
+        </Button>
       </div>
 
-      {/* KPI summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Zap className="h-8 w-8 text-primary" />
-            <div>
-              <p className="text-2xl font-bold font-heading text-foreground">{totalEnabled}</p>
-              <p className="text-xs text-muted-foreground">Regole Attive</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <ArrowRightLeft className="h-8 w-8 text-destructive" />
-            <div>
-              <p className="text-2xl font-bold font-heading text-foreground">{atRiskCandidates.length}</p>
-              <p className="text-xs text-muted-foreground">Da spostare At Risk</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <CalendarClock className="h-8 w-8 text-warning" />
-            <div>
-              <p className="text-2xl font-bold font-heading text-foreground">{reorderDueSoon.length}</p>
-              <p className="text-xs text-muted-foreground">Riordini in scadenza</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Clock className="h-8 w-8 text-chart-4" />
-            <div>
-              <p className="text-2xl font-bold font-heading text-foreground">{overdueTasks.length}</p>
-              <p className="text-xs text-muted-foreground">Task Scaduti</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Rules by category */}
-      <Tabs defaultValue="status">
-        <TabsList>
-          <TabsTrigger value="status">Transizioni Status</TabsTrigger>
-          <TabsTrigger value="followup">Follow-up</TabsTrigger>
-          <TabsTrigger value="notification">Notifiche</TabsTrigger>
-          <TabsTrigger value="preview">Anteprima Azioni</TabsTrigger>
-        </TabsList>
-
-        {(["status", "followup", "notification"] as const).map(cat => (
-          <TabsContent key={cat} value={cat} className="space-y-3">
-            <div className="mb-2">
-              <h2 className="text-sm font-heading font-semibold text-foreground">{categoryLabels[cat].label}</h2>
-              <p className="text-xs text-muted-foreground">{categoryLabels[cat].desc}</p>
-            </div>
-            {rules.filter(r => r.category === cat).map(renderRuleCard)}
-          </TabsContent>
-        ))}
-
-        <TabsContent value="preview" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-heading">Clienti da spostare ad At Risk</CardTitle>
-              <CardDescription className="text-xs">Clienti attivi con 75+ giorni di inattività</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              {atRiskCandidates.length === 0 ? (
-                <p className="text-xs text-muted-foreground px-4 pb-4">Nessun cliente da spostare</p>
-              ) : (
-                <div className="divide-y divide-border">
-                  {atRiskCandidates.slice(0, 10).map(c => (
-                    <div key={c.id} className="flex items-center justify-between px-4 py-2 text-xs">
-                      <div>
-                        <span className="font-medium text-foreground">{c.company_name}</span>
-                        <span className="text-muted-foreground ml-2">{c.contact_name || "—"}</span>
-                      </div>
-                      <Badge variant="destructive" className="text-[10px]">
-                        {c.days_since_last_order}d inattivo
-                      </Badge>
+      {/* Rules list */}
+      {isLoading ? (
+        <p className="text-muted-foreground">Caricamento...</p>
+      ) : rules.length === 0 ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">
+          <Zap className="mx-auto mb-4 h-12 w-12" />
+          <p>Nessuna regola di automazione. Crea la prima!</p>
+        </CardContent></Card>
+      ) : (
+        <div className="space-y-3">
+          {rules.map(rule => (
+            <Card key={rule.id} className={`border transition-all ${rule.is_active ? "border-border" : "border-border/40 opacity-60"}`}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h4 className="text-sm font-heading font-semibold text-foreground">{rule.name}</h4>
+                      <Badge variant="outline" className="text-[10px]">{triggerTypes[rule.trigger_type] || rule.trigger_type}</Badge>
+                      <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                      <Badge variant="secondary" className="text-[10px]">{actionTypes[rule.action_type] || rule.action_type}</Badge>
                     </div>
-                  ))}
+                    {rule.description && <p className="text-xs text-muted-foreground">{rule.description}</p>}
+                    <p className="text-[10px] text-muted-foreground mt-1">Creata: {format(new Date(rule.created_at), "dd/MM/yyyy")}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(rule)} title="Modifica"><Pencil size={14} /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateRule.mutate(rule)} title="Duplica"><Copy size={14} /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(rule.id)} title="Elimina"><Trash2 size={14} /></Button>
+                    <Switch checked={rule.is_active} onCheckedChange={v => toggleActive.mutate({ id: rule.id, active: v })} />
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-heading">Follow-up Riordino Imminente</CardTitle>
-              <CardDescription className="text-xs">Clienti con data di riordino prevista entro 7 giorni</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              {reorderDueSoon.length === 0 ? (
-                <p className="text-xs text-muted-foreground px-4 pb-4">Nessun riordino imminente</p>
-              ) : (
-                <div className="divide-y divide-border">
-                  {reorderDueSoon.slice(0, 10).map(c => (
-                    <div key={c.id} className="flex items-center justify-between px-4 py-2 text-xs">
-                      <div>
-                        <span className="font-medium text-foreground">{c.company_name}</span>
-                      </div>
-                      <span className="text-warning font-medium">
-                        Riordino: {c.next_reorder_expected_date ? format(new Date(c.next_reorder_expected_date), "dd/MM/yyyy") : "—"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      {/* Wizard Dialog */}
+      <Dialog open={wizardOpen} onOpenChange={v => { if (!v) closeWizard(); }}>
+        <DialogContent className="max-w-lg bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="font-heading">
+              {editingRule ? "Modifica Regola" : "Nuova Regola"} — Step {step}/3
+            </DialogTitle>
+          </DialogHeader>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-heading">Task Scaduti</CardTitle>
-              <CardDescription className="text-xs">Task pending con scadenza superata</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              {overdueTasks.length === 0 ? (
-                <p className="text-xs text-muted-foreground px-4 pb-4">Nessun task scaduto</p>
-              ) : (
-                <div className="divide-y divide-border">
-                  {overdueTasks.slice(0, 10).map(t => (
-                    <div key={t.id} className="flex items-center justify-between px-4 py-2 text-xs">
-                      <div>
-                        <span className="font-medium text-foreground">{t.title}</span>
-                        <Badge variant="outline" className="ml-2 text-[10px]">{t.type}</Badge>
-                      </div>
-                      <span className="text-destructive font-medium">
-                        Scaduto: {t.due_date ? format(new Date(t.due_date), "dd/MM") : "—"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          {step === 1 && (
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-foreground">Quando...</p>
+              <Select value={triggerType} onValueChange={v => { setTriggerType(v); setTriggerConfig({}); }}>
+                <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona trigger" /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(triggerTypes).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {renderTriggerFields()}
+              <div className="flex justify-end">
+                <Button disabled={!triggerType} onClick={goToStep2}>Avanti</Button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-foreground">Allora...</p>
+              <Select value={actionType} onValueChange={v => { setActionType(v); setActionConfig({}); }}>
+                <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona azione" /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(actionTypes).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {renderActionFields()}
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep(1)}>Indietro</Button>
+                <Button disabled={!actionType} onClick={goToStep3}>Avanti</Button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <Card className="bg-muted/50 border-border">
+                <CardContent className="p-3 text-sm">
+                  <span className="text-muted-foreground">Quando </span>
+                  <span className="font-medium text-foreground">{triggerTypes[triggerType]}</span>
+                  <span className="text-muted-foreground">, allora </span>
+                  <span className="font-medium text-foreground">{actionTypes[actionType]}</span>
+                </CardContent>
+              </Card>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Nome regola</Label>
+                <Input className="bg-secondary" value={ruleName} onChange={e => setRuleName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Descrizione (opzionale)</Label>
+                <Textarea className="bg-secondary" value={ruleDesc} onChange={e => setRuleDesc(e.target.value)} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={ruleActive} onCheckedChange={setRuleActive} />
+                <Label className="text-sm">Attiva</Label>
+              </div>
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep(2)}>Indietro</Button>
+                <Button onClick={() => saveRule.mutate()} disabled={!ruleName || saveRule.isPending}>
+                  {saveRule.isPending ? "Salvataggio..." : "Salva regola"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={v => { if (!v) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminare questa regola?</AlertDialogTitle>
+            <AlertDialogDescription>L'azione non può essere annullata.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteId && deleteRule.mutate(deleteId)}>Elimina</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

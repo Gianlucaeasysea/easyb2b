@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { checkAndRunAutomations } from "@/hooks/useAutomations";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -61,9 +62,16 @@ const CRMDealsPipeline = () => {
       }
       const { error } = await supabase.from("deals").update(updates).eq("id", id);
       if (error) throw error;
+      return { id, stage };
     },
-    onSuccess: () => {
+    onSuccess: ({ id, stage }) => {
       queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
+      const deal = deals?.find((d: any) => d.id === id);
+      if (deal) {
+        checkAndRunAutomations("deal_stage_changed", {
+          deal_id: id, to_stage: stage, deal_title: deal.title, client_id: deal.client_id || undefined,
+        });
+      }
     },
   });
 

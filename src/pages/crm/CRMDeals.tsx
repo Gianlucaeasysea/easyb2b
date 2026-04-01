@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { checkAndRunAutomations } from "@/hooks/useAutomations";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -166,11 +167,20 @@ const CRMDeals = () => {
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
       const { error } = await supabase.from("deals").update(updates).eq("id", id);
       if (error) throw error;
+      return { id, updates };
     },
-    onSuccess: () => {
+    onSuccess: ({ id, updates }) => {
       queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
       toast.success("Deal aggiornato");
       setEditing(false);
+      if (updates.stage && detailDeal) {
+        checkAndRunAutomations("deal_stage_changed", {
+          deal_id: id,
+          to_stage: updates.stage,
+          deal_title: detailDeal.title,
+          client_id: detailDeal.client_id || undefined,
+        });
+      }
       if (detailDeal) {
         const updated = deals?.find(d => d.id === detailDeal.id);
         if (updated) setDetailDeal({ ...updated, ...editForm });
@@ -235,8 +245,17 @@ const CRMDeals = () => {
       const { error } = await supabase.from("deals").update(updates).in("id", ids);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, stage) => {
       queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
+      const ids = Array.from(selected);
+      ids.forEach(id => {
+        const deal = deals?.find(d => d.id === id);
+        if (deal) {
+          checkAndRunAutomations("deal_stage_changed", {
+            deal_id: id, to_stage: stage, deal_title: deal.title, client_id: deal.client_id || undefined,
+          });
+        }
+      });
       setSelected(new Set());
       setBulkStage("");
       toast.success("Stage aggiornato");
