@@ -271,7 +271,9 @@ export default function CRMEmailTemplates() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              <Textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} placeholder="<p>Gentile {{nome_contatto}},</p>..." className="mt-1 bg-secondary border-border min-h-[200px] font-mono text-xs" />
+              <div className="mt-1">
+                <TiptapEditor content={form.body} onChange={html => setForm(f => ({ ...f, body: html }))} placeholder="Scrivi il corpo del template..." />
+              </div>
             </div>
           </div>
           <DialogFooter className="mt-4">
