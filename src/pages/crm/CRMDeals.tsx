@@ -51,6 +51,9 @@ const CRMDeals = () => {
   const [form, setForm] = useState({ ...emptyForm });
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState("all");
+  const [filterOrg, setFilterOrg] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detailDeal, setDetailDeal] = useState<any>(null);
   const [editing, setEditing] = useState(false);
@@ -58,6 +61,8 @@ const CRMDeals = () => {
   const [lostReasonOpen, setLostReasonOpen] = useState(false);
   const [lostReason, setLostReason] = useState("");
   const [lostDealId, setLostDealId] = useState<string | null>(null);
+  const [bulkStage, setBulkStage] = useState("");
+  const [bulkAssignTo, setBulkAssignTo] = useState("");
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ["crm-deals"],
@@ -106,6 +111,30 @@ const CRMDeals = () => {
       return data || [];
     },
     enabled: !!detailDeal?.client_id,
+  });
+
+  // Detail: activities for this deal
+  const { data: detailActivities } = useQuery({
+    queryKey: ["crm-deal-activities", detailDeal?.id],
+    queryFn: async () => {
+      if (!detailDeal?.id) return [];
+      const { data } = await supabase.from("activities").select("id, title, type, scheduled_at, completed_at, created_at").eq("lead_id", detailDeal.id).order("created_at", { ascending: false });
+      // Also check if deal_id concept exists in tasks
+      return data || [];
+    },
+    enabled: !!detailDeal?.id,
+  });
+
+  // Sales reps (profiles with sales/admin roles)
+  const { data: salesReps } = useQuery({
+    queryKey: ["crm-sales-reps"],
+    queryFn: async () => {
+      const { data: roles } = await supabase.from("user_roles").select("user_id, role").in("role", ["admin", "sales"]);
+      if (!roles?.length) return [];
+      const userIds = roles.map(r => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("user_id, email, contact_name").in("user_id", userIds);
+      return (profiles || []).map(p => ({ ...p, role: roles.find(r => r.user_id === p.user_id)?.role }));
+    },
   });
 
   const createDeal = useMutation({
@@ -185,7 +214,49 @@ const CRMDeals = () => {
       if (!d.title.toLowerCase().includes(s) && !(d as any).clients?.company_name?.toLowerCase().includes(s)) return false;
     }
     if (filterStage !== "all" && d.stage !== filterStage) return false;
+    if (filterOrg !== "all" && d.client_id !== filterOrg) return false;
+    if (filterDateFrom) {
+      const from = new Date(filterDateFrom);
+      if (new Date(d.created_at!) < from) return false;
+    }
+    if (filterDateTo) {
+      const to = new Date(filterDateTo);
+      to.setHours(23, 59, 59);
+      if (new Date(d.created_at!) > to) return false;
+    }
     return true;
+  });
+
+  const bulkUpdateStage = useMutation({
+    mutationFn: async (stage: string) => {
+      const ids = Array.from(selected);
+      const updates: any = { stage, probability: stageConfig[stage]?.prob ?? 20 };
+      if (stage === "closed_won" || stage === "closed_lost") updates.closed_at = new Date().toISOString();
+      const { error } = await supabase.from("deals").update(updates).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
+      setSelected(new Set());
+      setBulkStage("");
+      toast.success("Stage aggiornato");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const bulkAssign = useMutation({
+    mutationFn: async (assignTo: string) => {
+      const ids = Array.from(selected);
+      const { error } = await supabase.from("deals").update({ assigned_to: assignTo }).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
+      setSelected(new Set());
+      setBulkAssignTo("");
+      toast.success("Assegnazione aggiornata");
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const toggleSelect = (id: string) => {
@@ -217,13 +288,6 @@ const CRMDeals = () => {
           <p className="text-sm text-muted-foreground">Manage sales opportunities and track deal progress</p>
         </div>
         <div className="flex items-center gap-2">
-          {selected.size > 0 && (
-            <Button variant="destructive" size="sm" className="gap-1" onClick={() => {
-              if (confirm(`Eliminare ${selected.size} deal?`)) deleteDeal.mutate(Array.from(selected));
-            }}>
-              <Trash2 size={14} /> Elimina ({selected.size})
-            </Button>
-          )}
           <Button variant="outline" size="sm" onClick={() => navigate("/crm/deals/pipeline")} className="gap-1">
             <TrendingUp size={14} /> Pipeline View
           </Button>
@@ -323,8 +387,43 @@ const CRMDeals = () => {
             {Object.entries(stageConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={filterOrg} onValueChange={setFilterOrg}>
+          <SelectTrigger className="w-44 bg-secondary border-border rounded-lg"><SelectValue placeholder="Organizzazione" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutte le org.</SelectItem>
+            {orgs?.map(o => <SelectItem key={o.id} value={o.id}>{o.company_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Input type="date" placeholder="Da" className="w-36 bg-secondary border-border rounded-lg text-xs" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} />
+        <Input type="date" placeholder="A" className="w-36 bg-secondary border-border rounded-lg text-xs" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} />
         <Badge variant="outline" className="text-xs">{filtered?.length || 0} deals</Badge>
       </div>
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-muted rounded-lg border border-border">
+          <span className="text-sm font-medium">{selected.size} selezionati</span>
+          <Select value={bulkStage} onValueChange={v => { setBulkStage(v); bulkUpdateStage.mutate(v); }}>
+            <SelectTrigger className="w-40 h-8 text-xs bg-background"><SelectValue placeholder="Cambia stage" /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(stageConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {salesReps && salesReps.length > 0 && (
+            <Select value={bulkAssignTo} onValueChange={v => { setBulkAssignTo(v); bulkAssign.mutate(v); }}>
+              <SelectTrigger className="w-44 h-8 text-xs bg-background"><SelectValue placeholder="Assegna a" /></SelectTrigger>
+              <SelectContent>
+                {salesReps.map(r => <SelectItem key={r.user_id} value={r.user_id}>{r.contact_name || r.email || r.user_id.slice(0, 8)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Button variant="destructive" size="sm" className="gap-1 h-8 text-xs" onClick={() => {
+            if (confirm(`Eliminare ${selected.size} deal?`)) deleteDeal.mutate(Array.from(selected));
+          }}>
+            <Trash2 size={12} /> Elimina
+          </Button>
+        </div>
+      )}
 
       {/* Table */}
       {isLoading ? (
@@ -517,6 +616,24 @@ const CRMDeals = () => {
                         <p className="text-sm text-destructive">{detailDeal.lost_reason}</p>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Activities linked to this deal */}
+                {detailActivities && detailActivities.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground mb-2">Attività collegate</p>
+                    <div className="space-y-1">
+                      {detailActivities.map(a => (
+                        <div key={a.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/50 text-xs">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[9px]">{a.type || "note"}</Badge>
+                            <span className="font-medium">{a.title}</span>
+                          </div>
+                          <span className="text-muted-foreground">{fmtDate(a.scheduled_at || a.created_at)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
