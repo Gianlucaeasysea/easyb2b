@@ -245,8 +245,17 @@ const CRMDeals = () => {
       const { error } = await supabase.from("deals").update(updates).in("id", ids);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, stage) => {
       queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
+      const ids = Array.from(selected);
+      ids.forEach(id => {
+        const deal = deals?.find(d => d.id === id);
+        if (deal) {
+          checkAndRunAutomations("deal_stage_changed", {
+            deal_id: id, to_stage: stage, deal_title: deal.title, client_id: deal.client_id || undefined,
+          });
+        }
+      });
       setSelected(new Set());
       setBulkStage("");
       toast.success("Stage aggiornato");
