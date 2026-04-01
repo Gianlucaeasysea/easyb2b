@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Send, Sparkles, Loader2, Users, Plus, X, Variable, Save, Clock, AlertTriangle } from "lucide-react";
+import { Send, Sparkles, Loader2, Users, Plus, X, Variable, Save, Clock, AlertTriangle, Paperclip, FileIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import TiptapEditor from "./TiptapEditor";
 
 interface ComposeEmailDialogProps {
   open: boolean;
@@ -56,6 +58,9 @@ export const ComposeEmailDialog = ({
   const [selectedTemplateId, setSelectedTemplateId] = useState("__none__");
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>();
   const [showSchedule, setShowSchedule] = useState(false);
+  const [attachments, setAttachments] = useState<{ name: string; path: string; size: number }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch contacts for this client
   const { data: contacts } = useQuery({
@@ -120,6 +125,7 @@ export const ComposeEmailDialog = ({
       setSelectedTemplateId("__none__");
       setScheduleDate(undefined);
       setShowSchedule(false);
+      setAttachments([]);
       if (initialSubject) {
         setSubject(initialSubject);
         setBody("");
@@ -393,7 +399,51 @@ export const ComposeEmailDialog = ({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Scrivi il contenuto dell'email..." className="mt-1 bg-secondary border-border min-h-[200px] font-mono text-sm" />
+            <div className="mt-1">
+              <TiptapEditor content={body} onChange={setBody} placeholder="Scrivi il contenuto dell'email..." />
+            </div>
+          </div>
+
+          {/* Attachments */}
+          <div>
+            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={async (e) => {
+              const files = e.target.files;
+              if (!files) return;
+              if (attachments.length + files.length > 5) { toast.error("Max 5 allegati"); return; }
+              setUploading(true);
+              try {
+                for (const file of Array.from(files)) {
+                  if (file.size > 10 * 1024 * 1024) { toast.error(`${file.name} supera 10MB`); continue; }
+                  const path = `${clientId}/${Date.now()}-${file.name}`;
+                  const { error } = await supabase.storage.from("email-attachments").upload(path, file);
+                  if (error) throw error;
+                  setAttachments(prev => [...prev, { name: file.name, path, size: file.size }]);
+                }
+              } catch (err: any) {
+                toast.error("Errore upload: " + err.message);
+              } finally {
+                setUploading(false);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }
+            }} />
+            <Button type="button" variant="outline" size="sm" className="gap-1 text-xs" onClick={() => fileInputRef.current?.click()} disabled={uploading || attachments.length >= 5}>
+              {uploading ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />}
+              {uploading ? "Caricamento..." : "Allega file"}
+            </Button>
+            <span className="text-[10px] text-muted-foreground ml-2">Max 5 file, 10MB ciascuno</span>
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {attachments.map((a, i) => (
+                  <Badge key={i} variant="outline" className="gap-1 text-xs">
+                    <FileIcon size={10} /> {a.name} ({(a.size / 1024).toFixed(0)}KB)
+                    <button onClick={async () => {
+                      await supabase.storage.from("email-attachments").remove([a.path]);
+                      setAttachments(prev => prev.filter((_, idx) => idx !== i));
+                    }} className="hover:text-destructive ml-1"><X size={10} /></button>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Schedule picker */}
