@@ -51,6 +51,9 @@ const CRMDeals = () => {
   const [form, setForm] = useState({ ...emptyForm });
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState("all");
+  const [filterOrg, setFilterOrg] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detailDeal, setDetailDeal] = useState<any>(null);
   const [editing, setEditing] = useState(false);
@@ -58,6 +61,8 @@ const CRMDeals = () => {
   const [lostReasonOpen, setLostReasonOpen] = useState(false);
   const [lostReason, setLostReason] = useState("");
   const [lostDealId, setLostDealId] = useState<string | null>(null);
+  const [bulkStage, setBulkStage] = useState("");
+  const [bulkAssignTo, setBulkAssignTo] = useState("");
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ["crm-deals"],
