@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { checkAndRunAutomations } from "@/hooks/useAutomations";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
