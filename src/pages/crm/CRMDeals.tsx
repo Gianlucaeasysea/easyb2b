@@ -113,7 +113,30 @@ const CRMDeals = () => {
     enabled: !!detailDeal?.client_id,
   });
 
-  const createDeal = useMutation({
+  // Detail: activities for this deal
+  const { data: detailActivities } = useQuery({
+    queryKey: ["crm-deal-activities", detailDeal?.id],
+    queryFn: async () => {
+      if (!detailDeal?.id) return [];
+      const { data } = await supabase.from("activities").select("id, title, type, scheduled_at, completed_at, created_at").eq("lead_id", detailDeal.id).order("created_at", { ascending: false });
+      // Also check if deal_id concept exists in tasks
+      return data || [];
+    },
+    enabled: !!detailDeal?.id,
+  });
+
+  // Sales reps (profiles with sales/admin roles)
+  const { data: salesReps } = useQuery({
+    queryKey: ["crm-sales-reps"],
+    queryFn: async () => {
+      const { data: roles } = await supabase.from("user_roles").select("user_id, role").in("role", ["admin", "sales"]);
+      if (!roles?.length) return [];
+      const userIds = roles.map(r => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("user_id, email, contact_name").in("user_id", userIds);
+      return (profiles || []).map(p => ({ ...p, role: roles.find(r => r.user_id === p.user_id)?.role }));
+    },
+  });
+
     mutationFn: async () => {
       const { error } = await supabase.from("deals").insert({
         title: form.title,
