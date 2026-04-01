@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Send, Sparkles, Loader2, Users, Plus, X, Variable, Save, Clock, AlertTriangle } from "lucide-react";
+import { Send, Sparkles, Loader2, Users, Plus, X, Variable, Save, Clock, AlertTriangle, Paperclip, FileIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import TiptapEditor from "./TiptapEditor";
 
 interface ComposeEmailDialogProps {
   open: boolean;
