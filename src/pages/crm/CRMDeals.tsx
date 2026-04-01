@@ -137,6 +137,7 @@ const CRMDeals = () => {
     },
   });
 
+  const createDeal = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("deals").insert({
         title: form.title,
