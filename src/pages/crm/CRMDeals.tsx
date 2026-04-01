@@ -288,13 +288,6 @@ const CRMDeals = () => {
           <p className="text-sm text-muted-foreground">Manage sales opportunities and track deal progress</p>
         </div>
         <div className="flex items-center gap-2">
-          {selected.size > 0 && (
-            <Button variant="destructive" size="sm" className="gap-1" onClick={() => {
-              if (confirm(`Eliminare ${selected.size} deal?`)) deleteDeal.mutate(Array.from(selected));
-            }}>
-              <Trash2 size={14} /> Elimina ({selected.size})
-            </Button>
-          )}
           <Button variant="outline" size="sm" onClick={() => navigate("/crm/deals/pipeline")} className="gap-1">
             <TrendingUp size={14} /> Pipeline View
           </Button>
