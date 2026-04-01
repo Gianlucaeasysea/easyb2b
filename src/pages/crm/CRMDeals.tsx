@@ -165,9 +165,14 @@ const CRMDeals = () => {
 
   const updateDeal = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
-      const { error } = await supabase.from("deals").update(updates).eq("id", id);
+      const cleaned = { ...updates };
+      if (cleaned.expected_close_date === "" || cleaned.expected_close_date === undefined) {
+        cleaned.expected_close_date = null;
+      }
+      if (cleaned.notes === "") cleaned.notes = null;
+      const { error } = await supabase.from("deals").update(cleaned).eq("id", id);
       if (error) throw error;
-      return { id, updates };
+      return { id, updates: cleaned };
     },
     onSuccess: ({ id, updates }) => {
       queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
