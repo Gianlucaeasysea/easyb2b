@@ -58,6 +58,9 @@ export const ComposeEmailDialog = ({
   const [selectedTemplateId, setSelectedTemplateId] = useState("__none__");
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>();
   const [showSchedule, setShowSchedule] = useState(false);
+  const [attachments, setAttachments] = useState<{ name: string; path: string; size: number }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch contacts for this client
   const { data: contacts } = useQuery({
