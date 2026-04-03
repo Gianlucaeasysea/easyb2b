@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { cleanupOrphanedDealerAccountByEmail, deleteDealerAuthArtifacts } from "../_shared/dealer-account-cleanup.ts";
 
 type AppRole = "admin" | "sales" | "dealer" | "operations";
 
@@ -265,15 +266,7 @@ const deleteClientGraph = async (adminClient: any, clientId: string) => {
 
   // Clean up auth user, roles, and profile if a dealer account was linked
   if (linkedUserId) {
-    // Delete user_roles
-    await adminClient.from("user_roles").delete().eq("user_id", linkedUserId);
-    // Delete profile
-    await adminClient.from("profiles").delete().eq("user_id", linkedUserId);
-    // Delete auth user (frees the email for reuse)
-    const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(linkedUserId);
-    if (authDeleteError) {
-      console.error(`Warning: failed to delete auth user ${linkedUserId}: ${authDeleteError.message}`);
-    }
+    await deleteDealerAuthArtifacts(adminClient, linkedUserId);
   }
 };
 
@@ -297,6 +290,13 @@ Deno.serve(async (req) => {
     if (action === "convert_request_to_pipeline") {
       if (!body?.requestId) return json({ error: "Missing requestId" }, 400);
       return json(await convertRequestToPipeline(adminClient, body.requestId, user.id, role));
+    }
+
+    if (action === "cleanup_orphaned_dealer_account") {
+      const email = typeof body?.email === "string" ? body.email : "";
+      if (!email.trim()) return json({ error: "Missing email" }, 400);
+
+      return json(await cleanupOrphanedDealerAccountByEmail(adminClient, email));
     }
 
     if (action === "delete_clients") {
