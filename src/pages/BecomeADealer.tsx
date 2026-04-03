@@ -13,6 +13,42 @@ import { ArrowLeft, CheckCircle } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 
+const regionCountries: Record<string, string[]> = {
+  europe: [
+    "Albania", "Andorra", "Austria", "Belgium", "Bosnia and Herzegovina", "Bulgaria",
+    "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia", "Finland", "France",
+    "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Kosovo", "Latvia",
+    "Lithuania", "Luxembourg", "Malta", "Moldova", "Monaco", "Montenegro",
+    "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal", "Romania",
+    "San Marino", "Serbia", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland",
+    "Turkey", "Ukraine", "United Kingdom",
+  ],
+  "north-america": [
+    "Canada", "Mexico", "United States", "Bahamas", "Barbados", "Belize",
+    "Costa Rica", "Cuba", "Dominican Republic", "El Salvador", "Guatemala",
+    "Haiti", "Honduras", "Jamaica", "Nicaragua", "Panama", "Trinidad and Tobago",
+  ],
+  "south-america": [
+    "Argentina", "Bolivia", "Brazil", "Chile", "Colombia", "Ecuador",
+    "Guyana", "Paraguay", "Peru", "Suriname", "Uruguay", "Venezuela",
+  ],
+  "asia-pacific": [
+    "Bangladesh", "Cambodia", "China", "Hong Kong", "India", "Indonesia", "Japan",
+    "Laos", "Malaysia", "Mongolia", "Myanmar", "Nepal", "North Korea", "Pakistan",
+    "Philippines", "Singapore", "South Korea", "Sri Lanka", "Taiwan", "Thailand",
+    "Vietnam",
+  ],
+  "middle-east-africa": [
+    "Algeria", "Bahrain", "Egypt", "Ethiopia", "Ghana", "Iran", "Iraq", "Israel",
+    "Jordan", "Kenya", "Kuwait", "Lebanon", "Libya", "Morocco", "Nigeria", "Oman",
+    "Qatar", "Saudi Arabia", "Senegal", "South Africa", "Sudan", "Syria",
+    "Tanzania", "Tunisia", "Uganda", "United Arab Emirates", "Yemen",
+  ],
+  oceania: [
+    "Australia", "Fiji", "New Zealand", "Papua New Guinea", "Samoa", "Tonga", "Vanuatu",
+  ],
+};
+
 const BecomeADealer = () => {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
