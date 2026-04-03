@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { deleteClientsCascade } from "@/lib/crmEntityActions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -403,8 +404,7 @@ const AdminClientDetail = () => {
 
   const deleteClient = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("clients").delete().eq("id", id!);
-      if (error) throw error;
+      await deleteClientsCascade([id!]);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-clients"] });

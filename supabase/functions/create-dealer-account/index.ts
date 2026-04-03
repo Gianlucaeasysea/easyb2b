@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { corsHeaders } from "../_shared/cors.ts";
+import { cleanupOrphanedDealerAccountByEmail } from "../_shared/dealer-account-cleanup.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -30,6 +31,8 @@ Deno.serve(async (req) => {
 
     const { client_id, email, password } = await req.json();
     if (!client_id || !email || !password) throw new Error("Missing fields");
+
+    await cleanupOrphanedDealerAccountByEmail(supabaseAdmin, email, client_id);
 
     // Create auth user
     const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
