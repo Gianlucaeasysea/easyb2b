@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Plus, Trash2, Tag, Crown, RefreshCw, Search, Package, Save, Upload,
   FileSpreadsheet, ArrowRight, Check, X, Pencil, Users, ChevronRight,
-  Percent, ShoppingBag, BarChart3, Eye
+  Percent, ShoppingBag, BarChart3, Eye, Copy
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -262,6 +262,46 @@ const AdminPriceLists = () => {
       toast.success("Listino eliminato");
     },
   });
+
+  const duplicateList = async (pl: any) => {
+    try {
+      const { data: newList, error: listErr } = await supabase.from("price_lists").insert({
+        name: `${pl.name} (copia)`,
+        description: pl.description || null,
+        discount_tier_id: pl.discount_tier_id || null,
+      } as any).select().single();
+      if (listErr) throw listErr;
+
+      // Copy all items
+      const { data: items } = await supabase.from("price_list_items").select("*").eq("price_list_id", pl.id);
+      if (items?.length) {
+        const newItems = items.map(i => ({
+          price_list_id: newList.id,
+          product_id: i.product_id,
+          custom_price: i.custom_price,
+        }));
+        await supabase.from("price_list_items").insert(newItems as any);
+      }
+
+      // Copy client assignments
+      const { data: plClients } = await supabase.from("price_list_clients").select("*").eq("price_list_id", pl.id);
+      if (plClients?.length) {
+        const newClients = plClients.map(c => ({
+          price_list_id: newList.id,
+          client_id: c.client_id,
+        }));
+        await supabase.from("price_list_clients").insert(newClients as any);
+      }
+
+      qc.invalidateQueries({ queryKey: ["price-lists"] });
+      qc.invalidateQueries({ queryKey: ["price-list-item-counts"] });
+      qc.invalidateQueries({ queryKey: ["price-list-client-counts"] });
+      setActiveListId(newList.id);
+      toast.success(`Listino "${pl.name}" duplicato`);
+    } catch (err: any) {
+      toast.error("Errore duplicazione: " + err.message);
+    }
+  };
 
   // ─── Client management ───
   const addClientToList = async (clientId: string) => {
@@ -633,6 +673,9 @@ const AdminPriceLists = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateList(pl)} title="Duplica listino">
+                          <Copy className="h-3 w-3 text-muted-foreground" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(pl)}>
                           <Pencil className="h-3 w-3 text-muted-foreground" />
                         </Button>

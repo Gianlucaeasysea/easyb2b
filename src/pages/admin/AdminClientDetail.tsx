@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check, CreditCard, Plus, Bell, Send, FileText, Upload, Download, PackagePlus } from "lucide-react";
+import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check, CreditCard, Plus, Bell, Send, FileText, Upload, Download, PackagePlus, Tag } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
@@ -234,6 +234,23 @@ const AdminClientDetail = () => {
       const { data, error } = await supabase.from("products").select("id, name, sku, price").eq("active_b2b", true).order("name");
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: assignedPriceLists, refetch: refetchAssignedLists } = useQuery({
+    queryKey: ["admin-client-pricelists", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_list_clients").select("*, price_lists(id, name, description)").eq("client_id", id!);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: allPriceLists } = useQuery({
+    queryKey: ["all-price-lists"],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_lists").select("*").order("name");
+      return data || [];
     },
   });
 
@@ -788,10 +805,11 @@ const AdminClientDetail = () => {
         {/* Right: Tabs - Orders & Communications */}
         <div className="lg:col-span-2">
           <Tabs defaultValue="orders" className="w-full">
-            <TabsList className="mb-4 bg-secondary">
+            <TabsList className="mb-4 bg-secondary flex-wrap">
               <TabsTrigger value="orders" className="gap-1 text-xs"><ShoppingBag size={14} /> Ordini ({totalOrders})</TabsTrigger>
               <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Comunicazioni</TabsTrigger>
               <TabsTrigger value="documents" className="gap-1 text-xs"><FileText size={14} /> Documenti ({clientDocs?.length || 0})</TabsTrigger>
+              <TabsTrigger value="pricing" className="gap-1 text-xs"><Tag size={14} /> Listini</TabsTrigger>
             </TabsList>
 
             <TabsContent value="orders">
@@ -959,6 +977,56 @@ const AdminClientDetail = () => {
                     ))}
                   </div>
                 )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="pricing">
+              <div className="glass-card-solid p-6 space-y-6">
+                <h2 className="font-heading font-bold text-foreground flex items-center gap-2">
+                  <Tag size={16} /> Listini Assegnati
+                </h2>
+                
+                {assignedPriceLists && assignedPriceLists.length > 0 ? (
+                  <div className="space-y-2">
+                    {assignedPriceLists.map((plc: any) => (
+                      <div key={plc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{plc.price_lists?.name}</p>
+                          {plc.price_lists?.description && <p className="text-xs text-muted-foreground">{plc.price_lists.description}</p>}
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/20" onClick={async () => {
+                          const { error } = await supabase.from("price_list_clients").delete().eq("id", plc.id);
+                          if (error) toast.error(error.message);
+                          else { toast.success("Listino rimosso"); refetchAssignedLists(); }
+                        }}>
+                          <Trash2 size={14} className="text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nessun listino assegnato a questo cliente.</p>
+                )}
+                
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Aggiungi listino:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {allPriceLists?.filter(pl => !assignedPriceLists?.some((a: any) => a.price_list_id === pl.id)).map(pl => (
+                      <Button key={pl.id} variant="outline" size="sm" className="text-xs gap-1" onClick={async () => {
+                        const { error } = await supabase.from("price_list_clients").insert({ price_list_id: pl.id, client_id: id! } as any);
+                        if (error) {
+                          if (error.code === "23505") toast.info("Listino già assegnato");
+                          else toast.error(error.message);
+                        } else {
+                          toast.success("Listino assegnato");
+                          refetchAssignedLists();
+                        }
+                      }}>
+                        <Plus size={12} /> {pl.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </TabsContent>
           </Tabs>

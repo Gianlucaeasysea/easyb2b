@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   ArrowLeft, Building2, Mail, Phone, Globe, MapPin, ShoppingBag,
   MessageCircle, Send, Clock, TrendingUp, Users, FileText, CalendarDays, BarChart3,
-  Plus, Crown, Star, Pencil, Trash2, Check, X, StickyNote, Upload, Handshake, CheckSquare
+  Plus, Crown, Star, Pencil, Trash2, Check, X, StickyNote, Upload, Handshake, CheckSquare, Tag
 } from "lucide-react";
 import { isPast } from "date-fns";
 import { format, differenceInDays, isValid } from "date-fns";
@@ -190,6 +190,58 @@ const CRMOrganizationDetail = () => {
     },
     enabled: !!id,
   });
+
+  // Price list queries
+  const { data: assignedPriceLists, refetch: refetchAssignedLists } = useQuery({
+    queryKey: ["crm-org-pricelists", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_list_clients").select("*, price_lists(id, name, description, discount_tier_id)").eq("client_id", id!);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: allPriceLists } = useQuery({
+    queryKey: ["all-price-lists"],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_lists").select("*").order("name");
+      return data || [];
+    },
+  });
+
+  const { data: discountTiers } = useQuery({
+    queryKey: ["discount-tiers"],
+    queryFn: async () => {
+      const { data } = await supabase.from("discount_tiers").select("*").order("sort_order");
+      return data || [];
+    },
+  });
+
+  const assignPriceList = async (priceListId: string) => {
+    const { error } = await supabase.from("price_list_clients").insert({ price_list_id: priceListId, client_id: id! } as any);
+    if (error) {
+      if (error.code === "23505") toast.info("Listino già assegnato");
+      else toast.error(error.message);
+    } else {
+      toast.success("Listino assegnato");
+      refetchAssignedLists();
+    }
+  };
+
+  const removePriceList = async (plcId: string) => {
+    const { error } = await supabase.from("price_list_clients").delete().eq("id", plcId);
+    if (error) toast.error(error.message);
+    else { toast.success("Listino rimosso"); refetchAssignedLists(); }
+  };
+
+  const updateDiscountClass = async (newClass: string) => {
+    const { error } = await supabase.from("clients").update({ discount_class: newClass }).eq("id", id!);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Classe sconto aggiornata");
+      queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
+    }
+  };
 
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
   const totalOrders = orders?.length || 0;
@@ -381,6 +433,7 @@ const CRMOrganizationDetail = () => {
           <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Comunicazioni</TabsTrigger>
           <TabsTrigger value="activities" className="gap-1 text-xs"><Clock size={14} /> Attività</TabsTrigger>
           <TabsTrigger value="documents" className="gap-1 text-xs"><FileText size={14} /> Documenti ({documents?.length || 0})</TabsTrigger>
+          <TabsTrigger value="pricing" className="gap-1 text-xs"><Tag size={14} /> Listini & Sconti</TabsTrigger>
           <TabsTrigger value="notes" className="gap-1 text-xs"><StickyNote size={14} /> Note</TabsTrigger>
         </TabsList>
 
@@ -686,6 +739,68 @@ const CRMOrganizationDetail = () => {
                 </TableBody>
               </Table>
             )}
+          </div>
+        </TabsContent>
+
+        {/* PRICING */}
+        <TabsContent value="pricing">
+          <div className="space-y-6">
+            {/* Discount Class */}
+            <div className="glass-card-solid p-5">
+              <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
+                <Crown size={14} /> Classe di Sconto
+              </h3>
+              <div className="flex items-center gap-3">
+                <Select value={client.discount_class || "D"} onValueChange={updateDiscountClass}>
+                  <SelectTrigger className="w-48 bg-secondary border-border"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {discountTiers?.map(t => (
+                      <SelectItem key={t.id} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
+                    ))}
+                    <SelectItem value="D">Standard (D)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-muted-foreground">Attuale: {client.discount_class || "D"}</span>
+              </div>
+            </div>
+
+            {/* Assigned Price Lists */}
+            <div className="glass-card-solid p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-heading font-bold text-foreground flex items-center gap-2 text-sm">
+                  <Tag size={14} /> Listini Assegnati
+                </h3>
+              </div>
+              {assignedPriceLists && assignedPriceLists.length > 0 ? (
+                <div className="space-y-2 mb-4">
+                  {assignedPriceLists.map((plc: any) => (
+                    <div key={plc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{plc.price_lists?.name}</p>
+                        {plc.price_lists?.description && <p className="text-xs text-muted-foreground">{plc.price_lists.description}</p>}
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/20" onClick={() => removePriceList(plc.id)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground mb-4">Nessun listino assegnato</p>
+              )}
+              
+              {/* Add price list */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Aggiungi listino:</p>
+                <div className="flex flex-wrap gap-2">
+                  {allPriceLists?.filter(pl => !assignedPriceLists?.some((a: any) => a.price_list_id === pl.id)).map(pl => (
+                    <Button key={pl.id} variant="outline" size="sm" className="text-xs gap-1" onClick={() => assignPriceList(pl.id)}>
+                      <Plus size={12} /> {pl.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </TabsContent>
 
