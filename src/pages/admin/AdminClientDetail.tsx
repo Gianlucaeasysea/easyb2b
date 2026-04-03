@@ -237,6 +237,23 @@ const AdminClientDetail = () => {
     },
   });
 
+  const { data: assignedPriceLists, refetch: refetchAssignedLists } = useQuery({
+    queryKey: ["admin-client-pricelists", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_list_clients").select("*, price_lists(id, name, description)").eq("client_id", id!);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: allPriceLists } = useQuery({
+    queryKey: ["all-price-lists"],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_lists").select("*").order("name");
+      return data || [];
+    },
+  });
+
   const [orderItems, setOrderItems] = useState<{ product_id: string; quantity: number; unit_price: number }[]>([]);
 
   const createManualOrder = async () => {
