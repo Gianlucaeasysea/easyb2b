@@ -228,11 +228,22 @@ const BecomeADealer = () => {
                 <Textarea className="rounded-lg bg-secondary border-border min-h-[100px]" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} />
               </div>
 
-              <div className="flex items-start gap-3">
-                <Checkbox id="privacy" required checked={form.privacy} onCheckedChange={c => setForm(f => ({ ...f, privacy: !!c }))} />
-                <Label htmlFor="privacy" className="text-xs text-muted-foreground leading-snug cursor-pointer">
-                  I agree to the Privacy Policy and Terms of Service *
-                </Label>
+              <div className="space-y-3 border-t border-border pt-4">
+                <div className="flex items-start gap-3">
+                  <Checkbox id="privacy" required checked={form.privacy} onCheckedChange={c => setForm(f => ({ ...f, privacy: !!c }))} className="mt-0.5" />
+                  <Label htmlFor="privacy" className="text-xs text-muted-foreground leading-snug cursor-pointer">
+                    I have read and agree to the{" "}
+                    <Link to="/privacy-policy" className="underline hover:text-foreground" target="_blank">Privacy Policy</Link>
+                    {" "}and{" "}
+                    <Link to="/terms-of-service" className="underline hover:text-foreground" target="_blank">Terms of Service</Link> *
+                  </Label>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Checkbox id="marketing" checked={form.marketingConsent} onCheckedChange={c => setForm(f => ({ ...f, marketingConsent: !!c }))} className="mt-0.5" />
+                  <Label htmlFor="marketing" className="text-xs text-muted-foreground leading-snug cursor-pointer">
+                    I consent to receive marketing and promotional communications
+                  </Label>
+                </div>
               </div>
 
               <Button type="submit" size="lg" disabled={loading} className="w-full rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6">
