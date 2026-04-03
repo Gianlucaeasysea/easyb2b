@@ -1,0 +1,1 @@
+ALTER TABLE public.distributor_requests ADD COLUMN IF NOT EXISTS country TEXT, ADD COLUMN IF NOT EXISTS vat_number TEXT;

@@ -677,12 +677,14 @@ export type Database = {
           business_type: string | null
           company_name: string
           contact_name: string
+          country: string | null
           created_at: string
           email: string
           id: string
           message: string | null
           phone: string
           status: string | null
+          vat_number: string | null
           website: string | null
           zone: string | null
         }
@@ -690,12 +692,14 @@ export type Database = {
           business_type?: string | null
           company_name: string
           contact_name: string
+          country?: string | null
           created_at?: string
           email: string
           id?: string
           message?: string | null
           phone: string
           status?: string | null
+          vat_number?: string | null
           website?: string | null
           zone?: string | null
         }
@@ -703,12 +707,14 @@ export type Database = {
           business_type?: string | null
           company_name?: string
           contact_name?: string
+          country?: string | null
           created_at?: string
           email?: string
           id?: string
           message?: string | null
           phone?: string
           status?: string | null
+          vat_number?: string | null
           website?: string | null
           zone?: string | null
         }
