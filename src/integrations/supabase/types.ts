@@ -492,6 +492,8 @@ export type Database = {
           phone: string | null
           platform_client_id: string | null
           portal_password: string | null
+          show_discount_tiers: boolean
+          show_goals: boolean
           status: string | null
           status_changed_at: string | null
           total_orders_count: number | null
@@ -523,6 +525,8 @@ export type Database = {
           phone?: string | null
           platform_client_id?: string | null
           portal_password?: string | null
+          show_discount_tiers?: boolean
+          show_goals?: boolean
           status?: string | null
           status_changed_at?: string | null
           total_orders_count?: number | null
@@ -554,6 +558,8 @@ export type Database = {
           phone?: string | null
           platform_client_id?: string | null
           portal_password?: string | null
+          show_discount_tiers?: boolean
+          show_goals?: boolean
           status?: string | null
           status_changed_at?: string | null
           total_orders_count?: number | null
