@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Plus, Trash2, Tag, Crown, RefreshCw, Search, Package, Save, Upload,
   FileSpreadsheet, ArrowRight, Check, X, Pencil, Users, ChevronRight,
-  Percent, ShoppingBag, BarChart3, Eye
+  Percent, ShoppingBag, BarChart3, Eye, Copy
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";

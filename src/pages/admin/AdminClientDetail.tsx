@@ -788,10 +788,11 @@ const AdminClientDetail = () => {
         {/* Right: Tabs - Orders & Communications */}
         <div className="lg:col-span-2">
           <Tabs defaultValue="orders" className="w-full">
-            <TabsList className="mb-4 bg-secondary">
+            <TabsList className="mb-4 bg-secondary flex-wrap">
               <TabsTrigger value="orders" className="gap-1 text-xs"><ShoppingBag size={14} /> Ordini ({totalOrders})</TabsTrigger>
               <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Comunicazioni</TabsTrigger>
               <TabsTrigger value="documents" className="gap-1 text-xs"><FileText size={14} /> Documenti ({clientDocs?.length || 0})</TabsTrigger>
+              <TabsTrigger value="pricing" className="gap-1 text-xs"><Tag size={14} /> Listini</TabsTrigger>
             </TabsList>
 
             <TabsContent value="orders">
