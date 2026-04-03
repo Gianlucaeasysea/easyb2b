@@ -68,7 +68,7 @@ const CRMLeads = () => {
 
   const addLead = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.from("leads").insert({ ...form, status: "request", assigned_to: user?.id }).select().single();
+      const { data, error } = await supabase.from("leads").insert({ ...form, status: "new", assigned_to: user?.id }).select().single();
       if (error) throw error;
 
       // Auto-create organization + contact
@@ -79,6 +79,7 @@ const CRMLeads = () => {
         phone: form.phone || null,
         zone: form.zone || null,
         status: "lead",
+        discount_class: "standard",
       }).select().single();
 
       if (newClient && form.contact_name) {

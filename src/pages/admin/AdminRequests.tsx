@@ -73,7 +73,7 @@ const AdminRequests = () => {
         phone: request.phone,
         zone: request.zone,
         source: "Dealer Application",
-        status: "request",
+        status: "new",
         notes: `[Dealer Request] Business type: ${request.business_type || "—"}\nWebsite: ${request.website || "—"}\nCountry: ${(request as any).country || "—"}\nVAT: ${(request as any).vat_number || "—"}\nMessage: ${request.message || "—"}`,
         assigned_to: user?.id,
       });
