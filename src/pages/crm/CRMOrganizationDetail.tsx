@@ -191,6 +191,58 @@ const CRMOrganizationDetail = () => {
     enabled: !!id,
   });
 
+  // Price list queries
+  const { data: assignedPriceLists, refetch: refetchAssignedLists } = useQuery({
+    queryKey: ["crm-org-pricelists", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_list_clients").select("*, price_lists(id, name, description, discount_tier_id)").eq("client_id", id!);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: allPriceLists } = useQuery({
+    queryKey: ["all-price-lists"],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_lists").select("*").order("name");
+      return data || [];
+    },
+  });
+
+  const { data: discountTiers } = useQuery({
+    queryKey: ["discount-tiers"],
+    queryFn: async () => {
+      const { data } = await supabase.from("discount_tiers").select("*").order("sort_order");
+      return data || [];
+    },
+  });
+
+  const assignPriceList = async (priceListId: string) => {
+    const { error } = await supabase.from("price_list_clients").insert({ price_list_id: priceListId, client_id: id! } as any);
+    if (error) {
+      if (error.code === "23505") toast.info("Listino già assegnato");
+      else toast.error(error.message);
+    } else {
+      toast.success("Listino assegnato");
+      refetchAssignedLists();
+    }
+  };
+
+  const removePriceList = async (plcId: string) => {
+    const { error } = await supabase.from("price_list_clients").delete().eq("id", plcId);
+    if (error) toast.error(error.message);
+    else { toast.success("Listino rimosso"); refetchAssignedLists(); }
+  };
+
+  const updateDiscountClass = async (newClass: string) => {
+    const { error } = await supabase.from("clients").update({ discount_class: newClass }).eq("id", id!);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Classe sconto aggiornata");
+      queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
+    }
+  };
+
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
   const totalOrders = orders?.length || 0;
 
