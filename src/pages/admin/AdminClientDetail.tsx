@@ -20,11 +20,14 @@ import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 
 const NOTIFICATION_TYPES = [
-  { key: "order_received", label: "Ordine Ricevuto", description: "Conferma ricezione ordine" },
-  { key: "order_confirmed", label: "Ordine Confermato", description: "Notifica conferma ordine con documenti" },
-  { key: "order_status_update", label: "Aggiornamento Stato", description: "Cambio stato dell'ordine" },
-  { key: "order_documents_ready", label: "Documenti Pronti", description: "Nuovi documenti caricati (fattura, DDT)" },
-  { key: "shipping_update", label: "Aggiornamento Spedizione", description: "Tracking e notifiche di spedizione" },
+  { key: "account_credentials", label: "Credenziali Account", description: "Email con credenziali di accesso al portale", category: "Account" },
+  { key: "dealer_request_confirmation", label: "Conferma Richiesta Dealer", description: "Email di conferma invio form 'Become a Dealer'", category: "Account" },
+  { key: "order_received", label: "Ordine Ricevuto", description: "Conferma ricezione ordine dal portale", category: "Ordini" },
+  { key: "order_confirmed", label: "Ordine Confermato", description: "Notifica conferma e approvazione ordine", category: "Ordini" },
+  { key: "order_status_update", label: "Aggiornamento Stato Ordine", description: "Cambio stato dell'ordine (spedito, in lavorazione, ecc.)", category: "Ordini" },
+  { key: "order_documents_ready", label: "Documenti Pronti", description: "Nuovi documenti caricati (fattura, DDT, packing list)", category: "Ordini" },
+  { key: "shipping_update", label: "Aggiornamento Spedizione", description: "Tracking number e notifiche consegna", category: "Spedizioni" },
+  { key: "promotional_updates", label: "Promo & Novità", description: "Comunicazioni su promozioni, nuovi prodotti e offerte", category: "Marketing" },
 ];
 
 const ClientNotificationPreferences = ({ clientId }: { clientId: string }) => {
@@ -77,19 +80,30 @@ const ClientNotificationPreferences = ({ clientId }: { clientId: string }) => {
       {isLoading ? (
         <p className="text-xs text-muted-foreground">Caricamento...</p>
       ) : (
-        <div className="space-y-3">
-          {NOTIFICATION_TYPES.map(nt => (
-            <div key={nt.key} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-              <div>
-                <p className="text-sm font-semibold text-foreground">{nt.label}</p>
-                <p className="text-xs text-muted-foreground">{nt.description}</p>
+        <div className="space-y-4">
+          {["Account", "Ordini", "Spedizioni", "Marketing"].map(cat => {
+            const items = NOTIFICATION_TYPES.filter(nt => nt.category === cat);
+            if (!items.length) return null;
+            return (
+              <div key={cat}>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">{cat}</p>
+                <div className="space-y-2">
+                  {items.map(nt => (
+                    <div key={nt.key} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{nt.label}</p>
+                        <p className="text-xs text-muted-foreground">{nt.description}</p>
+                      </div>
+                      <Switch
+                        checked={isEnabled(nt.key)}
+                        onCheckedChange={(checked) => togglePref.mutate({ type: nt.key, enabled: checked })}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-              <Switch
-                checked={isEnabled(nt.key)}
-                onCheckedChange={(checked) => togglePref.mutate({ type: nt.key, enabled: checked })}
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
