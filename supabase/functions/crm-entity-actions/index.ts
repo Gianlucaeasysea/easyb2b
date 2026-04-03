@@ -224,6 +224,15 @@ const convertRequestToPipeline = async (adminClient: any, requestId: string, use
 };
 
 const deleteClientGraph = async (adminClient: any, clientId: string) => {
+  // 1. Look up the auth user_id linked to this client BEFORE deleting
+  const { data: clientRow } = await adminClient
+    .from("clients")
+    .select("user_id")
+    .eq("id", clientId)
+    .maybeSingle();
+
+  const linkedUserId = clientRow?.user_id as string | null;
+
   const { data: orders, error: ordersError } = await adminClient
     .from("orders")
     .select("id")
@@ -253,6 +262,19 @@ const deleteClientGraph = async (adminClient: any, clientId: string) => {
   await ensure(adminClient.from("client_contacts").delete().eq("client_id", clientId), "Failed to delete contacts");
   await ensure(adminClient.from("orders").delete().eq("client_id", clientId), "Failed to delete orders");
   await ensure(adminClient.from("clients").delete().eq("id", clientId), "Failed to delete organization");
+
+  // Clean up auth user, roles, and profile if a dealer account was linked
+  if (linkedUserId) {
+    // Delete user_roles
+    await adminClient.from("user_roles").delete().eq("user_id", linkedUserId);
+    // Delete profile
+    await adminClient.from("profiles").delete().eq("user_id", linkedUserId);
+    // Delete auth user (frees the email for reuse)
+    const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(linkedUserId);
+    if (authDeleteError) {
+      console.error(`Warning: failed to delete auth user ${linkedUserId}: ${authDeleteError.message}`);
+    }
+  }
 };
 
 const deleteLeadGraph = async (adminClient: any, leadId: string) => {
