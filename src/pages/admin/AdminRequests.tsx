@@ -38,24 +38,53 @@ const AdminRequests = () => {
 
   const convertToLead = useMutation({
     mutationFn: async (request: any) => {
-      const { error } = await supabase.from("leads").insert({
+      // 1. Create organization (client)
+      const { data: newClient, error: clientErr } = await supabase.from("clients").insert({
+        company_name: request.company_name,
+        contact_name: request.contact_name,
+        email: request.email,
+        phone: request.phone,
+        zone: request.zone,
+        country: (request as any).country || null,
+        vat_number: (request as any).vat_number || null,
+        business_type: request.business_type || null,
+        website: request.website || null,
+        status: "lead",
+      }).select().single();
+      if (clientErr) throw clientErr;
+
+      // 2. Create primary contact
+      if (request.contact_name) {
+        await supabase.from("client_contacts").insert({
+          client_id: newClient.id,
+          contact_name: request.contact_name,
+          email: request.email,
+          phone: request.phone,
+          is_primary: true,
+        });
+      }
+
+      // 3. Create lead
+      const { error: leadErr } = await supabase.from("leads").insert({
         company_name: request.company_name,
         contact_name: request.contact_name,
         email: request.email,
         phone: request.phone,
         zone: request.zone,
         source: "Dealer Application",
-        status: "new",
-        notes: `[Dealer Request] Business type: ${request.business_type || "—"}\nWebsite: ${request.website || "—"}\nMessage: ${request.message || "—"}`,
+        status: "request",
+        notes: `[Dealer Request] Business type: ${request.business_type || "—"}\nWebsite: ${request.website || "—"}\nCountry: ${(request as any).country || "—"}\nVAT: ${(request as any).vat_number || "—"}\nMessage: ${request.message || "—"}`,
         assigned_to: user?.id,
       });
-      if (error) throw error;
+      if (leadErr) throw leadErr;
+
       await supabase.from("distributor_requests").update({ status: "converted" }).eq("id", request.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
-      toast({ title: "Lead creato dalla richiesta!" });
+      queryClient.invalidateQueries({ queryKey: ["crm-organizations"] });
+      toast({ title: "Lead + Organization creati dalla richiesta!" });
       setSelectedRequest(null);
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -94,6 +123,7 @@ const AdminRequests = () => {
                 <TableHead>Contact</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Region</TableHead>
+                <TableHead>Country</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
@@ -107,6 +137,7 @@ const AdminRequests = () => {
                   <TableCell className="text-sm">{r.contact_name}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">{r.email}</TableCell>
                   <TableCell className="text-muted-foreground">{r.zone || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{(r as any).country || "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{r.business_type || "—"}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">{format(new Date(r.created_at), "dd MMM yyyy")}</TableCell>
                   <TableCell>
@@ -120,7 +151,7 @@ const AdminRequests = () => {
                     <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                       {r.status === "new" && (
                         <>
-                          <Button size="sm" variant="ghost" className="text-success hover:text-success h-8 gap-1" onClick={() => convertToLead.mutate(r)} title="Convert to Lead">
+                          <Button size="sm" variant="ghost" className="text-success hover:text-success h-8 gap-1" onClick={() => convertToLead.mutate(r)} title="Convert to Lead + Organization">
                             <Target size={14} /> Pipeline
                           </Button>
                           <Button size="sm" variant="ghost" className="text-success hover:text-success h-8" onClick={() => updateStatus.mutate({ id: r.id, status: "approved" })}>
@@ -131,9 +162,7 @@ const AdminRequests = () => {
                           </Button>
                         </>
                       )}
-                      {r.status === "converted" && (
-                        <Badge className="bg-success/20 text-success border-0 text-[10px]">In Pipeline</Badge>
-                      )}
+                      {r.status === "converted" && <Badge className="bg-success/20 text-success border-0 text-[10px]">In Pipeline</Badge>}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -143,7 +172,6 @@ const AdminRequests = () => {
         </div>
       )}
 
-      {/* Request Detail Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
         <DialogContent className="bg-card border-border max-w-lg">
           {selectedRequest && (
@@ -157,8 +185,10 @@ const AdminRequests = () => {
                   <div><span className="text-muted-foreground text-xs uppercase">Email</span><p className="font-medium">{selectedRequest.email}</p></div>
                   <div><span className="text-muted-foreground text-xs uppercase">Phone</span><p className="font-medium">{selectedRequest.phone}</p></div>
                   <div><span className="text-muted-foreground text-xs uppercase">Region</span><p className="font-medium">{selectedRequest.zone || "—"}</p></div>
+                  <div><span className="text-muted-foreground text-xs uppercase">Country</span><p className="font-medium">{(selectedRequest as any).country || "—"}</p></div>
                   <div><span className="text-muted-foreground text-xs uppercase">Business Type</span><p className="font-medium">{selectedRequest.business_type || "—"}</p></div>
                   <div><span className="text-muted-foreground text-xs uppercase">Website</span><p className="font-medium">{selectedRequest.website || "—"}</p></div>
+                  <div><span className="text-muted-foreground text-xs uppercase">VAT ID</span><p className="font-medium">{(selectedRequest as any).vat_number || "—"}</p></div>
                 </div>
                 {selectedRequest.message && (
                   <div>
