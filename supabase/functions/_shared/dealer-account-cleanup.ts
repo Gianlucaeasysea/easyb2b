@@ -16,6 +16,19 @@ export const cleanupOrphanedDealerAccountByEmail = async (
 ) => {
   const normalizedEmail = email.trim().toLowerCase();
 
+  const { data: authUsersPage, error: authUsersError } = await adminClient.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  if (authUsersError) {
+    throw new Error(`Failed to check existing auth user: ${authUsersError.message}`);
+  }
+
+  const matchedAuthUser = authUsersPage.users.find(
+    (user: { id: string; email?: string | null }) => user.email?.toLowerCase() === normalizedEmail,
+  );
+
   const { data: profile, error: profileError } = await adminClient
     .from("profiles")
     .select("user_id")
@@ -27,14 +40,16 @@ export const cleanupOrphanedDealerAccountByEmail = async (
     throw new Error(`Failed to check existing profile: ${profileError.message}`);
   }
 
-  if (!profile?.user_id) {
+  const userId = matchedAuthUser?.id || profile?.user_id;
+
+  if (!userId) {
     return { success: true, cleaned: false, userId: null };
   }
 
   const { data: linkedClients, error: linkedClientsError } = await adminClient
     .from("clients")
     .select("id")
-    .eq("user_id", profile.user_id);
+    .eq("user_id", userId);
 
   if (linkedClientsError) {
     throw new Error(`Failed to check linked organizations: ${linkedClientsError.message}`);
@@ -56,7 +71,7 @@ export const cleanupOrphanedDealerAccountByEmail = async (
     }
   }
 
-  await deleteDealerAuthArtifacts(adminClient, profile.user_id);
+  await deleteDealerAuthArtifacts(adminClient, userId);
 
-  return { success: true, cleaned: true, userId: profile.user_id };
+  return { success: true, cleaned: true, userId };
 };
