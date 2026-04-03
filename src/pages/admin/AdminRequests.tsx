@@ -50,6 +50,7 @@ const AdminRequests = () => {
         business_type: request.business_type || null,
         website: request.website || null,
         status: "lead",
+        discount_class: "standard",
       }).select().single();
       if (clientErr) throw clientErr;
 
