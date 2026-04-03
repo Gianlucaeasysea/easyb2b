@@ -4,8 +4,8 @@ import { checkAndRunAutomations } from "@/hooks/useAutomations";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Plus, Phone, Mail, MessageCircle, Search, Trash2, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { Users, Plus, Phone, Mail, MessageCircle, Search, Trash2, ArrowRight, LayoutList, Columns3 } from "lucide-react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,15 +13,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import LeadDetailPanel from "@/components/crm/LeadDetailPanel";
+import { differenceInDays } from "date-fns";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-const statusColors: Record<string, string> = {
+const LEAD_STAGES = [
+  { value: "request", label: "Request", color: "border-muted-foreground text-muted-foreground", bg: "bg-muted/50" },
+  { value: "contact", label: "Contact", color: "border-primary text-primary", bg: "bg-primary/10" },
+  { value: "qualification", label: "Qualification", color: "border-warning text-warning", bg: "bg-warning/10" },
+  { value: "onboarding", label: "Onboarding", color: "border-chart-4 text-chart-4", bg: "bg-chart-4/10" },
+  { value: "first_order", label: "First Order", color: "bg-success/20 text-success border-0", bg2: "bg-success/10" },
+  { value: "lost", label: "Lost", color: "bg-destructive/20 text-destructive border-0", bg2: "bg-destructive/10" },
+  { value: "nurturing", label: "Nurturing", color: "border-primary/60 text-primary/80", bg2: "bg-primary/5" },
+];
+
+// Also support legacy statuses
+const ALL_STATUS_COLORS: Record<string, string> = {
+  request: "border-muted-foreground text-muted-foreground",
+  contact: "border-primary text-primary",
+  qualification: "border-warning text-warning",
+  onboarding: "border-chart-4 text-chart-4",
+  first_order: "bg-success/20 text-success border-0",
+  lost: "bg-destructive/20 text-destructive border-0",
+  nurturing: "border-primary/60 text-primary/80",
   new: "border-primary text-primary",
   contacted: "border-warning text-warning",
   qualified: "border-success text-success",
   proposal: "border-chart-4 text-chart-4",
   won: "bg-success/20 text-success border-0",
-  lost: "bg-destructive/20 text-destructive border-0",
 };
 
 const CRMLeads = () => {
@@ -34,6 +54,7 @@ const CRMLeads = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterZone, setFilterZone] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
   const [form, setForm] = useState({ company_name: "", contact_name: "", email: "", phone: "", zone: "", source: "" });
 
   const { data: leads, isLoading } = useQuery({
@@ -47,23 +68,53 @@ const CRMLeads = () => {
 
   const addLead = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.from("leads").insert({ ...form, assigned_to: user?.id }).select().single();
+      const { data, error } = await supabase.from("leads").insert({ ...form, status: "request", assigned_to: user?.id }).select().single();
       if (error) throw error;
+
+      // Auto-create organization + contact
+      const { data: newClient } = await supabase.from("clients").insert({
+        company_name: form.company_name,
+        contact_name: form.contact_name || null,
+        email: form.email || null,
+        phone: form.phone || null,
+        zone: form.zone || null,
+        status: "lead",
+      }).select().single();
+
+      if (newClient && form.contact_name) {
+        await supabase.from("client_contacts").insert({
+          client_id: newClient.id,
+          contact_name: form.contact_name,
+          email: form.email || null,
+          phone: form.phone || null,
+          is_primary: true,
+        });
+      }
+
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
-      toast({ title: "Lead added" });
+      queryClient.invalidateQueries({ queryKey: ["crm-organizations"] });
+      toast({ title: "Lead + Organization added" });
       setOpen(false);
       setForm({ company_name: "", contact_name: "", email: "", phone: "", zone: "", source: "" });
       checkAndRunAutomations("lead_created", { lead_id: data.id, client_name: data.company_name });
     },
   });
 
-  // Convert lead to organization (client)
+  const updateLeadStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from("leads").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
+    },
+  });
+
   const convertToOrg = useMutation({
     mutationFn: async (lead: any) => {
-      // Create client from lead data
       const { data: newClient, error: clientErr } = await supabase.from("clients").insert({
         company_name: lead.company_name,
         contact_name: lead.contact_name,
@@ -74,7 +125,6 @@ const CRMLeads = () => {
       }).select().single();
       if (clientErr) throw clientErr;
 
-      // Create primary contact if there's a contact name
       if (lead.contact_name) {
         await supabase.from("client_contacts").insert({
           client_id: newClient.id,
@@ -85,16 +135,13 @@ const CRMLeads = () => {
         });
       }
 
-      // Move activities from lead to client
       await supabase.from("activities").update({ client_id: newClient.id }).eq("lead_id", lead.id);
-
-      // Update lead status
-      await supabase.from("leads").update({ status: "won" }).eq("id", lead.id);
-
+      await supabase.from("leads").update({ status: "first_order" }).eq("id", lead.id);
       return newClient;
     },
     onSuccess: (newClient) => {
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-organizations"] });
       toast({ title: "Lead convertito in organizzazione", description: newClient.company_name });
     },
     onError: (e: any) => toast({ title: "Errore", description: e.message, variant: "destructive" }),
@@ -123,15 +170,15 @@ const CRMLeads = () => {
 
   const zones = [...new Set(leads?.map(l => l.zone).filter(Boolean) || [])].sort();
 
-  const filtered = leads?.filter(l => {
+  const filtered = useMemo(() => leads?.filter(l => {
     if (search) {
       const s = search.toLowerCase();
-      if (!l.company_name?.toLowerCase().includes(s) && !l.contact_name?.toLowerCase().includes(s) && !l.zone?.toLowerCase().includes(s)) return false;
+      if (!l.company_name?.toLowerCase().includes(s) && !l.contact_name?.toLowerCase().includes(s) && !l.zone?.toLowerCase().includes(s) && !l.email?.toLowerCase().includes(s)) return false;
     }
     if (filterStatus !== "all" && l.status !== filterStatus) return false;
     if (filterZone !== "all" && l.zone !== filterZone) return false;
     return true;
-  });
+  }), [leads, search, filterStatus, filterZone]);
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {
@@ -146,12 +193,40 @@ const CRMLeads = () => {
     else setSelected(new Set(filtered?.map(l => l.id) || []));
   };
 
+  // Kanban drag-drop
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const newStatus = result.destination.droppableId;
+    const leadId = result.draggableId;
+    updateLeadStatus.mutate({ id: leadId, status: newStatus });
+  };
+
+  const kanbanLeads = useMemo(() => {
+    const grouped: Record<string, any[]> = {};
+    LEAD_STAGES.forEach(s => { grouped[s.value] = []; });
+    filtered?.forEach(l => {
+      const status = l.status || "request";
+      if (grouped[status]) grouped[status].push(l);
+      else {
+        // Map legacy statuses
+        if (status === "new") grouped["request"]?.push(l);
+        else if (status === "contacted") grouped["contact"]?.push(l);
+        else if (status === "qualified" || status === "proposal") grouped["qualification"]?.push(l);
+        else if (status === "won") grouped["first_order"]?.push(l);
+        else grouped["request"]?.push(l);
+      }
+    });
+    return grouped;
+  }, [filtered]);
+
+  const allStatuses = [...LEAD_STAGES.map(s => s.value), "new", "contacted", "qualified", "proposal", "won"];
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">Leads</h1>
-          <p className="text-sm text-muted-foreground">Pre-qualification contacts — convert to Organizations when qualified</p>
+          <p className="text-sm text-muted-foreground">Pre-qualification contacts — manage your sales pipeline</p>
         </div>
         <div className="flex items-center gap-2">
           {selected.size > 0 && (
@@ -161,6 +236,14 @@ const CRMLeads = () => {
               <Trash2 size={14} /> Elimina ({selected.size})
             </Button>
           )}
+          <div className="flex items-center border border-border rounded-lg overflow-hidden">
+            <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" className="rounded-none gap-1 h-8" onClick={() => setViewMode("list")}>
+              <LayoutList size={14} /> Lista
+            </Button>
+            <Button variant={viewMode === "kanban" ? "default" : "ghost"} size="sm" className="rounded-none gap-1 h-8" onClick={() => setViewMode("kanban")}>
+              <Columns3 size={14} /> Kanban
+            </Button>
+          </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">
@@ -212,13 +295,13 @@ const CRMLeads = () => {
           <Input placeholder="Search leads..." className="pl-9 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-36 bg-secondary border-border rounded-lg">
+          <SelectTrigger className="w-40 bg-secondary border-border rounded-lg">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            {["new", "contacted", "qualified", "proposal", "won", "lost"].map(s => (
-              <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+            {LEAD_STAGES.map(s => (
+              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -243,7 +326,8 @@ const CRMLeads = () => {
           <Users className="mx-auto text-muted-foreground mb-4" size={48} />
           <p className="text-muted-foreground">No leads found.</p>
         </div>
-      ) : (
+      ) : viewMode === "list" ? (
+        /* ────── LIST VIEW ────── */
         <div className="glass-card-solid overflow-hidden">
           <Table>
             <TableHeader>
@@ -270,11 +354,11 @@ const CRMLeads = () => {
                   <TableCell onClick={() => setDetailLead(l)} className="text-muted-foreground">{l.zone}</TableCell>
                   <TableCell onClick={() => setDetailLead(l)} className="text-muted-foreground">{l.source}</TableCell>
                   <TableCell onClick={() => setDetailLead(l)}>
-                    <Badge variant="outline" className={statusColors[l.status || "new"]}>{l.status}</Badge>
+                    <Badge variant="outline" className={ALL_STATUS_COLORS[l.status || "request"] || ""}>{LEAD_STAGES.find(s => s.value === l.status)?.label || l.status}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
-                      {l.status !== "won" && l.status !== "lost" && (
+                      {l.status !== "first_order" && l.status !== "lost" && l.status !== "won" && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-success" onClick={() => {
                           if (confirm(`Convertire "${l.company_name}" in organizzazione?`)) convertToOrg.mutate(l);
                         }} title="Convert to Organization">
@@ -308,6 +392,75 @@ const CRMLeads = () => {
             </TableBody>
           </Table>
         </div>
+      ) : (
+        /* ────── KANBAN VIEW ────── */
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: "60vh" }}>
+            {LEAD_STAGES.map(stage => (
+              <Droppable key={stage.value} droppableId={stage.value}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`min-w-[260px] w-[260px] flex-shrink-0 rounded-xl border border-border p-3 transition-colors ${snapshot.isDraggingOver ? "bg-primary/5 border-primary/30" : "bg-secondary/30"}`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xs font-heading font-bold uppercase tracking-wider text-muted-foreground">{stage.label}</h3>
+                      <Badge variant="outline" className="text-[10px] h-5 px-1.5">{kanbanLeads[stage.value]?.length || 0}</Badge>
+                    </div>
+                    <ScrollArea className="h-[calc(60vh-60px)]">
+                      <div className="space-y-2 pr-2">
+                        {kanbanLeads[stage.value]?.map((lead, index) => (
+                          <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                onClick={() => setDetailLead(lead)}
+                                className={`glass-card-solid p-3 rounded-lg cursor-pointer hover:border-primary/30 transition-all ${snapshot.isDragging ? "shadow-lg border-primary/50" : ""}`}
+                              >
+                                <p className="font-heading font-semibold text-sm text-foreground truncate">{lead.company_name}</p>
+                                {lead.contact_name && <p className="text-xs text-muted-foreground truncate">{lead.contact_name}</p>}
+                                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                  {lead.zone && <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">{lead.zone}</span>}
+                                  {lead.source && <span className="text-[10px] text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded">{lead.source}</span>}
+                                  {lead.updated_at && (
+                                    <span className="text-[10px] text-muted-foreground ml-auto">
+                                      {differenceInDays(new Date(), new Date(lead.updated_at))}d
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 mt-2" onClick={e => e.stopPropagation()}>
+                                  {lead.email && (
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-warning" onClick={() => window.open(`mailto:${lead.email}?subject=${encodeURIComponent("Easysea — Follow-up")}`)}>
+                                      <Mail size={12} />
+                                    </Button>
+                                  )}
+                                  {lead.phone && (
+                                    <>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => window.open(`tel:${lead.phone}`)}>
+                                        <Phone size={12} />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-success" onClick={() => openWhatsApp(lead.phone!, lead.contact_name || lead.company_name)}>
+                                        <MessageCircle size={12} />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
+              </Droppable>
+            ))}
+          </div>
+        </DragDropContext>
       )}
 
       <LeadDetailPanel
