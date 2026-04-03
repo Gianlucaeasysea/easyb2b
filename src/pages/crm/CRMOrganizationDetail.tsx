@@ -14,8 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   ArrowLeft, Building2, Mail, Phone, Globe, MapPin, ShoppingBag,
   MessageCircle, Send, Clock, TrendingUp, Users, FileText, CalendarDays, BarChart3,
-  Plus, Crown, Star, Pencil, Trash2, Check, X, StickyNote, Upload, Handshake, CheckSquare, Tag
+  Plus, Crown, Star, Pencil, Trash2, Check, X, StickyNote, Upload, Handshake, CheckSquare, Tag, Eye
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { isPast } from "date-fns";
 import { format, differenceInDays, isValid } from "date-fns";
 import { it } from "date-fns/locale";
@@ -761,6 +762,43 @@ const CRMOrganizationDetail = () => {
                   </SelectContent>
                 </Select>
                 <span className="text-xs text-muted-foreground">Attuale: {client.discount_class || "D"}</span>
+              </div>
+            </div>
+
+            {/* Dealer Portal Visibility */}
+            <div className="glass-card-solid p-5">
+              <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
+                <Eye size={14} /> Visibilità Portale Dealer
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Classi di Sconto</p>
+                    <p className="text-xs text-muted-foreground">Mostra le classi di sconto al dealer</p>
+                  </div>
+                  <Switch
+                    checked={client.show_discount_tiers ?? true}
+                    onCheckedChange={async (checked) => {
+                      const { error } = await supabase.from("clients").update({ show_discount_tiers: checked } as any).eq("id", id!);
+                      if (error) toast.error(error.message);
+                      else { toast.success("Aggiornato"); queryClient.invalidateQueries({ queryKey: ["crm-org", id] }); }
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Goals & Rewards</p>
+                    <p className="text-xs text-muted-foreground">Mostra la pagina Goals & Rewards al dealer</p>
+                  </div>
+                  <Switch
+                    checked={client.show_goals ?? true}
+                    onCheckedChange={async (checked) => {
+                      const { error } = await supabase.from("clients").update({ show_goals: checked } as any).eq("id", id!);
+                      if (error) toast.error(error.message);
+                      else { toast.success("Aggiornato"); queryClient.invalidateQueries({ queryKey: ["crm-org", id] }); }
+                    }}
+                  />
+                </div>
               </div>
             </div>
 
