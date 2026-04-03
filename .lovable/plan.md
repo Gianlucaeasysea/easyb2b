@@ -1,76 +1,107 @@
 
 
-## Plan: Client-Side Notifications & Document Improvements
+# Piano di implementazione — Multi-fix e miglioramenti
 
-### What we're building
+Questo piano copre 10 interventi distinti organizzati in 4 aree.
 
-1. **Notifications page for dealers** (`/portal/notifications`) — a dedicated section where dealers see all notifications (new documents uploaded, order status changes, etc.)
-2. **Database table `client_notifications`** to store notifications per client
-3. **Auto-generate notification when a document is uploaded** (in the existing `OrderDocuments` upload flow)
-4. **Notification bell with unread count** in the portal header
-5. **Clean documents section** already exists in `DealerOrders.tsx` — minor polish
+---
 
-### Technical Details
+## AREA 1: Form "Become a Dealer"
 
-**Step 1 — Create `client_notifications` table (migration)**
+### 1.1 Aggiungere campo Country (paese) oltre a Region (continente)
+- Aggiungere al form state un campo `country` (testo libero o input)
+- Inserire un campo Input "Country" sotto il Select "Region" nel grid
+- Salvare il valore nel campo `country` della tabella `distributor_requests` (la colonna NON esiste: servira una migrazione per aggiungere `country TEXT` alla tabella)
 
-```sql
-CREATE TABLE public.client_notifications (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id uuid NOT NULL,
-  title text NOT NULL,
-  body text,
-  type text NOT NULL DEFAULT 'info',
-  read boolean NOT NULL DEFAULT false,
-  order_id uuid,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+### 1.2 Campo VAT ID (opzionale)
+- Aggiungere `vat_number` al form state
+- Aggiungere campo Input "VAT ID (optional)" nel form
+- Migrazione: aggiungere colonna `vat_number TEXT` a `distributor_requests`
 
-ALTER TABLE public.client_notifications ENABLE ROW LEVEL SECURITY;
+### 1.3 Fix campo Website — non forzare https
+- Cambiare `type="url"` a `type="text"` nell'input website
+- Nella submit, normalizzare: se il valore non inizia con `http://` o `https://`, prepend `https://`
 
-CREATE POLICY "Dealers view own notifications"
-  ON public.client_notifications FOR SELECT TO authenticated
-  USING (client_id IN (SELECT id FROM clients WHERE user_id = auth.uid()));
+### 1.4 Email automatiche su invio form
+- Creare edge function `send-dealer-request-notification` che:
+  - Invia email di conferma al cliente (es. "Abbiamo ricevuto la tua candidatura")
+  - Invia notifica a sales (`business@easysea.org`) con CC a `g.scotto@easysea.org`
+- Chiamare la funzione dopo l'insert nella submit del form `BecomeADealer.tsx`
 
-CREATE POLICY "Dealers update own notifications"
-  ON public.client_notifications FOR UPDATE TO authenticated
-  USING (client_id IN (SELECT id FROM clients WHERE user_id = auth.uid()));
+---
 
-CREATE POLICY "Admins manage notifications"
-  ON public.client_notifications FOR ALL TO authenticated
-  USING (has_role(auth.uid(), 'admin'::app_role));
-```
+## AREA 2: Sezione Sales / CRM
 
-**Step 2 — Auto-create notification on document upload**
+### 2.1 Approvazione richiesta dealer → crea Organization + Contact automaticamente
+- In `CRMRequests.tsx` (e `AdminRequests.tsx`), quando si clicca "Convert to Lead" / "Pipeline":
+  - Creare anche un record in `clients` (organization) con status "lead"
+  - Creare un record in `client_contacts` come contatto primario
+  - Linkare il lead al `client_id` dell'organizzazione appena creata
+  - Includere `country` e `vat_number` dai nuovi campi
 
-In `OrderDocuments.tsx`, after successful upload + event logging, insert a row into `client_notifications` with the order's `client_id`, title like "Nuovo documento disponibile: Fattura", and link to the order.
+### 2.2 Creazione lead manuale → auto-crea Organization
+- In `CRMLeads.tsx`, quando si aggiunge un lead (`addLead`), dopo l'insert:
+  - Creare automaticamente un'organizzazione (`clients`) con status "lead"
+  - Creare contatto primario (`client_contacts`)
+  - Aggiornare il lead con il `client_id` risultante
+- Aggiungere pulsante "Add Organization" nella pagina Organizations per creazione manuale diretta
 
-Also update `send-order-notification` edge function to insert a notification row when `type = 'documents_uploaded'`.
+### 2.3 Leads — Doppia vista (Lista + Kanban) con fasi personalizzate
+- Aggiungere toggle List/Kanban nella pagina Leads
+- Nuovi status lead: `request`, `contact`, `qualification`, `onboarding`, `first_order`, `lost`, `nurturing`
+- Vista Kanban con colonne drag-and-drop per ogni fase (usando `@hello-pangea/dnd` gia presente)
+- Ogni card mostra: azienda, contatto, email, telefono, tempo nello stage
+- Azioni rapide (email, call, WhatsApp) disponibili da entrambe le viste
 
-**Step 3 — Create `DealerNotifications.tsx` page**
+### 2.4 Assegnare listino e classi sconto dal CRM
+- Nel dettaglio Organizzazione (`CRMOrganizationDetail.tsx`), aggiungere tab/sezione per:
+  - Assegnare/rimuovere listini prezzi (usando `price_list_clients`)
+  - Cambiare classe sconto del client (`discount_class` su `clients`)
 
-- Query `client_notifications` ordered by `created_at desc`
-- Group by date, show type icon, title, body, timestamp
-- "Mark all as read" button
-- Click on notification navigates to relevant order
+---
 
-**Step 4 — Add notification bell to portal header**
+## AREA 3: Sezione Admin
 
-In `PortalLayout.tsx` header, add a Bell icon with unread count badge. Uses realtime subscription on `client_notifications` for live updates.
+### 3.1 Assegnare listino dal profilo cliente / dealer request
+- In `AdminClientDetail.tsx`, aggiungere sezione per gestire listini assegnati
+- In `AdminRequests.tsx`, nel flusso di conversione, opzione per assegnare listino
 
-**Step 5 — Add route and sidebar entry**
+### 3.2 Duplicare un listino
+- In `AdminPriceLists.tsx`, aggiungere pulsante "Duplica" sul listino selezionato
+- Copia nome (+ " (copia)"), descrizione, e tutti i `price_list_items` associati
 
-- Register `/portal/notifications` route in `App.tsx`
-- Add "Notifications" item with Bell icon to `DealerSidebar.tsx`
+### 3.3 Nuovi ordini — aggiornamento dinamico real-time
+- Il hook `useNewOrderNotifications` gia ascolta INSERT su `orders`, ma la query `admin-new-orders` non si invalida
+- Aggiungere `queryClient.invalidateQueries({ queryKey: ["admin-new-orders"] })` nel callback del realtime listener
+- Abilitare realtime sulla tabella orders: `ALTER PUBLICATION supabase_realtime ADD TABLE public.orders`
 
-### Files to create/edit
+### 3.4 Email credenziali al dealer alla creazione account
+- Modificare l'edge function `create-dealer-account` per inviare email al dealer con le credenziali (email + password + link portale) dopo la creazione dell'account
+- Utilizzare il sistema di email transazionali gia configurato
 
-| File | Action |
-|------|--------|
-| Migration SQL | Create `client_notifications` table |
-| `src/pages/portal/DealerNotifications.tsx` | Create — notifications page |
-| `src/components/OrderDocuments.tsx` | Edit — insert notification on upload |
-| `src/layouts/PortalLayout.tsx` | Edit — add bell icon with unread count |
-| `src/components/portal/DealerSidebar.tsx` | Edit — add Notifications link |
-| `src/App.tsx` | Edit — add route |
+---
+
+## Dettagli tecnici
+
+### Migrazioni DB necessarie
+1. `ALTER TABLE distributor_requests ADD COLUMN country TEXT, ADD COLUMN vat_number TEXT;`
+2. `ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;`
+3. Update lead statuses: i nuovi status (`request`, `contact`, `qualification`, `onboarding`, `first_order`, `nurturing`) verranno gestiti lato applicativo senza check constraint
+
+### File principali da modificare
+- `src/pages/BecomeADealer.tsx` — form fields + submit logic
+- `src/pages/crm/CRMRequests.tsx` + `src/pages/admin/AdminRequests.tsx` — auto-create org+contact
+- `src/pages/crm/CRMLeads.tsx` — dual view, new stages, auto-create org
+- `src/pages/crm/CRMOrganizations.tsx` — manual add organization button
+- `src/pages/crm/CRMOrganizationDetail.tsx` — price list assignment
+- `src/pages/admin/AdminClientDetail.tsx` — price list assignment
+- `src/pages/admin/AdminPriceLists.tsx` — duplicate list button
+- `src/pages/admin/AdminNewOrders.tsx` — realtime query invalidation
+- `src/hooks/useNewOrderNotifications.ts` — invalidate admin-new-orders query
+- `supabase/functions/create-dealer-account/index.ts` — send credentials email
+- Nuova edge function: `supabase/functions/send-dealer-request-notification/index.ts`
+
+### Edge Functions
+- **send-dealer-request-notification**: conferma cliente + notifica sales con CC giuseppe
+- **create-dealer-account**: aggiungere invio email con credenziali dopo creazione
 
