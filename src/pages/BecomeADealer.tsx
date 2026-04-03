@@ -19,28 +19,61 @@ const BecomeADealer = () => {
   const { toast } = useToast();
   const [form, setForm] = useState({
     companyName: "", contactName: "", email: "", phone: "",
-    zone: "", businessType: "", website: "", message: "", privacy: false,
+    zone: "", country: "", businessType: "", website: "", message: "", privacy: false, vatNumber: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.from("distributor_requests").insert({
+
+    // Normalize website
+    let website = form.website.trim();
+    if (website && !website.startsWith("http://") && !website.startsWith("https://")) {
+      website = `https://${website}`;
+    }
+
+    const { data, error } = await supabase.from("distributor_requests").insert({
       company_name: form.companyName,
       contact_name: form.contactName,
       email: form.email,
       phone: form.phone,
       zone: form.zone,
+      country: (form as any).country || null,
       business_type: form.businessType,
-      website: form.website || null,
+      website: website || null,
       message: form.message || null,
-    });
-    setLoading(false);
+      vat_number: (form as any).vatNumber || null,
+    } as any).select().single();
+
     if (error) {
+      setLoading(false);
       toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      setSubmitted(true);
+      return;
     }
+
+    // Send notification emails
+    try {
+      await supabase.functions.invoke("send-dealer-request-notification", {
+        body: {
+          requestId: data.id,
+          companyName: form.companyName,
+          contactName: form.contactName,
+          email: form.email,
+          phone: form.phone,
+          zone: form.zone,
+          country: form.country,
+          businessType: form.businessType,
+          website: website || null,
+          message: form.message || null,
+          vatNumber: form.vatNumber || null,
+        },
+      });
+    } catch (emailErr) {
+      console.error("Notification email failed:", emailErr);
+    }
+
+    setLoading(false);
+    setSubmitted(true);
   };
 
   if (submitted) {
@@ -115,6 +148,13 @@ const BecomeADealer = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Country *</Label>
+                  <Input required className="rounded-lg bg-secondary border-border" placeholder="e.g. Italy" value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Business Type *</Label>
                   <Select required onValueChange={v => setForm(f => ({ ...f, businessType: v }))}>
                     <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Select..." /></SelectTrigger>
@@ -128,11 +168,15 @@ const BecomeADealer = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">VAT ID (optional)</Label>
+                  <Input className="rounded-lg bg-secondary border-border" placeholder="e.g. IT12345678901" value={form.vatNumber} onChange={e => setForm(f => ({ ...f, vatNumber: e.target.value }))} />
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Website</Label>
-                <Input type="url" className="rounded-lg bg-secondary border-border" placeholder="https://" value={form.website} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} />
+                <Input type="text" className="rounded-lg bg-secondary border-border" placeholder="www.example.com" value={form.website} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} />
               </div>
 
               <div className="space-y-2">
@@ -147,8 +191,8 @@ const BecomeADealer = () => {
                 </Label>
               </div>
 
-              <Button type="submit" size="lg" className="w-full rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6">
-                Submit Application
+              <Button type="submit" size="lg" disabled={loading} className="w-full rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6">
+                {loading ? "Submitting..." : "Submit Application"}
               </Button>
             </form>
           </motion.div>

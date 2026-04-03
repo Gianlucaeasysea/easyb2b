@@ -62,6 +62,14 @@ Deno.serve(async (req) => {
     }, { onConflict: "user_id" });
     if (profErr) console.warn("Profile creation warning:", profErr.message);
 
+    // Send credentials email to the dealer
+    try {
+      const portalUrl = "https://easyb2b.lovable.app/login";
+      await sendCredentialsEmail(supabaseAdmin, email, password, portalUrl);
+    } catch (emailErr) {
+      console.error("Failed to send credentials email:", emailErr);
+    }
+
     return new Response(JSON.stringify({ success: true, user_id: userId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -72,3 +80,67 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+async function sendCredentialsEmail(supabaseAdmin: any, email: string, password: string, portalUrl: string) {
+  // Try to use Gmail API via stored tokens
+  const { data: tokenData } = await supabaseAdmin.from("gmail_tokens").select("*").limit(1).single();
+  if (!tokenData) {
+    console.warn("No Gmail tokens found, credentials email not sent");
+    return;
+  }
+
+  let accessToken = tokenData.access_token;
+  if (new Date(tokenData.expires_at) < new Date()) {
+    const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: tokenData.refresh_token,
+        client_id: Deno.env.get("GOOGLE_CLIENT_ID") || "",
+        client_secret: Deno.env.get("CLIENT_SECRET") || "",
+      }),
+    });
+    const refreshData = await refreshRes.json();
+    if (refreshData.access_token) {
+      accessToken = refreshData.access_token;
+      await supabaseAdmin.from("gmail_tokens").update({
+        access_token: accessToken,
+        expires_at: new Date(Date.now() + (refreshData.expires_in || 3600) * 1000).toISOString(),
+      }).eq("id", tokenData.id);
+    }
+  }
+
+  const subject = "EasySea — Your Dealer Portal Credentials";
+  const body = `Welcome to the EasySea Dealer Portal!
+
+Your account has been created. Here are your login credentials:
+
+Email: ${email}
+Password: ${password}
+
+Login here: ${portalUrl}
+
+Please change your password after your first login.
+
+Best regards,
+The EasySea Team`;
+
+  const rawMessage = `From: EasySea <business@easysea.org>\r\nTo: ${email}\r\nBcc: g.scotto@easysea.org\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
+  const encoded = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ raw: encoded }),
+  });
+
+  if (!gmailRes.ok) {
+    const errText = await gmailRes.text();
+    console.error("Gmail API error sending credentials:", errText);
+    throw new Error(`Gmail API error: ${gmailRes.status}`);
+  }
+}
