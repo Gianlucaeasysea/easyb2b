@@ -41,6 +41,18 @@ const DealerGoals = () => {
     enabled: !!client,
   });
 
+  const showTiers = (client as any)?.show_discount_tiers ?? true;
+  const showGoals = (client as any)?.show_goals ?? true;
+
+  if (!showGoals) {
+    return (
+      <div className="text-center py-20">
+        <Lock size={48} className="mx-auto text-muted-foreground mb-4 opacity-30" />
+        <p className="text-muted-foreground">This section is not available for your account.</p>
+      </div>
+    );
+  }
+
   const totalSpent = orders?.reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
   const currentTier = tiers.find(t => t.name === (client?.discount_class || "standard")) || tiers[0];
   const currentTierIndex = tiers.indexOf(currentTier);
@@ -83,32 +95,36 @@ const DealerGoals = () => {
         )}
       </div>
 
-      {/* Tier Roadmap */}
-      <h2 className="font-heading text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Tier Roadmap</h2>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-        {tiers.map((tier, i) => {
-          const isCurrentOrPast = i <= currentTierIndex;
-          return (
-            <div key={tier.name} className={`glass-card-solid p-4 ${i === currentTierIndex ? "border border-primary/40" : ""}`}>
-              <div className="flex items-center gap-2 mb-2">
-                {isCurrentOrPast ? (
-                  <Star size={16} className={tier.color} fill={i === currentTierIndex ? "currentColor" : "none"} />
-                ) : (
-                  <Lock size={16} className="text-muted-foreground" />
-                )}
-                <span className={`font-heading font-bold text-sm ${isCurrentOrPast ? "text-foreground" : "text-muted-foreground"}`}>
-                  Class {tier.name}
-                </span>
-              </div>
-              <p className={`text-xs ${isCurrentOrPast ? "text-foreground" : "text-muted-foreground"}`}>{tier.label}</p>
-              <p className={`text-lg font-heading font-bold mt-1 ${isCurrentOrPast ? "text-success" : "text-muted-foreground"}`}>-{tier.discount}%</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {tier.minSpend === 0 ? "Starting tier" : `€${tier.minSpend.toLocaleString()} spent`}
-              </p>
-            </div>
-          );
-        })}
-      </div>
+      {/* Tier Roadmap - only if showTiers */}
+      {showTiers && (
+        <>
+          <h2 className="font-heading text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Tier Roadmap</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+            {tiers.map((tier, i) => {
+              const isCurrentOrPast = i <= currentTierIndex;
+              return (
+                <div key={tier.name} className={`glass-card-solid p-4 ${i === currentTierIndex ? "border border-primary/40" : ""}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {isCurrentOrPast ? (
+                      <Star size={16} className={tier.color} fill={i === currentTierIndex ? "currentColor" : "none"} />
+                    ) : (
+                      <Lock size={16} className="text-muted-foreground" />
+                    )}
+                    <span className={`font-heading font-bold text-sm ${isCurrentOrPast ? "text-foreground" : "text-muted-foreground"}`}>
+                      Class {tier.name}
+                    </span>
+                  </div>
+                  <p className={`text-xs ${isCurrentOrPast ? "text-foreground" : "text-muted-foreground"}`}>{tier.label}</p>
+                  <p className={`text-lg font-heading font-bold mt-1 ${isCurrentOrPast ? "text-success" : "text-muted-foreground"}`}>-{tier.discount}%</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {tier.minSpend === 0 ? "Starting tier" : `€${tier.minSpend.toLocaleString()} spent`}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Achievements */}
       <h2 className="font-heading text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
