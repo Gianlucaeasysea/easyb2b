@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Star, Play } from "lucide-react";
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -75,7 +75,21 @@ const textTestimonials = [
   { name: "James Whitfield", company: "SailTech UK, United Kingdom", quote: "250+ 5-star reviews speak for themselves. Easysea delivers quality and innovation like no other brand.", stars: 5 },
 ];
 
+const testimonialCardVariants = {
+  hidden: { opacity: 0, y: 40, scale: 0.95 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { delay: i * 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
+  }),
+};
+
 const TestimonialsSection = () => {
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start end", "end start"] });
+  const parallaxY = useTransform(scrollYProgress, [0, 1], [40, -40]);
+
   const { data: videos } = useQuery({
     queryKey: ["landing-testimonials"],
     queryFn: async () => {
@@ -89,20 +103,26 @@ const TestimonialsSection = () => {
   });
 
   return (
-    <section id="partners" className="py-32 bg-background">
+    <section ref={sectionRef} id="partners" className="py-32 bg-background overflow-hidden">
       <div className="container mx-auto px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-20"
-        >
-          <p className="text-[11px] uppercase tracking-[0.4em] text-primary font-heading font-bold mb-5">
+        <motion.div style={{ y: parallaxY }} className="text-center mb-20">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-[11px] uppercase tracking-[0.4em] text-primary font-heading font-bold mb-5"
+          >
             Trusted worldwide
-          </p>
-          <h2 className="font-heading text-3xl md:text-5xl lg:text-6xl font-black text-foreground">
+          </motion.p>
+          <motion.h2
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1, duration: 0.8 }}
+            className="font-heading text-3xl md:text-5xl lg:text-6xl font-black text-foreground"
+          >
             What our <span className="text-gradient-blue">dealers say</span>
-          </h2>
+          </motion.h2>
         </motion.div>
 
         {/* Video Testimonials */}
@@ -111,6 +131,7 @@ const TestimonialsSection = () => {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
             className="mb-16 flex flex-wrap items-center justify-center gap-6"
           >
             {videos.map((v) => (
@@ -124,15 +145,25 @@ const TestimonialsSection = () => {
           {textTestimonials.map((t, i) => (
             <motion.div
               key={t.name}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.12 }}
+              custom={i}
+              variants={testimonialCardVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-40px" }}
+              whileHover={{ y: -6, transition: { duration: 0.3 } }}
               className="glass-card-solid p-8 hover:border-primary/20 transition-all duration-300"
             >
               <div className="flex gap-0.5 mb-5">
                 {Array.from({ length: t.stars }).map((_, j) => (
-                  <Star key={j} size={13} className="fill-warning text-warning" />
+                  <motion.div
+                    key={j}
+                    initial={{ opacity: 0, scale: 0 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.15 + j * 0.05, type: "spring", stiffness: 400 }}
+                  >
+                    <Star size={13} className="fill-warning text-warning" />
+                  </motion.div>
                 ))}
               </div>
               <p className="text-foreground/80 text-sm italic mb-7 leading-relaxed">"{t.quote}"</p>

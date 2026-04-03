@@ -6,9 +6,10 @@ import HowItWorksSection from "@/components/landing/ComeFunzionaSection";
 import TestimonialsSection from "@/components/landing/TestimonianzeSection";
 import CTASection from "@/components/landing/CTASection";
 import Footer from "@/components/landing/Footer";
+import PageTransition from "@/components/PageTransition";
 
 const Index = () => (
-  <>
+  <PageTransition>
     <Navbar />
     <HeroSection />
     <AboutSection />
@@ -17,7 +18,7 @@ const Index = () => (
     <TestimonialsSection />
     <CTASection />
     <Footer />
-  </>
+  </PageTransition>
 );
 
 export default Index;
