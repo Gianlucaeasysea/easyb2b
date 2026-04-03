@@ -381,6 +381,7 @@ const CRMOrganizationDetail = () => {
           <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Comunicazioni</TabsTrigger>
           <TabsTrigger value="activities" className="gap-1 text-xs"><Clock size={14} /> Attività</TabsTrigger>
           <TabsTrigger value="documents" className="gap-1 text-xs"><FileText size={14} /> Documenti ({documents?.length || 0})</TabsTrigger>
+          <TabsTrigger value="pricing" className="gap-1 text-xs"><Tag size={14} /> Listini & Sconti</TabsTrigger>
           <TabsTrigger value="notes" className="gap-1 text-xs"><StickyNote size={14} /> Note</TabsTrigger>
         </TabsList>
 
