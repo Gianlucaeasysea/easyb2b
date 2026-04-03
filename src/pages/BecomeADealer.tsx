@@ -13,6 +13,42 @@ import { ArrowLeft, CheckCircle } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 
+const regionCountries: Record<string, string[]> = {
+  europe: [
+    "Albania", "Andorra", "Austria", "Belgium", "Bosnia and Herzegovina", "Bulgaria",
+    "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia", "Finland", "France",
+    "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Kosovo", "Latvia",
+    "Lithuania", "Luxembourg", "Malta", "Moldova", "Monaco", "Montenegro",
+    "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal", "Romania",
+    "San Marino", "Serbia", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland",
+    "Turkey", "Ukraine", "United Kingdom",
+  ],
+  "north-america": [
+    "Canada", "Mexico", "United States", "Bahamas", "Barbados", "Belize",
+    "Costa Rica", "Cuba", "Dominican Republic", "El Salvador", "Guatemala",
+    "Haiti", "Honduras", "Jamaica", "Nicaragua", "Panama", "Trinidad and Tobago",
+  ],
+  "south-america": [
+    "Argentina", "Bolivia", "Brazil", "Chile", "Colombia", "Ecuador",
+    "Guyana", "Paraguay", "Peru", "Suriname", "Uruguay", "Venezuela",
+  ],
+  "asia-pacific": [
+    "Bangladesh", "Cambodia", "China", "Hong Kong", "India", "Indonesia", "Japan",
+    "Laos", "Malaysia", "Mongolia", "Myanmar", "Nepal", "North Korea", "Pakistan",
+    "Philippines", "Singapore", "South Korea", "Sri Lanka", "Taiwan", "Thailand",
+    "Vietnam",
+  ],
+  "middle-east-africa": [
+    "Algeria", "Bahrain", "Egypt", "Ethiopia", "Ghana", "Iran", "Iraq", "Israel",
+    "Jordan", "Kenya", "Kuwait", "Lebanon", "Libya", "Morocco", "Nigeria", "Oman",
+    "Qatar", "Saudi Arabia", "Senegal", "South Africa", "Sudan", "Syria",
+    "Tanzania", "Tunisia", "Uganda", "United Arab Emirates", "Yemen",
+  ],
+  oceania: [
+    "Australia", "Fiji", "New Zealand", "Papua New Guinea", "Samoa", "Tonga", "Vanuatu",
+  ],
+};
+
 const BecomeADealer = () => {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -135,8 +171,8 @@ const BecomeADealer = () => {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Region *</Label>
-                  <Select required onValueChange={v => setForm(f => ({ ...f, zone: v }))}>
-                    <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <Select required value={form.zone || undefined} onValueChange={v => setForm(f => ({ ...f, zone: v, country: "" }))}>
+                    <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Select region..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="europe">Europe</SelectItem>
                       <SelectItem value="north-america">North America</SelectItem>
@@ -149,7 +185,14 @@ const BecomeADealer = () => {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Country *</Label>
-                  <Input required className="rounded-lg bg-secondary border-border" placeholder="e.g. Italy" value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} />
+                  <Select required value={form.country || undefined} onValueChange={v => setForm(f => ({ ...f, country: v }))} disabled={!form.zone}>
+                    <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder={form.zone ? "Select country..." : "Select region first"} /></SelectTrigger>
+                    <SelectContent>
+                      {(regionCountries[form.zone] || []).map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
