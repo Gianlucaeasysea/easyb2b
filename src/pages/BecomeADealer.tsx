@@ -74,11 +74,12 @@ const BecomeADealer = () => {
       email: form.email,
       phone: form.phone,
       zone: form.zone,
-      country: (form as any).country || null,
+      country: form.country || null,
       business_type: form.businessType,
       website: website || null,
       message: form.message || null,
-      vat_number: (form as any).vatNumber || null,
+      vat_number: form.vatNumber || null,
+      marketing_consent: form.marketingConsent,
     } as any).select().single();
 
     if (error) {
