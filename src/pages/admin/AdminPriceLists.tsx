@@ -633,6 +633,9 @@ const AdminPriceLists = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateList(pl)} title="Duplica listino">
+                          <Copy className="h-3 w-3 text-muted-foreground" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(pl)}>
                           <Pencil className="h-3 w-3 text-muted-foreground" />
                         </Button>
