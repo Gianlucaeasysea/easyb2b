@@ -17,6 +17,7 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-p
 import LeadDetailPanel from "@/components/crm/LeadDetailPanel";
 import { differenceInDays } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { deleteLeadsCascade } from "@/lib/crmEntityActions";
 
 const LEAD_STAGES = [
   { value: "request", label: "Request", color: "border-muted-foreground text-muted-foreground", bg: "bg-muted/50" },
@@ -149,17 +150,11 @@ const CRMLeads = () => {
   });
 
   const deleteLeads = useMutation({
-    mutationFn: async (ids: string[]) => {
-      for (const id of ids) {
-        await supabase.from("activities").delete().eq("lead_id", id);
-      }
-      const { error } = await supabase.from("leads").delete().in("id", ids);
-      if (error) throw error;
-    },
-    onSuccess: () => {
+    mutationFn: deleteLeadsCascade,
+    onSuccess: (_result, ids) => {
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       setSelected(new Set());
-      toast({ title: `${selected.size} lead eliminati` });
+      toast({ title: `${ids.length} lead eliminati` });
     },
     onError: (e: any) => toast({ title: "Errore", description: e.message, variant: "destructive" }),
   });
