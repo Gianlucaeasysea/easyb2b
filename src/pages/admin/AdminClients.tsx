@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
 import { differenceInDays } from "date-fns";
+import { deleteClientsCascade } from "@/lib/crmEntityActions";
 
 const AdminClients = () => {
   const navigate = useNavigate();
@@ -123,20 +124,12 @@ const AdminClients = () => {
     const ids = Array.from(selected);
 
     if (bulkAction === "delete") {
-      // Delete order_items, orders, contacts, then clients
-      for (const id of ids) {
-        const { data: orders } = await supabase.from("orders").select("id").eq("client_id", id);
-        if (orders?.length) {
-          const orderIds = orders.map(o => o.id);
-          await supabase.from("order_items").delete().in("order_id", orderIds);
-          await supabase.from("order_documents").delete().in("order_id", orderIds);
-          await supabase.from("orders").delete().eq("client_id", id);
-        }
-        await supabase.from("client_contacts").delete().eq("client_id", id);
-        await supabase.from("activities").delete().eq("client_id", id);
+      try {
+        await deleteClientsCascade(ids);
+      } catch (error: any) {
+        toast.error(error.message);
+        return;
       }
-      const { error } = await supabase.from("clients").delete().in("id", ids);
-      if (error) { toast.error(error.message); return; }
       toast.success(`${ids.length} clienti eliminati`);
     } else if (bulkAction === "status") {
       const { error } = await supabase.from("clients").update({ status: bulkStatus }).in("id", ids);

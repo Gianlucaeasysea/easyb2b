@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { format } from "date-fns";
+import { convertRequestToPipeline } from "@/lib/crmEntityActions";
 
 const AdminRequests = () => {
   const { toast } = useToast();
@@ -37,51 +38,11 @@ const AdminRequests = () => {
   });
 
   const convertToLead = useMutation({
-    mutationFn: async (request: any) => {
-      // 1. Create organization (client)
-      const { data: newClient, error: clientErr } = await supabase.from("clients").insert({
-        company_name: request.company_name,
-        contact_name: request.contact_name,
-        email: request.email,
-        phone: request.phone,
-        zone: request.zone,
-        country: (request as any).country || null,
-        vat_number: (request as any).vat_number || null,
-        business_type: request.business_type || null,
-        website: request.website || null,
-        status: "lead",
-        discount_class: "standard",
-      }).select().single();
-      if (clientErr) throw clientErr;
-
-      // 2. Create primary contact
-      if (request.contact_name) {
-        await supabase.from("client_contacts").insert({
-          client_id: newClient.id,
-          contact_name: request.contact_name,
-          email: request.email,
-          phone: request.phone,
-          is_primary: true,
-        });
-      }
-
-      // 3. Create lead
-      const { error: leadErr } = await supabase.from("leads").insert({
-        company_name: request.company_name,
-        contact_name: request.contact_name,
-        email: request.email,
-        phone: request.phone,
-        zone: request.zone,
-        source: "Dealer Application",
-        status: "new",
-        notes: `[Dealer Request] Business type: ${request.business_type || "—"}\nWebsite: ${request.website || "—"}\nCountry: ${(request as any).country || "—"}\nVAT: ${(request as any).vat_number || "—"}\nMessage: ${request.message || "—"}`,
-        assigned_to: user?.id,
-      });
-      if (leadErr) throw leadErr;
-
-      await supabase.from("distributor_requests").update({ status: "converted" }).eq("id", request.id);
-    },
+    mutationFn: async (request: any) => convertRequestToPipeline(request.id),
     onSuccess: () => {
+      if (selectedRequest?.id) {
+        setSelectedRequest((prev: any) => prev ? { ...prev, status: "converted" } : prev);
+      }
       queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       queryClient.invalidateQueries({ queryKey: ["crm-organizations"] });

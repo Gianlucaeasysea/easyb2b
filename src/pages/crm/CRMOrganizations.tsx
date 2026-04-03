@@ -12,6 +12,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { differenceInDays, format } from "date-fns";
 import * as XLSX from "xlsx";
+import { deleteClientsCascade } from "@/lib/crmEntityActions";
 
 const lifecycleStatuses = ["lead", "qualifying", "onboarding", "active", "at_risk", "churned", "disqualified"];
 
@@ -136,28 +137,7 @@ const CRMOrganizations = () => {
   });
 
   const deleteClients = useMutation({
-    mutationFn: async (ids: string[]) => {
-      for (const id of ids) {
-        const { data: orders } = await supabase.from("orders").select("id").eq("client_id", id);
-        if (orders?.length) {
-          const orderIds = orders.map(o => o.id);
-          await supabase.from("order_items").delete().in("order_id", orderIds);
-          await supabase.from("order_documents").delete().in("order_id", orderIds);
-          await supabase.from("order_events").delete().in("order_id", orderIds);
-          await supabase.from("orders").delete().eq("client_id", id);
-        }
-        await supabase.from("client_contacts").delete().eq("client_id", id);
-        await supabase.from("client_communications").delete().eq("client_id", id);
-        await supabase.from("client_shipping_addresses").delete().eq("client_id", id);
-        await supabase.from("client_documents").delete().eq("client_id", id);
-        await supabase.from("client_notifications").delete().eq("client_id", id);
-        await supabase.from("client_notification_preferences").delete().eq("client_id", id);
-        await supabase.from("activities").delete().eq("client_id", id);
-        await supabase.from("price_list_clients").delete().eq("client_id", id);
-      }
-      const { error } = await supabase.from("clients").delete().in("id", ids);
-      if (error) throw error;
-    },
+    mutationFn: deleteClientsCascade,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-organizations"] });
       queryClient.invalidateQueries({ queryKey: ["admin-clients"] });
