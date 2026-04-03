@@ -92,7 +92,7 @@ const BecomeADealer = () => {
     try {
       await supabase.functions.invoke("send-dealer-request-notification", {
         body: {
-          requestId: data.id,
+          companyName: form.companyName,
           companyName: form.companyName,
           contactName: form.contactName,
           email: form.email,
