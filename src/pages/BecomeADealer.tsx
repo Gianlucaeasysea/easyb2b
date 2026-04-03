@@ -171,8 +171,8 @@ const BecomeADealer = () => {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Region *</Label>
-                  <Select required onValueChange={v => setForm(f => ({ ...f, zone: v }))}>
-                    <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <Select required value={form.zone || undefined} onValueChange={v => setForm(f => ({ ...f, zone: v, country: "" }))}>
+                    <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Select region..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="europe">Europe</SelectItem>
                       <SelectItem value="north-america">North America</SelectItem>
@@ -185,7 +185,14 @@ const BecomeADealer = () => {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Country *</Label>
-                  <Input required className="rounded-lg bg-secondary border-border" placeholder="e.g. Italy" value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} />
+                  <Select required value={form.country || undefined} onValueChange={v => setForm(f => ({ ...f, country: v }))} disabled={!form.zone}>
+                    <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder={form.zone ? "Select country..." : "Select region first"} /></SelectTrigger>
+                    <SelectContent>
+                      {(regionCountries[form.zone] || []).map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
