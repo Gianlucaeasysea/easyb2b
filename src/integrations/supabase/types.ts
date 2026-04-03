@@ -687,6 +687,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          marketing_consent: boolean
           message: string | null
           phone: string
           status: string | null
@@ -702,6 +703,7 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          marketing_consent?: boolean
           message?: string | null
           phone: string
           status?: string | null
@@ -717,6 +719,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          marketing_consent?: boolean
           message?: string | null
           phone?: string
           status?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.distributor_requests ADD COLUMN marketing_consent boolean NOT NULL DEFAULT false;
