@@ -80,19 +80,30 @@ const ClientNotificationPreferences = ({ clientId }: { clientId: string }) => {
       {isLoading ? (
         <p className="text-xs text-muted-foreground">Caricamento...</p>
       ) : (
-        <div className="space-y-3">
-          {NOTIFICATION_TYPES.map(nt => (
-            <div key={nt.key} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-              <div>
-                <p className="text-sm font-semibold text-foreground">{nt.label}</p>
-                <p className="text-xs text-muted-foreground">{nt.description}</p>
+        <div className="space-y-4">
+          {["Account", "Ordini", "Spedizioni", "Marketing"].map(cat => {
+            const items = NOTIFICATION_TYPES.filter(nt => nt.category === cat);
+            if (!items.length) return null;
+            return (
+              <div key={cat}>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">{cat}</p>
+                <div className="space-y-2">
+                  {items.map(nt => (
+                    <div key={nt.key} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{nt.label}</p>
+                        <p className="text-xs text-muted-foreground">{nt.description}</p>
+                      </div>
+                      <Switch
+                        checked={isEnabled(nt.key)}
+                        onCheckedChange={(checked) => togglePref.mutate({ type: nt.key, enabled: checked })}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-              <Switch
-                checked={isEnabled(nt.key)}
-                onCheckedChange={(checked) => togglePref.mutate({ type: nt.key, enabled: checked })}
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
