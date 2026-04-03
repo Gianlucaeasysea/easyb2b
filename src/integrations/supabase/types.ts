@@ -1152,6 +1152,39 @@ export type Database = {
           },
         ]
       }
+      platform_changelog: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          level: string
+          status: string
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          level?: string
+          status?: string
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          level?: string
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
       price_list_clients: {
         Row: {
           client_id: string

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Package, ShoppingBag, FileText, Settings, Upload, Tag, Map, FileImage, PackagePlus, Globe, Zap } from "lucide-react";
+import { LayoutDashboard, Users, Package, ShoppingBag, FileText, Settings, Upload, Tag, Map, FileImage, PackagePlus, Globe, Zap, ClipboardList } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useNewOrderNotifications } from "@/hooks/useNewOrderNotifications";
@@ -20,6 +20,7 @@ const items = [
   { title: "System Map", url: "/admin/system-map", icon: Map },
   { title: "CMS / Pagine", url: "/admin/cms", icon: Globe },
   { title: "Automazioni", url: "/admin/automations", icon: Zap },
+  { title: "Changelog", url: "/admin/changelog", icon: ClipboardList },
   { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
