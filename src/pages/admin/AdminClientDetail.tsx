@@ -20,11 +20,14 @@ import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 
 const NOTIFICATION_TYPES = [
-  { key: "order_received", label: "Ordine Ricevuto", description: "Conferma ricezione ordine" },
-  { key: "order_confirmed", label: "Ordine Confermato", description: "Notifica conferma ordine con documenti" },
-  { key: "order_status_update", label: "Aggiornamento Stato", description: "Cambio stato dell'ordine" },
-  { key: "order_documents_ready", label: "Documenti Pronti", description: "Nuovi documenti caricati (fattura, DDT)" },
-  { key: "shipping_update", label: "Aggiornamento Spedizione", description: "Tracking e notifiche di spedizione" },
+  { key: "account_credentials", label: "Credenziali Account", description: "Email con credenziali di accesso al portale", category: "Account" },
+  { key: "dealer_request_confirmation", label: "Conferma Richiesta Dealer", description: "Email di conferma invio form 'Become a Dealer'", category: "Account" },
+  { key: "order_received", label: "Ordine Ricevuto", description: "Conferma ricezione ordine dal portale", category: "Ordini" },
+  { key: "order_confirmed", label: "Ordine Confermato", description: "Notifica conferma e approvazione ordine", category: "Ordini" },
+  { key: "order_status_update", label: "Aggiornamento Stato Ordine", description: "Cambio stato dell'ordine (spedito, in lavorazione, ecc.)", category: "Ordini" },
+  { key: "order_documents_ready", label: "Documenti Pronti", description: "Nuovi documenti caricati (fattura, DDT, packing list)", category: "Ordini" },
+  { key: "shipping_update", label: "Aggiornamento Spedizione", description: "Tracking number e notifiche consegna", category: "Spedizioni" },
+  { key: "promotional_updates", label: "Promo & Novità", description: "Comunicazioni su promozioni, nuovi prodotti e offerte", category: "Marketing" },
 ];
 
 const ClientNotificationPreferences = ({ clientId }: { clientId: string }) => {
