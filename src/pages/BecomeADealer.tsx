@@ -68,7 +68,7 @@ const BecomeADealer = () => {
       website = `https://${website}`;
     }
 
-    const { data, error } = await supabase.from("distributor_requests").insert({
+    const { error } = await supabase.from("distributor_requests").insert({
       company_name: form.companyName,
       contact_name: form.contactName,
       email: form.email,
@@ -80,7 +80,7 @@ const BecomeADealer = () => {
       message: form.message || null,
       vat_number: form.vatNumber || null,
       marketing_consent: form.marketingConsent,
-    } as any).select().single();
+    } as any);
 
     if (error) {
       setLoading(false);
@@ -92,7 +92,6 @@ const BecomeADealer = () => {
     try {
       await supabase.functions.invoke("send-dealer-request-notification", {
         body: {
-          requestId: data.id,
           companyName: form.companyName,
           contactName: form.contactName,
           email: form.email,
