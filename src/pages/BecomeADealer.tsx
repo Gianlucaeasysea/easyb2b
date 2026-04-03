@@ -55,7 +55,7 @@ const BecomeADealer = () => {
   const { toast } = useToast();
   const [form, setForm] = useState({
     companyName: "", contactName: "", email: "", phone: "",
-    zone: "", country: "", businessType: "", website: "", message: "", privacy: false, vatNumber: "",
+    zone: "", country: "", businessType: "", website: "", message: "", privacy: false, marketingConsent: false, vatNumber: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
