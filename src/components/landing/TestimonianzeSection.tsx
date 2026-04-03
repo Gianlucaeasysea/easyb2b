@@ -25,7 +25,7 @@ const getEmbedUrl = (url: string, type: string) => {
   return url;
 };
 
-const VideoTestimonial = ({ url, type, vertical }: { url: string; type: string; vertical?: boolean }) => {
+const VideoTestimonial = ({ url, type }: { url: string; type: string }) => {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isEmbed = type === "youtube" || type === "vimeo";
@@ -39,42 +39,27 @@ const VideoTestimonial = ({ url, type, vertical }: { url: string; type: string; 
     }
   };
 
-  const containerClass = "aspect-[9/16] h-[380px] md:h-[440px]";
-
   return (
-    <div className={`relative rounded-2xl overflow-hidden glass-card-solid border-primary/20 flex-shrink-0 ${containerClass}`}>
+    <div className="relative rounded-2xl overflow-hidden bg-card border border-border hover:border-primary/20 transition-colors aspect-[9/16] h-[380px] md:h-[440px] flex-shrink-0">
       {isEmbed ? (
         playing ? (
-          <iframe
-            src={getEmbedUrl(url, type)}
-            className="w-full h-full"
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-          />
+          <iframe src={getEmbedUrl(url, type)} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen />
         ) : (
           <div className="w-full h-full bg-muted flex items-center justify-center">
-            <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/20 hover:bg-foreground/30 transition-colors cursor-pointer">
-              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                <Play size={32} className="text-primary-foreground ml-1" />
+            <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/10 hover:bg-foreground/20 transition-colors cursor-pointer">
+              <div className="w-16 h-16 rounded-full gradient-blue flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 transition-transform">
+                <Play size={28} className="text-primary-foreground ml-1" />
               </div>
             </button>
           </div>
         )
       ) : (
         <>
-          <video
-            ref={videoRef}
-            src={url}
-            controls={playing}
-            playsInline
-            preload="metadata"
-            className="w-full h-full object-cover"
-            onEnded={() => setPlaying(false)}
-          />
+          <video ref={videoRef} src={url} controls={playing} playsInline preload="metadata" className="w-full h-full object-cover" onEnded={() => setPlaying(false)} />
           {!playing && (
-            <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/30 hover:bg-foreground/40 transition-colors cursor-pointer">
-              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                <Play size={32} className="text-primary-foreground ml-1" />
+            <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/10 hover:bg-foreground/20 transition-colors cursor-pointer">
+              <div className="w-16 h-16 rounded-full gradient-blue flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 transition-transform">
+                <Play size={28} className="text-primary-foreground ml-1" />
               </div>
             </button>
           )}
@@ -104,11 +89,20 @@ const TestimonialsSection = () => {
   });
 
   return (
-    <section id="partners" className="py-28 section-alt">
+    <section id="partners" className="py-32 bg-background">
       <div className="container mx-auto px-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-20">
-          <p className="text-xs uppercase tracking-[0.3em] text-primary font-heading font-semibold mb-4">Trusted worldwide</p>
-          <h2 className="font-heading text-3xl md:text-5xl font-bold text-foreground">What our dealers say</h2>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-20"
+        >
+          <p className="text-[11px] uppercase tracking-[0.4em] text-primary font-heading font-bold mb-5">
+            Trusted worldwide
+          </p>
+          <h2 className="font-heading text-3xl md:text-5xl lg:text-6xl font-black text-foreground">
+            What our <span className="text-gradient-blue">dealers say</span>
+          </h2>
         </motion.div>
 
         {/* Video Testimonials */}
@@ -120,25 +114,31 @@ const TestimonialsSection = () => {
             className="mb-16 flex flex-wrap items-center justify-center gap-6"
           >
             {videos.map((v) => (
-              <VideoTestimonial key={v.id} url={v.video_url} type={v.video_type} vertical={v.is_vertical} />
+              <VideoTestimonial key={v.id} url={v.video_url} type={v.video_type} />
             ))}
           </motion.div>
         )}
 
         {/* Text Testimonials */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-5">
           {textTestimonials.map((t, i) => (
-            <motion.div key={t.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }}
-              className="glass-card-solid p-8 hover:border-primary/30 transition-colors">
+            <motion.div
+              key={t.name}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.12 }}
+              className="glass-card-solid p-8 hover:border-primary/20 transition-all duration-300"
+            >
               <div className="flex gap-0.5 mb-5">
                 {Array.from({ length: t.stars }).map((_, j) => (
-                  <Star key={j} size={14} className="fill-warning text-warning" />
+                  <Star key={j} size={13} className="fill-warning text-warning" />
                 ))}
               </div>
-              <p className="text-foreground/80 text-sm italic mb-6 leading-relaxed">"{t.quote}"</p>
+              <p className="text-foreground/80 text-sm italic mb-7 leading-relaxed">"{t.quote}"</p>
               <div>
                 <p className="font-heading text-sm font-bold text-foreground">{t.name}</p>
-                <p className="text-xs text-muted-foreground">{t.company}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{t.company}</p>
               </div>
             </motion.div>
           ))}
