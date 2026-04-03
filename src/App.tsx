@@ -130,6 +130,7 @@ const App = () => (
               <Route path="marketing" element={<AdminMarketing />} />
               <Route path="cms" element={<AdminCMS />} />
               <Route path="automations" element={<CRMAutomations />} />
+              <Route path="changelog" element={<AdminChangelog />} />
             </Route>
 
             {/* CRM */}
