@@ -16,7 +16,7 @@ import {
   ArrowLeft, Building2, Mail, Phone, Globe, MapPin, ShoppingBag,
   MessageCircle, Send, Clock, TrendingUp, Users, FileText, CalendarDays, BarChart3,
   Plus, Crown, Star, Pencil, Trash2, Check, X, StickyNote, Upload, Handshake, CheckSquare, Tag, Eye,
-  UserCheck, RefreshCw
+  UserCheck, RefreshCw, KeyRound, Copy, EyeOff
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { isPast } from "date-fns";
@@ -80,6 +80,42 @@ const CRMOrganizationDetail = () => {
   });
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [taskForm, setTaskForm] = useState({ title: "", type: "call", priority: "medium", due_date: "", description: "" });
+  const [creatingCredentials, setCreatingCredentials] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const generatePassword = () => {
+    const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$";
+    return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  };
+
+  const handleCreateCredentials = async () => {
+    if (!client?.email) {
+      toast.error("Questa organizzazione non ha un'email configurata");
+      return;
+    }
+    setCreatingCredentials(true);
+    try {
+      const password = generatePassword();
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ client_id: id, email: client.email, password }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Errore nella creazione");
+      toast.success("Credenziali create e inviate via email al dealer");
+      queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
+    } catch (err: any) {
+      toast.error(err.message || "Errore nella creazione delle credenziali");
+    } finally {
+      setCreatingCredentials(false);
+    }
+  };
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["crm-org", id],
@@ -441,6 +477,64 @@ const CRMOrganizationDetail = () => {
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* Dealer Portal Credentials */}
+              <div className="glass-card-solid p-5">
+                <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
+                  <KeyRound size={14} /> Credenziali Portale Dealer
+                </h3>
+                {client.user_id ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 p-2 bg-success/10 border border-success/20 rounded-lg">
+                      <Check size={12} className="text-success" />
+                      <span className="text-xs text-success font-medium">Account attivo</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between p-2 bg-secondary/50 rounded">
+                        <span className="text-xs text-muted-foreground">Email</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-mono text-foreground">{client.email}</span>
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { navigator.clipboard.writeText(client.email || ""); toast.success("Email copiata"); }}>
+                            <Copy size={10} />
+                          </Button>
+                        </div>
+                      </div>
+                      {client.portal_password && (
+                        <div className="flex items-center justify-between p-2 bg-secondary/50 rounded">
+                          <span className="text-xs text-muted-foreground">Password</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-mono text-foreground">
+                              {showPassword ? client.portal_password : "••••••••"}
+                            </span>
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setShowPassword(!showPassword)}>
+                              {showPassword ? <EyeOff size={10} /> : <Eye size={10} />}
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { navigator.clipboard.writeText(client.portal_password || ""); toast.success("Password copiata"); }}>
+                              <Copy size={10} />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground">Nessun account dealer collegato. Crea le credenziali per abilitare l'accesso al portale.</p>
+                    {!client.email && (
+                      <p className="text-xs text-destructive">⚠️ Configura prima un'email per questa organizzazione.</p>
+                    )}
+                    <Button
+                      size="sm"
+                      className="w-full gap-1"
+                      disabled={creatingCredentials || !client.email}
+                      onClick={handleCreateCredentials}
+                    >
+                      {creatingCredentials ? <RefreshCw size={12} className="animate-spin" /> : <UserCheck size={12} />}
+                      Crea Credenziali & Invia Email
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {addresses && addresses.length > 0 && (
@@ -1022,41 +1116,6 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
   const [selectedListId, setSelectedListId] = useState<string>("");
   const [customPricesOpen, setCustomPricesOpen] = useState(false);
   const [editingListId, setEditingListId] = useState<string | null>(null);
-  const [creatingCredentials, setCreatingCredentials] = useState(false);
-
-  const generatePassword = () => {
-    const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$";
-    return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  };
-
-  const handleCreateCredentials = async () => {
-    if (!client?.email) {
-      toast.error("Questa organizzazione non ha un'email configurata");
-      return;
-    }
-    setCreatingCredentials(true);
-    try {
-      const password = generatePassword();
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: JSON.stringify({ client_id: clientId, email: client.email, password }),
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Errore nella creazione");
-      toast.success("Credenziali create e inviate via email al dealer");
-      queryClient.invalidateQueries({ queryKey: ["crm-org", clientId] });
-    } catch (err: any) {
-      toast.error(err.message || "Errore nella creazione delle credenziali");
-    } finally {
-      setCreatingCredentials(false);
-    }
-  };
 
   // Preview: fetch items for selected price list
   const { data: previewItems } = useQuery({
@@ -1162,21 +1221,6 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
           </Button>
         </div>
 
-        {!client.user_id && (
-          <div className="flex items-center justify-between gap-2 p-3 mb-4 rounded-lg bg-warning/10 border border-warning/20">
-            <span className="text-warning text-xs">⚠️ Questa organizzazione non ha ancora un account cliente collegato</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs gap-1 border-warning/30 text-warning hover:bg-warning/20"
-              disabled={creatingCredentials}
-              onClick={handleCreateCredentials}
-            >
-              {creatingCredentials ? <RefreshCw size={12} className="animate-spin" /> : <UserCheck size={12} />}
-              Crea Credenziali
-            </Button>
-          </div>
-        )}
 
         {assignedPriceLists.length > 0 ? (
           <div className="space-y-2 mb-4">
@@ -1329,7 +1373,6 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
     </div>
   );
 }
-
 
 const stageColors: Record<string, string> = {
   qualification: "bg-primary/20 text-primary",
