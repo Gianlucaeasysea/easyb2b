@@ -253,7 +253,7 @@ const AdminDashboard = () => {
             <Input type="date" value={payedDateFrom} onChange={e => setPayedDateFrom(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
             <Input type="date" value={payedDateTo} onChange={e => setPayedDateTo(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Filtro per Payed Date</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Filtro per Data Pagamento</p>
         </div>
 
         <div className="glass-card-solid p-5">

@@ -16,7 +16,7 @@ import OrderDocuments from "@/components/OrderDocuments";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import {
-  ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor,
+  ORDER_STATUSES, PAYMENT_STATUSES, getOrderStatusLabel, getOrderStatusColor,
   getPaymentStatusLabel, getPaymentStatusColor,
 } from "@/lib/constants";
 import type { Tables } from "@/integrations/supabase/types";
@@ -66,6 +66,7 @@ const AdminOrderDetail = () => {
   });
 
   const [status, setStatus] = useState<string>("");
+  const [paymentStatus, setPaymentStatus] = useState<string>("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
@@ -75,6 +76,7 @@ const AdminOrderDetail = () => {
   const orderLoaded = order && !status;
   if (orderLoaded) {
     setStatus(order.status || "draft");
+    setPaymentStatus(order.payment_status || "unpaid");
     setTrackingNumber(order.tracking_number || "");
     setTrackingUrl(order.tracking_url || "");
     setInternalNotes(order.internal_notes || "");
@@ -88,6 +90,7 @@ const AdminOrderDetail = () => {
       const previousStatus = order?.status;
       const { error } = await supabase.from("orders").update({
         status,
+        payment_status: paymentStatus,
         tracking_number: trackingNumber || null,
         tracking_url: trackingUrl || null,
         internal_notes: internalNotes || null,
@@ -190,6 +193,19 @@ const AdminOrderDetail = () => {
               <SelectContent>
                 {statusOptions.map(s => (
                   <SelectItem key={s} value={s}>{getOrderStatusLabel(s)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Stato Pagamento</label>
+            <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+              <SelectTrigger className="bg-secondary border-border rounded-lg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PAYMENT_STATUSES).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>{label as string}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
