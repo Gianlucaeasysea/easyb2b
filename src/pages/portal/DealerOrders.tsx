@@ -153,6 +153,22 @@ const DealerOrders = () => {
     }
   };
 
+  // Cancel submitted order
+  const handleCancelOrder = async (order: any) => {
+    setCancellingId(order.id);
+    try {
+      const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", order.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+      toast.success("Ordine annullato con successo");
+    } catch (error) {
+      showErrorToast(error, "DealerOrders.cancel");
+    } finally {
+      setCancellingId(null);
+      setConfirmCancel(null);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
