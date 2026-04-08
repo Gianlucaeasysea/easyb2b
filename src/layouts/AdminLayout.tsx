@@ -76,7 +76,8 @@ const AdminLayout = () => {
               <img src={logo} alt="Easysea" className="h-5 opacity-60" />
               <span className="text-xs font-heading font-semibold text-primary uppercase tracking-wider">Admin</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <NotificationsDropdown basePath="/admin" targetRole="admin" />
               <span className="text-xs text-muted-foreground hidden sm:block">{user?.email}</span>
               <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground hover:text-foreground">
                 <LogOut size={16} />

@@ -4,6 +4,8 @@ import { CRMSidebar } from "@/components/crm/CRMSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationsDropdown } from "@/components/NotificationsDropdown";
+import { Button } from "@/components/ui/button";
 import logo from "@/assets/easysea-logo.png";
 
 const routeNames: Record<string, string> = {
