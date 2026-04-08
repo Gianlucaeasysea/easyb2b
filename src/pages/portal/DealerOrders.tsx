@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronUp, FileText, Download, Bell, Loader2, Send,
 } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
@@ -53,7 +53,13 @@ const DealerOrders = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
-  const [confirmDuplicate, setConfirmDuplicate] = useState<any>(null);
+  const [priceCheckData, setPriceCheckData] = useState<{
+    order: any;
+    items: { product_id: string; name: string; sku: string; quantity: number; originalPrice: number; currentPrice: number | null; available: boolean }[];
+    originalTotal: number;
+    newTotal: number;
+    hasChanges: boolean;
+  } | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<any>(null);
   const { data: client } = useQuery({
@@ -95,8 +101,8 @@ const DealerOrders = () => {
     return idx >= 0 ? idx : -1;
   };
 
-  // Duplicate order handler
-  const handleDuplicate = async (order: any) => {
+  // Step 1: Check prices before duplicating
+  const handlePrepareDuplicate = async (order: any) => {
     if (!client) return;
     setDuplicatingId(order.id);
     try {
@@ -117,18 +123,60 @@ const DealerOrders = () => {
       const { data: products } = await supabase.from("products").select("id, name, price, active_b2b, stock_quantity").in("id", productIds);
       const productMap = new Map(products?.map(p => [p.id, p]) || []);
 
-      const validItems: { product_id: string; quantity: number; unit_price: number; subtotal: number }[] = [];
-      let excludedCount = 0;
-
-      for (const item of items) {
+      const comparisonItems = items.map((item: any) => {
         const product = productMap.get(item.product_id);
-        if (!product || !product.active_b2b) { excludedCount++; continue; }
-        const price = priceMap[item.product_id] || Number(product.price || 0);
-        const qty = Math.min(item.quantity, product.stock_quantity || item.quantity);
-        validItems.push({ product_id: item.product_id, quantity: qty, unit_price: price, subtotal: price * qty });
+        const available = !!(product && product.active_b2b);
+        const currentPrice = available ? (priceMap[item.product_id] ?? (product?.price ? Number(product.price) : null)) : null;
+        return {
+          product_id: item.product_id,
+          name: item.products?.name || "Prodotto sconosciuto",
+          sku: item.products?.sku || "—",
+          quantity: item.quantity,
+          originalPrice: Number(item.unit_price || 0),
+          currentPrice,
+          available,
+        };
+      });
+
+      const originalTotal = comparisonItems.reduce((s, i) => s + i.originalPrice * i.quantity, 0);
+      const newTotal = comparisonItems.filter(i => i.available && i.currentPrice !== null).reduce((s, i) => s + (i.currentPrice! * i.quantity), 0);
+      const hasChanges = comparisonItems.some(i => !i.available || i.currentPrice === null || i.currentPrice !== i.originalPrice);
+
+      if (!hasChanges) {
+        // No changes — duplicate directly
+        await executeDuplicate(order, comparisonItems);
+      } else {
+        // Show price comparison dialog
+        setPriceCheckData({ order, items: comparisonItems, originalTotal, newTotal, hasChanges });
       }
+    } catch (error) {
+      showErrorToast(error, "DealerOrders.prepareDuplicate");
+    } finally {
+      setDuplicatingId(null);
+      
+    }
+  };
+
+  // Step 2: Execute the actual duplication
+  const executeDuplicate = async (order: any, comparisonItems?: typeof priceCheckData extends null ? never : NonNullable<typeof priceCheckData>["items"]) => {
+    if (!client) return;
+    setDuplicatingId(order.id);
+    try {
+      const itemsToUse = comparisonItems || priceCheckData?.items;
+      if (!itemsToUse) return;
+
+      const validItems = itemsToUse
+        .filter(i => i.available && i.currentPrice !== null)
+        .map(i => ({
+          product_id: i.product_id,
+          quantity: i.quantity,
+          unit_price: i.currentPrice!,
+          subtotal: i.currentPrice! * i.quantity,
+        }));
 
       if (!validItems.length) { toast.error("Nessun prodotto disponibile per la duplicazione"); return; }
+
+      const excludedCount = itemsToUse.length - validItems.length;
 
       const { data: newOrder, error: orderErr } = await supabase.rpc("create_order_with_items", {
         p_client_id: client.id,
@@ -140,16 +188,17 @@ const DealerOrders = () => {
       if (orderErr) throw orderErr;
 
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+      const newCode = (newOrder as any)?.order_code || (newOrder as any)?.id?.slice(0, 8);
       if (excludedCount > 0) {
-        toast.warning(`Ordine duplicato come bozza. ${excludedCount} prodotti non disponibili esclusi.`);
+        toast.warning(`Ordine duplicato come bozza #${newCode}. ${excludedCount} prodotti non disponibili esclusi. Verificalo prima di inviarlo.`);
       } else {
-        toast.success(`Ordine duplicato come bozza #${(newOrder as any)?.order_code || (newOrder as any)?.id?.slice(0, 8)}`);
+        toast.success(`Ordine duplicato come bozza #${newCode}. Verificalo prima di inviarlo.`);
       }
     } catch (error) {
       showErrorToast(error, "DealerOrders.duplicate");
     } finally {
       setDuplicatingId(null);
-      setConfirmDuplicate(null);
+      setPriceCheckData(null);
     }
   };
 
@@ -253,7 +302,7 @@ const DealerOrders = () => {
                         variant="ghost" size="sm"
                         className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
                         disabled={duplicatingId === order.id}
-                        onClick={(e) => { e.stopPropagation(); setConfirmDuplicate(order); }}
+                        onClick={(e) => { e.stopPropagation(); handlePrepareDuplicate(order); }}
                         title="Duplica Ordine"
                       >
                         {duplicatingId === order.id ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
@@ -465,21 +514,72 @@ const DealerOrders = () => {
       </>
       )}
 
-      {/* Confirm Duplicate Dialog */}
-      <Dialog open={!!confirmDuplicate} onOpenChange={() => setConfirmDuplicate(null)}>
-        <DialogContent className="max-w-sm">
+      {/* Price Check Dialog */}
+      <Dialog open={!!priceCheckData} onOpenChange={() => setPriceCheckData(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Duplica Ordine</DialogTitle>
+            <DialogTitle>Verifica prezzi prima di duplicare</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Vuoi duplicare questo ordine? Verrà creata una nuova bozza con gli stessi prodotti e quantità, ai prezzi aggiornati.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDuplicate(null)}>Annulla</Button>
-            <Button onClick={() => handleDuplicate(confirmDuplicate)} disabled={!!duplicatingId}>
-              {duplicatingId ? "Duplicazione..." : "Duplica"}
-            </Button>
-          </DialogFooter>
+          {priceCheckData && (
+            <>
+              <div className="border border-border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Prodotto</TableHead>
+                      <TableHead className="text-xs text-right">Prezzo Orig.</TableHead>
+                      <TableHead className="text-xs text-right">Prezzo Attuale</TableHead>
+                      <TableHead className="text-xs text-right">Variazione</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {priceCheckData.items.map((item) => {
+                      const diff = item.available && item.currentPrice !== null ? item.currentPrice - item.originalPrice : null;
+                      return (
+                        <TableRow key={item.product_id}>
+                          <TableCell>
+                            <p className="text-xs font-medium">{item.name}</p>
+                            <p className="text-[10px] text-muted-foreground font-mono">{item.sku}</p>
+                          </TableCell>
+                          <TableCell className="text-xs text-right font-mono">€{item.originalPrice.toFixed(2)}</TableCell>
+                          <TableCell className="text-xs text-right font-mono">
+                            {!item.available || item.currentPrice === null
+                              ? <span className="text-destructive font-medium">Non disponibile</span>
+                              : `€${item.currentPrice.toFixed(2)}`}
+                          </TableCell>
+                          <TableCell className="text-xs text-right font-medium">
+                            {!item.available || item.currentPrice === null ? (
+                              <span className="text-destructive">Rimosso</span>
+                            ) : diff === 0 ? (
+                              <span className="text-success">Invariato</span>
+                            ) : diff! > 0 ? (
+                              <span className="text-destructive">+€{diff!.toFixed(2)} ↑</span>
+                            ) : (
+                              <span className="text-success">-€{Math.abs(diff!).toFixed(2)} ↓</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="flex justify-between text-sm mt-2 p-3 bg-secondary/50 rounded-lg">
+                <span className="text-muted-foreground">
+                  Totale originale: <span className="font-mono font-semibold text-foreground">€{priceCheckData.originalTotal.toFixed(2)}</span>
+                </span>
+                <span className="text-muted-foreground">
+                  Nuovo totale: <span className="font-mono font-semibold text-primary">€{priceCheckData.newTotal.toFixed(2)}</span>
+                </span>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPriceCheckData(null)}>Annulla</Button>
+                <Button onClick={() => executeDuplicate(priceCheckData.order, priceCheckData.items)} disabled={!!duplicatingId}>
+                  {duplicatingId ? "Duplicazione..." : "Duplica con prezzi attuali"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
