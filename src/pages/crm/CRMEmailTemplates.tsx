@@ -1,4 +1,5 @@
 import { useState } from "react";
+import DOMPurify from "dompurify";
 import TiptapEditor from "@/components/crm/TiptapEditor";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -291,7 +292,7 @@ export default function CRMEmailTemplates() {
           <DialogHeader>
             <DialogTitle className="font-heading">Anteprima Template</DialogTitle>
           </DialogHeader>
-          <div className="border rounded-lg p-6 bg-white" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+          <div className="border rounded-lg p-6 bg-white" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml) }} />
         </DialogContent>
       </Dialog>
     </div>
