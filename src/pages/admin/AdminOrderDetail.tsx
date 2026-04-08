@@ -411,6 +411,31 @@ const AdminOrderDetail = () => {
           />
         </div>
       )}
+
+      {/* Reject Order Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rifiuta Ordine</DialogTitle>
+          </DialogHeader>
+          <div>
+            <label className="text-sm text-muted-foreground mb-2 block">Motivo del rifiuto (obbligatorio)</label>
+            <Textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Inserisci il motivo del rifiuto..."
+              rows={3}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>Annulla</Button>
+            <Button variant="destructive" onClick={handleRejectOrder} disabled={rejecting || !rejectReason.trim()}>
+              {rejecting ? "Rifiuto in corso..." : "Conferma Rifiuto"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
