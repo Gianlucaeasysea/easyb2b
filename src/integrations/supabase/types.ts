@@ -1700,6 +1700,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_order_with_items: {
+        Args: {
+          p_client_id: string
+          p_items?: Json
+          p_notes?: string
+          p_order_type?: string
+          p_payment_terms?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
