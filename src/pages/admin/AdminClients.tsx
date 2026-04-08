@@ -6,17 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, ArrowRight, Plus, Trash2, Settings2, Clock } from "lucide-react";
+import { Users, Search, ArrowRight, Plus, Trash2, Clock, Download, UserCheck, Tag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
-import { differenceInDays } from "date-fns";
+import { differenceInDays, format } from "date-fns";
 import { deleteClientsCascade } from "@/lib/crmEntityActions";
 import { TablePagination } from "@/components/ui/TablePagination";
+import BulkActionBar, { runBulkOperation, bulkResultToast } from "@/components/admin/BulkActionBar";
+import * as XLSX from "xlsx";
 
 const AdminClients = () => {
   const navigate = useNavigate();
@@ -25,11 +27,6 @@ const AdminClients = () => {
   const [inactiveDays, setInactiveDays] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showCreate, setShowCreate] = useState(false);
-  const [showBulk, setShowBulk] = useState(false);
-  const [bulkAction, setBulkAction] = useState<string>("");
-  const [bulkStatus, setBulkStatus] = useState("active");
-  const [bulkDiscount, setBulkDiscount] = useState("standard");
-  const [bulkType, setBulkType] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [newClient, setNewClient] = useState({
@@ -38,20 +35,25 @@ const AdminClients = () => {
     discount_class: "standard", website: "", vat_number: "", zone: "", notes: "",
   });
 
+  // Bulk dialogs
+  const [showDiscountDialog, setShowDiscountDialog] = useState(false);
+  const [showSalesDialog, setShowSalesDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [bulkDiscount, setBulkDiscount] = useState("standard");
+  const [bulkSalesId, setBulkSalesId] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
+
   useEffect(() => { setPage(1); }, [search, inactiveDays]);
 
   const { data: queryResult, isLoading, isFetching } = useQuery({
     queryKey: ["admin-clients", page, pageSize, search],
     queryFn: async () => {
       let query = supabase.from("clients").select("*", { count: "exact" }).order("company_name");
-
       if (search) {
         query = query.or(`company_name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%,country.ilike.%${search}%,business_type.ilike.%${search}%`);
       }
-
       const from = (page - 1) * pageSize;
       query = query.range(from, from + pageSize - 1);
-
       const { data, error, count } = await query;
       if (error) throw error;
       return { clients: data || [], totalCount: count || 0 };
@@ -70,9 +72,7 @@ const AdminClients = () => {
       if (error) throw error;
       const map: Record<string, { lastOrder: string | null; totalSpent: number }> = {};
       (data || []).forEach(o => {
-        if (!map[o.client_id]) {
-          map[o.client_id] = { lastOrder: o.created_at, totalSpent: 0 };
-        }
+        if (!map[o.client_id]) map[o.client_id] = { lastOrder: o.created_at, totalSpent: 0 };
         map[o.client_id].totalSpent += Number(o.total_amount || 0);
       });
       return map;
@@ -88,7 +88,19 @@ const AdminClients = () => {
     },
   });
 
-  // Apply inactive filter client-side since it depends on order stats
+  // Sales users for assignment
+  const { data: salesUsers } = useQuery({
+    queryKey: ["sales-users"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("user_roles").select("user_id").eq("role", "sales");
+      if (error) throw error;
+      if (!data?.length) return [];
+      const ids = data.map(r => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("user_id, contact_name, email").in("user_id", ids);
+      return profiles || [];
+    },
+  });
+
   const filtered = inactiveDays
     ? clients.filter(c => {
         const days = parseInt(inactiveDays);
@@ -126,33 +138,6 @@ const AdminClients = () => {
     onError: (error) => showErrorToast(error, "AdminClients.createClient"),
   });
 
-  const executeBulk = async () => {
-    if (selected.size === 0) { toast.error("Seleziona almeno un cliente"); return; }
-    const ids = Array.from(selected);
-
-    if (bulkAction === "delete") {
-      try { await deleteClientsCascade(ids); } catch (error) { showErrorToast(error, "AdminClients.bulkDelete"); return; }
-      toast.success(`${ids.length} clienti eliminati`);
-    } else if (bulkAction === "status") {
-      const { error } = await supabase.from("clients").update({ status: bulkStatus }).in("id", ids);
-      if (error) { toast.error(error.message); return; }
-      toast.success(`Stato aggiornato per ${ids.length} clienti`);
-    } else if (bulkAction === "discount") {
-      const { error } = await supabase.from("clients").update({ discount_class: bulkDiscount }).in("id", ids);
-      if (error) { toast.error(error.message); return; }
-      toast.success(`Classe sconto aggiornata per ${ids.length} clienti`);
-    } else if (bulkAction === "type") {
-      const { error } = await supabase.from("clients").update({ business_type: bulkType }).in("id", ids);
-      if (error) { toast.error(error.message); return; }
-      toast.success(`Tipo aggiornato per ${ids.length} clienti`);
-    }
-
-    setSelected(new Set());
-    setShowBulk(false);
-    setBulkAction("");
-    qc.invalidateQueries({ queryKey: ["admin-clients"] });
-  };
-
   const toggleSelect = (id: string) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -164,6 +149,85 @@ const AdminClients = () => {
   const toggleAll = () => {
     if (selected.size === filtered.length) setSelected(new Set());
     else setSelected(new Set(filtered.map(c => c.id)));
+  };
+
+  // Bulk: discount class
+  const handleBulkDiscount = async () => {
+    setBulkLoading(true);
+    try {
+      const ids = Array.from(selected);
+      const result = await runBulkOperation(ids, async (id) => {
+        const { error } = await supabase.from("clients").update({ discount_class: bulkDiscount }).eq("id", id);
+        if (error) throw error;
+      });
+      bulkResultToast(toast.success, toast.error, result, "clienti");
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["admin-clients"] });
+    } catch (error) {
+      showErrorToast(error, "AdminClients.bulkDiscount");
+    } finally {
+      setBulkLoading(false);
+      setShowDiscountDialog(false);
+    }
+  };
+
+  // Bulk: assign sales
+  const handleBulkSales = async () => {
+    setBulkLoading(true);
+    try {
+      const ids = Array.from(selected);
+      const result = await runBulkOperation(ids, async (id) => {
+        const { error } = await supabase.from("clients").update({ assigned_sales_id: bulkSalesId || null }).eq("id", id);
+        if (error) throw error;
+      });
+      bulkResultToast(toast.success, toast.error, result, "clienti");
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["admin-clients"] });
+    } catch (error) {
+      showErrorToast(error, "AdminClients.bulkSales");
+    } finally {
+      setBulkLoading(false);
+      setShowSalesDialog(false);
+    }
+  };
+
+  // Bulk: delete
+  const handleBulkDelete = async () => {
+    setBulkLoading(true);
+    try {
+      await deleteClientsCascade(Array.from(selected));
+      toast.success(`${selected.size} clienti eliminati`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["admin-clients"] });
+    } catch (error) {
+      showErrorToast(error, "AdminClients.bulkDelete");
+    } finally {
+      setBulkLoading(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  // Export CSV
+  const exportCSV = () => {
+    const exportClients = selected.size > 0
+      ? filtered.filter(c => selected.has(c.id))
+      : filtered;
+    const rows = exportClients.map(c => ({
+      "Azienda": c.company_name,
+      "Referente": c.contact_name || "",
+      "Email": c.email || "",
+      "Telefono": c.phone || "",
+      "Paese": c.country || "",
+      "Tipo": c.business_type || "",
+      "Classe Sconto": c.discount_class || "",
+      "Stato": c.status || "",
+      "Totale Speso": (clientOrderStats?.[c.id]?.totalSpent || 0).toFixed(2),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Clienti");
+    XLSX.writeFile(wb, `clienti_export_${format(new Date(), "yyyy-MM-dd")}.csv`, { bookType: "csv" });
+    toast.success(`${rows.length} clienti esportati`);
   };
 
   const statusLabel: Record<string, string> = {
@@ -183,18 +247,13 @@ const AdminClients = () => {
   );
 
   return (
-    <div>
+    <div className="pb-20">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">Clienti</h1>
           <p className="text-sm text-muted-foreground">Gestisci anagrafiche clienti B2B</p>
         </div>
         <div className="flex items-center gap-2">
-          {selected.size > 0 && (
-            <Button size="sm" variant="outline" onClick={() => setShowBulk(true)} className="gap-1">
-              <Settings2 size={14} /> Azioni ({selected.size})
-            </Button>
-          )}
           <Button size="sm" onClick={() => setShowCreate(true)} className="gap-1">
             <Plus size={14} /> Nuovo Cliente
           </Button>
@@ -209,16 +268,8 @@ const AdminClients = () => {
         </div>
         <div className="flex items-center gap-2">
           <Clock size={14} className="text-muted-foreground" />
-          <Input
-            type="number"
-            placeholder="Inattivi da X giorni"
-            value={inactiveDays}
-            onChange={e => setInactiveDays(e.target.value)}
-            className="w-[180px] text-xs bg-secondary border-border rounded-lg h-9"
-          />
-          {inactiveDays && (
-            <Button variant="ghost" size="sm" onClick={() => setInactiveDays("")} className="h-8 px-2 text-xs">✕</Button>
-          )}
+          <Input type="number" placeholder="Inattivi da X giorni" value={inactiveDays} onChange={e => setInactiveDays(e.target.value)} className="w-[180px] text-xs bg-secondary border-border rounded-lg h-9" />
+          {inactiveDays && <Button variant="ghost" size="sm" onClick={() => setInactiveDays("")} className="h-8 px-2 text-xs">✕</Button>}
         </div>
       </div>
 
@@ -326,6 +377,74 @@ const AdminClients = () => {
         </div>
       )}
 
+      {/* Floating Bulk Action Bar */}
+      <BulkActionBar count={selected.size} onDeselect={() => setSelected(new Set())}>
+        <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => setShowDiscountDialog(true)}>
+          <Tag size={14} /> Cambia Classe Sconto
+        </Button>
+        <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => setShowSalesDialog(true)}>
+          <UserCheck size={14} /> Assegna Sales
+        </Button>
+        <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={exportCSV}>
+          <Download size={14} /> Esporta CSV
+        </Button>
+        <Button size="sm" variant="destructive" className="gap-1 h-8" onClick={() => setShowDeleteConfirm(true)}>
+          <Trash2 size={14} /> Elimina
+        </Button>
+      </BulkActionBar>
+
+      {/* Discount Dialog */}
+      <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Cambia Classe Sconto ({selected.size} clienti)</DialogTitle></DialogHeader>
+          <Select value={bulkDiscount} onValueChange={setBulkDiscount}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {discountTiers?.map(t => (
+                <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDiscountDialog(false)}>Annulla</Button>
+            <Button onClick={handleBulkDiscount} disabled={bulkLoading}>{bulkLoading ? "Aggiornamento..." : "Applica"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Sales Dialog */}
+      <Dialog open={showSalesDialog} onOpenChange={setShowSalesDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Assegna Sales ({selected.size} clienti)</DialogTitle></DialogHeader>
+          <Select value={bulkSalesId} onValueChange={setBulkSalesId}>
+            <SelectTrigger><SelectValue placeholder="Seleziona sales..." /></SelectTrigger>
+            <SelectContent>
+              {salesUsers?.map(s => (
+                <SelectItem key={s.user_id} value={s.user_id}>{s.contact_name || s.email || s.user_id}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSalesDialog(false)}>Annulla</Button>
+            <Button onClick={handleBulkSales} disabled={bulkLoading || !bulkSalesId}>{bulkLoading ? "Aggiornamento..." : "Applica"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Conferma Eliminazione</DialogTitle></DialogHeader>
+          <p className="text-sm text-destructive">⚠️ Verranno eliminati {selected.size} clienti con tutti i dati associati (ordini, contatti, comunicazioni).</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Annulla</Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkLoading}>
+              {bulkLoading ? "Eliminazione..." : `Elimina ${selected.size} clienti`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Create Client Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
@@ -372,79 +491,20 @@ const AdminClients = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Classe Sconto</Label>
-                 <Select value={newClient.discount_class} onValueChange={v => setNewClient(f => ({ ...f, discount_class: v }))}>
-                   <SelectTrigger><SelectValue /></SelectTrigger>
-                   <SelectContent>
-                     {discountTiers?.map(t => (
-                       <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
+                <Select value={newClient.discount_class} onValueChange={v => setNewClient(f => ({ ...f, discount_class: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {discountTiers?.map(t => (
+                      <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div><Label>P.IVA</Label><Input value={newClient.vat_number} onChange={e => setNewClient(f => ({ ...f, vat_number: e.target.value }))} /></div>
             </div>
             <div><Label>Website</Label><Input value={newClient.website} onChange={e => setNewClient(f => ({ ...f, website: e.target.value }))} /></div>
             <Button onClick={() => createClient.mutate()} disabled={!newClient.company_name || createClient.isPending} className="w-full">
               Crea Cliente
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk Actions Dialog */}
-      <Dialog open={showBulk} onOpenChange={setShowBulk}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Azioni Bulk ({selected.size} selezionati)</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <Select value={bulkAction} onValueChange={setBulkAction}>
-              <SelectTrigger><SelectValue placeholder="Seleziona azione..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="status">Cambia Stato</SelectItem>
-                <SelectItem value="discount">Cambia Classe Sconto</SelectItem>
-                <SelectItem value="type">Cambia Tipo</SelectItem>
-                <SelectItem value="delete">Elimina</SelectItem>
-              </SelectContent>
-            </Select>
-            {bulkAction === "status" && (
-              <Select value={bulkStatus} onValueChange={setBulkStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">✅ Attivo</SelectItem>
-                  <SelectItem value="inactive">❌ Non Attivo</SelectItem>
-                  <SelectItem value="onboarding">🔄 In Attivazione</SelectItem>
-                  <SelectItem value="lead">📋 Lead</SelectItem>
-                  <SelectItem value="suspended">⛔ Sospeso</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-            {bulkAction === "discount" && (
-              <Select value={bulkDiscount} onValueChange={setBulkDiscount}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {discountTiers?.map(t => (
-                    <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {bulkAction === "type" && (
-              <Select value={bulkType || "__none__"} onValueChange={v => setBulkType(v === "__none__" ? "" : v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Nessuno —</SelectItem>
-                  <SelectItem value="Reseller">Reseller</SelectItem>
-                  <SelectItem value="Distributor">Distributor</SelectItem>
-                  <SelectItem value="Rigger">Rigger</SelectItem>
-                  <SelectItem value="Dropshipper">Dropshipper</SelectItem>
-                  <SelectItem value="Boat Builder">Boat Builder</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-            {bulkAction === "delete" && (
-              <p className="text-sm text-destructive">⚠️ Verranno eliminati {selected.size} clienti con tutti i dati associati (ordini, contatti, comunicazioni).</p>
-            )}
-            <Button onClick={executeBulk} disabled={!bulkAction} className="w-full" variant={bulkAction === "delete" ? "destructive" : "default"}>
-              {bulkAction === "delete" ? `Elimina ${selected.size} clienti` : "Applica"}
             </Button>
           </div>
         </DialogContent>
