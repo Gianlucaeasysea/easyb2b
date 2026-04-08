@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
   const code = url.searchParams.get('code')
   const error = url.searchParams.get('error')
 
-  const appUrl = Deno.env.get('APP_URL') || 'https://easyb2b.lovable.app'
+  const appUrl = Deno.env.get('APP_URL') || 'https://b2b.easysea.org'
 
   if (error) {
     console.error('OAuth error from Google:', error)

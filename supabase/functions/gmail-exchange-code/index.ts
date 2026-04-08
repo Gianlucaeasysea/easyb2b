@@ -11,7 +11,7 @@ function toOrigin(value: string | null) {
   }
 }
 
-const DEFAULT_APP_URL = 'https://easyb2b.lovable.app'
+const DEFAULT_APP_URL = 'https://b2b.easysea.org'
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
