@@ -252,14 +252,7 @@ const CRMOrganizationDetail = () => {
     else { toast.success("Listino rimosso"); refetchAssignedLists(); }
   };
 
-  const updateDiscountClass = async (newClass: string) => {
-    const { error } = await supabase.from("clients").update({ discount_class: newClass }).eq("id", id!);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Classe sconto aggiornata");
-      queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
-    }
-  };
+  // discount_class deprecated - use price lists instead
 
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
   const totalOrders = orders?.length || 0;
@@ -828,7 +821,7 @@ const CRMOrganizationDetail = () => {
             assignedPriceLists={assignedPriceLists || []}
             assignPriceList={assignPriceList}
             removePriceList={removePriceList}
-            updateDiscountClass={updateDiscountClass}
+            
             queryClient={queryClient}
           />
         </TabsContent>
@@ -1101,7 +1094,7 @@ const CRMOrganizationDetail = () => {
 export default CRMOrganizationDetail;
 
 // Pricing Tab component
-function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPriceLists, assignPriceList, removePriceList, updateDiscountClass, queryClient }: {
+function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPriceLists, assignPriceList, removePriceList, queryClient }: {
   clientId: string;
   client: Tables<"clients">;
   discountTiers: Tables<"discount_tiers">[];
@@ -1109,7 +1102,6 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
   assignedPriceLists: Array<{ id: string; price_list_id: string; price_lists: { id: string; name: string; description: string | null; discount_tier_id: string | null } | null }>;
   assignPriceList: (id: string) => Promise<void>;
   removePriceList: (id: string) => Promise<void>;
-  updateDiscountClass: (cls: string) => Promise<void>;
   queryClient: ReturnType<typeof useQueryClient>;
 }) {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -1154,24 +1146,6 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
 
   return (
     <div className="space-y-6">
-      {/* Discount Class */}
-      <div className="glass-card-solid p-5">
-        <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
-          <Crown size={14} /> Classe di Sconto
-        </h3>
-        <div className="flex items-center gap-3">
-          <Select value={client.discount_class || "D"} onValueChange={updateDiscountClass}>
-            <SelectTrigger className="w-48 bg-secondary border-border"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {discountTiers.map(t => (
-                <SelectItem key={t.id} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
-              ))}
-              <SelectItem value="D">Standard (D)</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-xs text-muted-foreground">Attuale: {client.discount_class || "D"}</span>
-        </div>
-      </div>
 
       {/* Dealer Portal Visibility */}
       <div className="glass-card-solid p-5">

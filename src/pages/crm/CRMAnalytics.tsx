@@ -77,7 +77,7 @@ const CRMAnalytics = () => {
   const { data: clients } = useQuery({
     queryKey: ["analytics-clients"],
     queryFn: async () => {
-      const { data } = await supabase.from("clients").select("id, company_name, status, total_orders_value, total_orders_count, last_order_date, days_since_last_order, discount_class");
+      const { data } = await supabase.from("clients").select("id, company_name, status, total_orders_value, total_orders_count, last_order_date, days_since_last_order");
       return data || [];
     },
   });

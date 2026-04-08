@@ -349,7 +349,7 @@ const AdminClientDetail = () => {
 
   const [form, setForm] = useState({
     company_name: "", contact_name: "", email: "", phone: "", country: "", zone: "",
-    status: "", discount_class: "", notes: "", address: "", website: "", business_type: "", vat_number: "",
+    status: "", notes: "", address: "", website: "", business_type: "", vat_number: "",
     payment_terms: "30_days", payment_terms_notes: "",
   });
 
@@ -361,7 +361,7 @@ const AdminClientDetail = () => {
       setForm({
         company_name: client.company_name || "", contact_name: client.contact_name || "",
         email: client.email || "", phone: client.phone || "", country: client.country || "",
-        zone: client.zone || "", status: client.status || "lead", discount_class: client.discount_class || "standard",
+        zone: client.zone || "", status: client.status || "lead",
         notes: client.notes || "", address: client.address || "", website: client.website || "",
         business_type: client.business_type || "", vat_number: client.vat_number || "",
         payment_terms: (client as any).payment_terms || "30_days",
@@ -502,7 +502,6 @@ const AdminClientDetail = () => {
 
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
   const totalOrders = orders?.length || 0;
-  const tier = discountTiers?.find(t => t.name === form.discount_class) || { label: form.discount_class, discount_pct: 0 };
 
   const fmtDate = (d: string | null | undefined) => {
     if (!d) return "—";
@@ -541,7 +540,7 @@ const AdminClientDetail = () => {
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading">Payment Terms</span>
           </div>
           <p className="font-heading text-xl font-bold text-foreground">
-            {{ prepaid: "Anticipato", "30_days": "30 gg", "60_days": "60 gg", "90_days": "90 gg", end_of_month: "Fine mese" }[(client as any).payment_terms] || tier.label}
+            {{ prepaid: "Anticipato", "30_days": "30 gg", "60_days": "60 gg", "90_days": "90 gg", end_of_month: "Fine mese" }[(client as any).payment_terms] || "30 gg"}
           </p>
           <p className="text-xs text-muted-foreground">Listino: {assignedPriceLists && assignedPriceLists.length > 0 ? (assignedPriceLists as any[]).map((plc: any) => plc.price_lists?.name).join(", ") : "—"}</p>
         </div>
@@ -799,15 +798,6 @@ const AdminClientDetail = () => {
               <div>
                 <Label className="text-xs text-muted-foreground">Note pagamento</Label>
                 <Textarea value={form.payment_terms_notes || ""} onChange={e => setForm(f => ({ ...f, payment_terms_notes: e.target.value }))} className="mt-1 bg-secondary border-border rounded-lg" rows={2} placeholder="Condizioni speciali..." />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Discount Class (deprecated)</Label>
-                <Select value={form.discount_class} onValueChange={v => setForm(f => ({ ...f, discount_class: v }))}>
-                  <SelectTrigger className="mt-1 bg-secondary border-border rounded-lg"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {discountTiers?.map(t => <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>)}
-                  </SelectContent>
-                </Select>
               </div>
 
               {/* Dealer Portal Visibility */}

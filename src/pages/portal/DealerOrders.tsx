@@ -24,7 +24,7 @@ const ORDER_PHASES = [
   { key: "confirmed", label: "Ordine Ricevuto", icon: CheckCircle },
   { key: "processing", label: "Confermato", icon: Package },
   { key: "ready_to_ship", label: "In Preparazione", icon: Clock },
-  { key: "shipped", label: "Pronto", icon: CheckCircle },
+  { key: "shipped", label: "Spedito", icon: Truck },
   { key: "delivered", label: "Consegnato", icon: Package },
 ];
 
@@ -86,8 +86,72 @@ const DealerOrders = () => {
   };
 
   const getPhaseIndex = (status: string) => {
+    if (status === "cancelled") return -2; // special cancelled marker
     const idx = ORDER_PHASES.findIndex(p => p.key === status);
     return idx >= 0 ? idx : -1;
+  };
+
+  // Duplicate order handler
+  const handleDuplicate = async (order: any) => {
+    if (!client) return;
+    setDuplicatingId(order.id);
+    try {
+      const items = (order.order_items || []) as any[];
+      if (!items.length) { toast.error("L'ordine non ha prodotti da duplicare"); return; }
+
+      // Fetch current prices from client's price list
+      const { data: priceListClients } = await supabase.from("price_list_clients").select("price_list_id").eq("client_id", client.id);
+      const priceListIds = priceListClients?.map(plc => plc.price_list_id) || [];
+      let priceMap: Record<string, number> = {};
+      if (priceListIds.length > 0) {
+        const { data: priceItems } = await supabase.from("price_list_items").select("product_id, custom_price").in("price_list_id", priceListIds);
+        priceItems?.forEach(pi => { priceMap[pi.product_id] = Number(pi.custom_price); });
+      }
+
+      // Check product availability
+      const productIds = items.map((i: any) => i.product_id);
+      const { data: products } = await supabase.from("products").select("id, name, price, active_b2b, stock_quantity").in("id", productIds);
+      const productMap = new Map(products?.map(p => [p.id, p]) || []);
+
+      const validItems: { product_id: string; quantity: number; unit_price: number; subtotal: number }[] = [];
+      let excludedCount = 0;
+
+      for (const item of items) {
+        const product = productMap.get(item.product_id);
+        if (!product || !product.active_b2b) { excludedCount++; continue; }
+        const price = priceMap[item.product_id] || Number(product.price || 0);
+        const qty = Math.min(item.quantity, product.stock_quantity || item.quantity);
+        validItems.push({ product_id: item.product_id, quantity: qty, unit_price: price, subtotal: price * qty });
+      }
+
+      if (!validItems.length) { toast.error("Nessun prodotto disponibile per la duplicazione"); return; }
+
+      const totalAmount = validItems.reduce((sum, i) => sum + i.subtotal, 0);
+      const { data: newOrder, error: orderErr } = await supabase.from("orders").insert({
+        client_id: client.id,
+        status: "draft",
+        total_amount: totalAmount,
+        notes: `Duplicato da ordine ${(order as any).order_code || order.id.slice(0, 8)}`,
+        payment_terms: (client as any).payment_terms || null,
+      }).select().single();
+      if (orderErr) throw orderErr;
+
+      const orderItemsToInsert = validItems.map(i => ({ order_id: newOrder.id, ...i }));
+      const { error: itemsErr } = await supabase.from("order_items").insert(orderItemsToInsert);
+      if (itemsErr) throw itemsErr;
+
+      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+      if (excludedCount > 0) {
+        toast.warning(`Ordine duplicato come bozza. ${excludedCount} prodotti non disponibili esclusi.`);
+      } else {
+        toast.success(`Ordine duplicato come bozza #${(newOrder as any).order_code || newOrder.id.slice(0, 8)}`);
+      }
+    } catch (error) {
+      showErrorToast(error, "DealerOrders.duplicate");
+    } finally {
+      setDuplicatingId(null);
+      setConfirmDuplicate(null);
+    }
   };
 
   return (
@@ -122,6 +186,9 @@ const DealerOrders = () => {
             const items = (order.order_items || []) as any[];
             const shippingCost = Number((order as any).shipping_cost_client || 0);
             const phaseIdx = getPhaseIndex(status);
+            const isPaid = (order as any).payment_status === "paid" || (order as any).payment_status === "Payed";
+            const isCancelled = status === "cancelled";
+            const isDraft = status === "draft";
 
             return (
               <div key={order.id} className="glass-card-solid overflow-hidden">
@@ -149,10 +216,22 @@ const DealerOrders = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
+                    {isDraft && <Badge className="border-0 text-xs bg-muted text-muted-foreground">Bozza</Badge>}
                     <Badge className={`border-0 text-xs ${statusColor}`}>{statusLabel}</Badge>
                     <span className="font-heading font-bold text-foreground text-lg">
                       €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
                     </span>
+                    {!isCancelled && (
+                      <Button
+                        variant="ghost" size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                        disabled={duplicatingId === order.id}
+                        onClick={(e) => { e.stopPropagation(); setConfirmDuplicate(order); }}
+                        title="Duplica Ordine"
+                      >
+                        {duplicatingId === order.id ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
+                      </Button>
+                    )}
                     {isExpanded ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
                   </div>
                 </div>
@@ -168,12 +247,19 @@ const DealerOrders = () => {
                     )}
 
                     {/* Progress timeline */}
-                    {phaseIdx >= 0 && (
+                    {isCancelled ? (
+                      <div className="px-5 py-4 border-b border-border">
+                        <div className="flex items-center gap-2 text-destructive">
+                          <XCircle size={16} />
+                          <span className="text-sm font-semibold">Ordine Annullato</span>
+                        </div>
+                      </div>
+                    ) : phaseIdx >= 0 && (
                       <div className="px-5 py-4 border-b border-border">
                         <div className="flex items-center justify-between">
                           {ORDER_PHASES.map((phase, i) => {
                             const isComplete = i <= phaseIdx;
-                            const isCurrent = i === phaseIdx;
+                            const isCurrent = i === phaseIdx && !isPaid;
                             const PhaseIcon = phase.icon;
                             return (
                               <div key={phase.key} className="flex items-center flex-1 last:flex-none">
@@ -199,6 +285,20 @@ const DealerOrders = () => {
                               </div>
                             );
                           })}
+                          {/* Pagato step */}
+                          <div className="flex items-center flex-none">
+                            <div className={`flex-1 h-0.5 w-6 mx-1 mt-[-14px] ${isPaid ? "bg-success" : "bg-border"}`} />
+                            <div className="flex flex-col items-center">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${
+                                isPaid ? "bg-success text-success-foreground ring-2 ring-success/30" : "bg-muted text-muted-foreground"
+                              }`}>
+                                <DollarSign size={14} />
+                              </div>
+                              <span className={`text-[9px] mt-1 text-center max-w-[70px] leading-tight ${
+                                isPaid ? "font-bold text-success" : "text-muted-foreground"
+                              }`}>Pagato</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -337,6 +437,24 @@ const DealerOrders = () => {
         />
       </>
       )}
+
+      {/* Confirm Duplicate Dialog */}
+      <Dialog open={!!confirmDuplicate} onOpenChange={() => setConfirmDuplicate(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Duplica Ordine</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Vuoi duplicare questo ordine? Verrà creata una nuova bozza con gli stessi prodotti e quantità, ai prezzi aggiornati.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDuplicate(null)}>Annulla</Button>
+            <Button onClick={() => handleDuplicate(confirmDuplicate)} disabled={!!duplicatingId}>
+              {duplicatingId ? "Duplicazione..." : "Duplica"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

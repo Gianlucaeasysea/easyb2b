@@ -32,14 +32,12 @@ const AdminClients = () => {
   const [newClient, setNewClient] = useState({
     company_name: "", contact_name: "", email: "", phone: "",
     country: "", address: "", business_type: "", status: "active",
-    discount_class: "standard", website: "", vat_number: "", zone: "", notes: "",
+    website: "", vat_number: "", zone: "", notes: "",
   });
 
   // Bulk dialogs
-  const [showDiscountDialog, setShowDiscountDialog] = useState(false);
   const [showSalesDialog, setShowSalesDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [bulkDiscount, setBulkDiscount] = useState("standard");
   const [bulkSalesId, setBulkSalesId] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
 
@@ -79,14 +77,6 @@ const AdminClients = () => {
     },
   });
 
-  const { data: discountTiers } = useQuery({
-    queryKey: ["discount-tiers"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("discount_tiers").select("*").order("sort_order");
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Sales users for assignment
   const { data: salesUsers } = useQuery({
@@ -132,7 +122,7 @@ const AdminClients = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-clients"] });
       setShowCreate(false);
-      setNewClient({ company_name: "", contact_name: "", email: "", phone: "", country: "", address: "", business_type: "", status: "active", discount_class: "standard", website: "", vat_number: "", zone: "", notes: "" });
+      setNewClient({ company_name: "", contact_name: "", email: "", phone: "", country: "", address: "", business_type: "", status: "active", website: "", vat_number: "", zone: "", notes: "" });
       toast.success("Cliente creato");
     },
     onError: (error) => showErrorToast(error, "AdminClients.createClient"),
@@ -149,26 +139,6 @@ const AdminClients = () => {
   const toggleAll = () => {
     if (selected.size === filtered.length) setSelected(new Set());
     else setSelected(new Set(filtered.map(c => c.id)));
-  };
-
-  // Bulk: discount class
-  const handleBulkDiscount = async () => {
-    setBulkLoading(true);
-    try {
-      const ids = Array.from(selected);
-      const result = await runBulkOperation(ids, async (id) => {
-        const { error } = await supabase.from("clients").update({ discount_class: bulkDiscount }).eq("id", id);
-        if (error) throw error;
-      });
-      bulkResultToast(toast.success, toast.error, result, "clienti");
-      setSelected(new Set());
-      qc.invalidateQueries({ queryKey: ["admin-clients"] });
-    } catch (error) {
-      showErrorToast(error, "AdminClients.bulkDiscount");
-    } finally {
-      setBulkLoading(false);
-      setShowDiscountDialog(false);
-    }
   };
 
   // Bulk: assign sales
@@ -219,7 +189,6 @@ const AdminClients = () => {
       "Telefono": c.phone || "",
       "Paese": c.country || "",
       "Tipo": c.business_type || "",
-      "Classe Sconto": c.discount_class || "",
       "Stato": c.status || "",
       "Totale Speso": (clientOrderStats?.[c.id]?.totalSpent || 0).toFixed(2),
     }));
@@ -280,7 +249,7 @@ const AdminClients = () => {
               <TableRow>
                 <TableHead className="w-10"><Checkbox disabled /></TableHead>
                 <TableHead>Azienda</TableHead><TableHead>Tipo</TableHead><TableHead>Paese</TableHead>
-                <TableHead>Sconto</TableHead><TableHead>Ultimo Ordine</TableHead>
+                 <TableHead>Ultimo Ordine</TableHead>
                 <TableHead className="text-right">Totale Speso</TableHead><TableHead>Stato</TableHead><TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -303,7 +272,6 @@ const AdminClients = () => {
                 <TableHead>Azienda</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Paese</TableHead>
-                <TableHead>Sconto</TableHead>
                 <TableHead>Ultimo Ordine</TableHead>
                 <TableHead className="text-right">Totale Speso</TableHead>
                 <TableHead>Stato</TableHead>
@@ -327,9 +295,6 @@ const AdminClients = () => {
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)}>
                     <span className="text-sm text-muted-foreground">{c.country || "—"}</span>
-                  </TableCell>
-                  <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)}>
-                    <Badge variant="outline" className="font-mono text-[10px]">{discountTiers?.find(t => t.name === c.discount_class)?.label || c.discount_class}</Badge>
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)}>
                     {(() => {
@@ -379,9 +344,6 @@ const AdminClients = () => {
 
       {/* Floating Bulk Action Bar */}
       <BulkActionBar count={selected.size} onDeselect={() => setSelected(new Set())}>
-        <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => setShowDiscountDialog(true)}>
-          <Tag size={14} /> Cambia Classe Sconto
-        </Button>
         <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => setShowSalesDialog(true)}>
           <UserCheck size={14} /> Assegna Sales
         </Button>
@@ -392,25 +354,6 @@ const AdminClients = () => {
           <Trash2 size={14} /> Elimina
         </Button>
       </BulkActionBar>
-
-      {/* Discount Dialog */}
-      <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Cambia Classe Sconto ({selected.size} clienti)</DialogTitle></DialogHeader>
-          <Select value={bulkDiscount} onValueChange={setBulkDiscount}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {discountTiers?.map(t => (
-                <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDiscountDialog(false)}>Annulla</Button>
-            <Button onClick={handleBulkDiscount} disabled={bulkLoading}>{bulkLoading ? "Aggiornamento..." : "Applica"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Assign Sales Dialog */}
       <Dialog open={showSalesDialog} onOpenChange={setShowSalesDialog}>
@@ -488,20 +431,7 @@ const AdminClients = () => {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Classe Sconto</Label>
-                <Select value={newClient.discount_class} onValueChange={v => setNewClient(f => ({ ...f, discount_class: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {discountTiers?.map(t => (
-                      <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>P.IVA</Label><Input value={newClient.vat_number} onChange={e => setNewClient(f => ({ ...f, vat_number: e.target.value }))} /></div>
-            </div>
+            <div><Label>P.IVA</Label><Input value={newClient.vat_number} onChange={e => setNewClient(f => ({ ...f, vat_number: e.target.value }))} /></div>
             <div><Label>Website</Label><Input value={newClient.website} onChange={e => setNewClient(f => ({ ...f, website: e.target.value }))} /></div>
             <Button onClick={() => createClient.mutate()} disabled={!newClient.company_name || createClient.isPending} className="w-full">
               Crea Cliente
