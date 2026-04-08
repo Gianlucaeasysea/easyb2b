@@ -525,6 +525,10 @@ const CRMOrganizationDetail = () => {
                         }}>
                           <KeyRound size={10} /> Reset Password
                         </Button>
+                        <Button variant="destructive" size="sm" className="gap-1 text-xs h-7" disabled={deletingCredentials} onClick={handleDeleteCredentials}>
+                          {deletingCredentials ? <RefreshCw size={10} className="animate-spin" /> : <Trash2 size={10} />}
+                          Elimina Account
+                        </Button>
                       </div>
                     </div>
                   </div>
