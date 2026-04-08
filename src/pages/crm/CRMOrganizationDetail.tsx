@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import { deleteContactsCascade } from "@/lib/crmEntityActions";
+import { invokeDealerAccountAction } from "@/lib/dealerAccountActions";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
 import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
 import {
@@ -65,7 +66,7 @@ const CRMOrganizationDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeOrderCtx, setComposeOrderCtx] = useState<any>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -87,45 +88,6 @@ const CRMOrganizationDetail = () => {
   const generatePassword = () => {
     const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$";
     return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  };
-
-  const invokeDealerAccountAction = async (payload: {
-    client_id: string;
-    email?: string;
-    password?: string;
-    action?: "delete";
-  }) => {
-    const accessToken = session?.access_token ?? (await supabase.auth.getSession()).data.session?.access_token;
-
-    if (!accessToken) {
-      throw new Error("Sessione non valida. Effettua di nuovo il login.");
-    }
-
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    let result: any = null;
-    try {
-      result = await response.json();
-    } catch {
-      result = null;
-    }
-
-    if (!response.ok) {
-      throw new Error(result?.error || `Errore nella gestione credenziali dealer (${response.status})`);
-    }
-
-    if (result?.error) {
-      throw new Error(result.error);
-    }
-
-    return result;
   };
 
   const handleCreateCredentials = async () => {
