@@ -14,7 +14,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
 import { useAuth } from "@/contexts/AuthContext";
-import { Copy, Pencil, Plus, Trash2, Zap, ArrowRight } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Copy, Pencil, Plus, Trash2, Zap, ArrowRight, History, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 
 /* ── Constants ── */
