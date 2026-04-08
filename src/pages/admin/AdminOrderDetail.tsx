@@ -209,8 +209,8 @@ const AdminOrderDetail = () => {
               <p><span className="text-muted-foreground">Country:</span> {client?.country || "—"}</p>
             </div>
             <div className="mt-3 pt-3 border-t border-border space-y-2 text-sm">
-              <p><span className="text-muted-foreground">Payment:</span> <Badge className={`border-0 text-[10px] ml-1 ${(order as any).payment_status === 'Payed' ? 'bg-success/20 text-success' : (order as any).payment_status === 'lost' ? 'bg-destructive/20 text-destructive' : 'bg-warning/20 text-warning'}`}>{(order as any).payment_status || "—"}</Badge></p>
-              <p><span className="text-muted-foreground">Payed Date:</span> {(order as any).payed_date || "—"}</p>
+              <p><span className="text-muted-foreground">Payment:</span> <Badge className={`border-0 text-[10px] ml-1 ${getPaymentStatusColor((order as any).payment_status || "unpaid")}`}>{getPaymentStatusLabel((order as any).payment_status || "unpaid")}</Badge></p>
+              <p><span className="text-muted-foreground">Data Pagamento:</span> {(order as any).payed_date || "—"}</p>
               <p><span className="text-muted-foreground">Delivery Date:</span> {(order as any).delivery_date || "—"}</p>
             </div>
             {order.notes && (

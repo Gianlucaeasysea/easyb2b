@@ -193,9 +193,9 @@ const AdminDashboard = () => {
     return Object.entries(map).map(([name, value]) => ({ name, value, fill: colorByLabel[name] || "#9ca3af" }));
   })();
 
-  // Late payments (payment_status pending/to be paid, created > 30 days ago)
+  // Late payments (payment_status not paid, created > 30 days ago)
   const latePayments = (orders || []).filter(o => {
-    const isPending = !o.payed_date && o.payment_status !== "Payed";
+    const isPending = !o.payed_date && o.payment_status !== "paid";
     const daysOld = differenceInDays(new Date(), new Date(o.created_at));
     return isPending && daysOld > 30 && Number(o.total_amount || 0) > 0;
   }).map(o => ({

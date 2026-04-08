@@ -52,7 +52,7 @@ const DealerDashboard = () => {
 
   const activeOrders = orders?.filter(o => o.status !== "delivered" && o.status !== "draft") || [];
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
-  const openInvoices = orders?.filter(o => o.status !== "draft" && o.payment_status !== "paid" && o.payment_status !== "Payed") || [];
+  const openInvoices = orders?.filter(o => o.status !== "draft" && o.payment_status !== "paid") || [];
   const openInvoiceTotal = openInvoices.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
   const monthlyTarget = 5000;
