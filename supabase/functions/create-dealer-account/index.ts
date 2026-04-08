@@ -29,7 +29,11 @@ Deno.serve(async (req) => {
       _user_id: caller.id,
       _role: "admin",
     });
-    if (!isAdmin) throw new Error("Not authorized");
+    const { data: isSales } = await supabaseAdmin.rpc("has_role", {
+      _user_id: caller.id,
+      _role: "sales",
+    });
+    if (!isAdmin && !isSales) throw new Error("Not authorized");
 
     const { client_id, email, password } = await req.json();
     if (!client_id || !email || !password) throw new Error("Missing fields");
