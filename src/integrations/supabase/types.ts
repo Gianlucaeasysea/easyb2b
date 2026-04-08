@@ -78,6 +78,27 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string | null
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
