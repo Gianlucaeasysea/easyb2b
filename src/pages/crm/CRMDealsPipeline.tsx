@@ -6,7 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { format, isValid } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { Building2, ArrowLeft, Calendar } from "lucide-react";
+import { Building2, ArrowLeft, Calendar, ShoppingBag } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useCallback, useRef } from "react";
 
@@ -85,7 +86,7 @@ const CRMDealsPipeline = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deals")
-        .select("*, clients:client_id(id, company_name), contact:contact_id(contact_name)")
+        .select("*, clients:client_id(id, company_name), contact:contact_id(contact_name), order:order_id(id, order_code)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -232,14 +233,27 @@ const CRMDealsPipeline = () => {
                                     }}
                                     exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                                     transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                                    onClick={() => navigate("/crm/deals")}
+                                    onClick={() => {
+                                      if (deal.source === "order" && (deal as any).order?.id) {
+                                        navigate(`/admin/orders/${(deal as any).order.id}`);
+                                      } else {
+                                        navigate("/crm/deals");
+                                      }
+                                    }}
                                     className={`glass-card-solid p-3 border-l-2 ${cardAccents[stage]} cursor-pointer hover:shadow-md transition-colors ${
                                       dragSnapshot.isDragging ? "shadow-lg ring-2 ring-primary/30 rotate-1" : ""
                                     }`}
                                   >
-                                    <p className="text-xs font-heading font-semibold text-foreground truncate">
-                                      {deal.title}
-                                    </p>
+                                    <div className="flex items-center gap-1.5">
+                                      <p className="text-xs font-heading font-semibold text-foreground truncate flex-1">
+                                        {deal.title}
+                                      </p>
+                                      {deal.source === "order" && (
+                                        <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 gap-0.5 border-primary/30 text-primary">
+                                          <ShoppingBag size={8} /> Da ordine
+                                        </Badge>
+                                      )}
+                                    </div>
                                     {org && (
                                       <button
                                         className="text-[10px] text-primary truncate flex items-center gap-1 mt-0.5 hover:underline"
