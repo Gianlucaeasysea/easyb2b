@@ -11,8 +11,8 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   roleError: boolean;
-  signInWithEmail: (email: string, password: string) => Promise<{ error: any }>;
-  signInWithMagicLink: (email: string) => Promise<{ error: any }>;
+  signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   retryRole: () => void;
 }
@@ -60,15 +60,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [roleError, setRoleError] = useState(false);
 
+  const VALID_ROLES: AppRole[] = ["admin", "dealer", "sales", "operations"];
+
   const fetchRoleWithRetry = useCallback(async (userId: string, retries = 3): Promise<AppRole | null> => {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         const { data, error } = await supabase.rpc("get_user_role", { _user_id: userId });
         if (error) throw error;
-        const fetched = data as AppRole | null;
-        if (fetched) {
-          setCachedRole(userId, fetched);
-          return fetched;
+        if (data && VALID_ROLES.includes(data as AppRole)) {
+          const validRole = data as AppRole;
+          setCachedRole(userId, validRole);
+          return validRole;
         }
         return null;
       } catch (err) {
