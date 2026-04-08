@@ -21,6 +21,13 @@ interface CRMOrderDetailModalProps {
   orderId: string | null;
 }
 
+const DOC_TYPE_LABELS: Record<string, string> = {
+  invoice: "Fattura", ddt: "DDT", credit_note: "Nota di Credito",
+  proforma: "Proforma", order_confirmation: "Conferma Ordine",
+  delivery_note: "DDT", warranty: "Garanzia", other: "Altro",
+};
+const docTypeLabel = (type: string) => DOC_TYPE_LABELS[type] || type;
+
 const fmtDate = (d: string | null | undefined) => {
   if (!d) return "—";
   try { return format(new Date(d), "dd MMM yyyy", { locale: it }); } catch { return "—"; }
