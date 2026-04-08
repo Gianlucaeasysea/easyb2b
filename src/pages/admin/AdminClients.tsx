@@ -238,7 +238,7 @@ const AdminClients = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(c => (
+              {pageData.map(c => (
                 <TableRow key={c.id} className="cursor-pointer hover:bg-secondary/50">
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggleSelect(c.id)} />
@@ -293,6 +293,7 @@ const AdminClients = () => {
               ))}
             </TableBody>
           </Table>
+          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
         </div>
       )}
 
