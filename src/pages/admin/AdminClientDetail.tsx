@@ -277,9 +277,10 @@ const AdminClientDetail = () => {
         })),
       });
       if (orderErr) throw orderErr;
+      const orderResult = order as any;
 
       await supabase.from("order_events").insert({
-        order_id: order.id,
+        order_id: orderResult.id,
         event_type: "created",
         title: "Ordine creato manualmente da admin",
       });

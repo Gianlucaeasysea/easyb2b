@@ -139,7 +139,7 @@ const DealerOrders = () => {
       if (excludedCount > 0) {
         toast.warning(`Ordine duplicato come bozza. ${excludedCount} prodotti non disponibili esclusi.`);
       } else {
-        toast.success(`Ordine duplicato come bozza #${(newOrder as any).order_code || newOrder.id.slice(0, 8)}`);
+        toast.success(`Ordine duplicato come bozza #${(newOrder as any)?.order_code || (newOrder as any)?.id?.slice(0, 8)}`);
       }
     } catch (error) {
       showErrorToast(error, "DealerOrders.duplicate");
