@@ -124,10 +124,11 @@ const CRMDealsPipeline = () => {
   }, [queryClient, highlightDeal]);
 
   const updateStage = async (id: string, stage: string) => {
-    const updates: Record<string, unknown> = { stage, probability: stageProbMap[stage] ?? 20 };
-    if (stage === "closed_won" || stage === "closed_lost") {
-      updates.closed_at = new Date().toISOString();
-    }
+    const updates = {
+      stage,
+      probability: stageProbMap[stage] ?? 20,
+      closed_at: (stage === "closed_won" || stage === "closed_lost") ? new Date().toISOString() : undefined,
+    };
     const { error } = await supabase.from("deals").update(updates).eq("id", id);
     if (error) {
       queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
@@ -212,11 +213,18 @@ const CRMDealsPipeline = () => {
                           const isHighlighted = highlightedIds.has(deal.id);
                           return (
                             <Draggable key={deal.id} draggableId={deal.id} index={index}>
-                              {(provided, snapshot) => (
+                              {(dragProvided, dragSnapshot) => {
+                                const dragProps = { ...dragProvided.draggableProps };
+                                const handleProps = { ...dragProvided.dragHandleProps };
+                                // Remove conflicting drag handlers for framer-motion compatibility
+                                delete (dragProps as Record<string, unknown>).onDragStart;
+                                delete (handleProps as Record<string, unknown>).onDragStart;
+                                return (
                                 <motion.div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
+                                  ref={dragProvided.innerRef}
+                                  {...dragProps}
+                                  {...handleProps}
+                                  onDragStart={dragProvided.draggableProps.onDragStart as unknown as React.DragEventHandler}
                                   layout={!isDragging}
                                   initial={{ opacity: 0, y: 20, scale: 0.95 }}
                                   animate={{
@@ -231,10 +239,10 @@ const CRMDealsPipeline = () => {
                                   transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                                   onClick={() => navigate("/crm/deals")}
                                   className={`glass-card-solid p-3 border-l-2 ${cardAccents[stage]} cursor-pointer hover:shadow-md transition-colors ${
-                                    snapshot.isDragging ? "shadow-lg ring-2 ring-primary/30 rotate-1" : ""
+                                    dragSnapshot.isDragging ? "shadow-lg ring-2 ring-primary/30 rotate-1" : ""
                                   }`}
                                   style={{
-                                    ...provided.draggableProps.style,
+                                    ...dragProvided.draggableProps.style,
                                   }}
                                 >
                                   <p className="text-xs font-heading font-semibold text-foreground truncate">
