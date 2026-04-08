@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Package, Trophy, Megaphone, HelpCircle, FileImage, ShoppingCart, UserCircle, Bell } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, HelpCircle, ShoppingCart, UserCircle, Bell, Receipt } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -15,9 +15,7 @@ const allItems = [
   { title: "Catalog", url: "/portal/catalog", icon: Package },
   { title: "Cart", url: "/portal/cart", icon: ShoppingCart },
   { title: "My Orders", url: "/portal/orders", icon: ShoppingBag },
-  { title: "Promotions", url: "/portal/promos", icon: Megaphone },
-  { title: "Goals & Rewards", url: "/portal/goals", icon: Trophy, key: "goals" },
-  { title: "Marketing", url: "/portal/marketing", icon: FileImage },
+  { title: "Invoices", url: "/portal/invoices", icon: Receipt },
   { title: "Notifications", url: "/portal/notifications", icon: Bell },
   { title: "My Profile", url: "/portal/profile", icon: UserCircle },
   { title: "Support", url: "/portal/support", icon: HelpCircle },
