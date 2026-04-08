@@ -1,8 +1,6 @@
 import { LayoutDashboard, ShoppingBag, Package, HelpCircle, ShoppingCart, UserCircle, Bell, Receipt } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { CartSavedIndicator } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { CartSavedIndicator } from "@/contexts/CartContext";
 import {
