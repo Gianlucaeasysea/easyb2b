@@ -101,8 +101,8 @@ const OrderDetailsTable = ({ limit, showFilters = true, title = "Dettaglio Ordin
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutti</SelectItem>
-              {Object.entries(ORDER_STATUS_MAP).map(([key, label]) => (
-                <SelectItem key={key} value={key}>{label}</SelectItem>
+              {Object.entries(ORDER_STATUSES).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label as string}</SelectItem>
               ))}
             </SelectContent>
           </Select>
