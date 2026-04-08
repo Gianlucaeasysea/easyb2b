@@ -328,6 +328,7 @@ const CRMOrganizations = () => {
                 <TableHead>Score</TableHead>
                 <TableHead>Ultimo Ordine</TableHead>
                 <TableHead>Next Reorder</TableHead>
+                <TableHead>Listino</TableHead>
                 <TableHead className="text-right">Azioni</TableHead>
               </TableRow>
             </TableHeader>
@@ -380,6 +381,13 @@ const CRMOrganizations = () => {
                         </span>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell onClick={() => navigate(`/crm/organizations/${c.id}`)}>
+                      {clientPriceLists?.[c.id]?.length ? (
+                        <span className="text-xs text-foreground">{clientPriceLists[c.id].join(", ")}</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Non assegnato</span>
                       )}
                     </TableCell>
                     <TableCell>
