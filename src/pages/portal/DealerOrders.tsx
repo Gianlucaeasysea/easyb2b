@@ -482,6 +482,24 @@ const DealerOrders = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Cancel Dialog */}
+      <Dialog open={!!confirmCancel} onOpenChange={() => setConfirmCancel(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Annulla Ordine</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Sei sicuro di voler annullare questo ordine? Questa azione non può essere annullata.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmCancel(null)}>Indietro</Button>
+            <Button variant="destructive" onClick={() => handleCancelOrder(confirmCancel)} disabled={!!cancellingId}>
+              {cancellingId ? "Annullamento..." : "Annulla Ordine"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
