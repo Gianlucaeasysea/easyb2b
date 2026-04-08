@@ -1154,24 +1154,6 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
 
   return (
     <div className="space-y-6">
-      {/* Discount Class */}
-      <div className="glass-card-solid p-5">
-        <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
-          <Crown size={14} /> Classe di Sconto
-        </h3>
-        <div className="flex items-center gap-3">
-          <Select value={client.discount_class || "D"} onValueChange={updateDiscountClass}>
-            <SelectTrigger className="w-48 bg-secondary border-border"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {discountTiers.map(t => (
-                <SelectItem key={t.id} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
-              ))}
-              <SelectItem value="D">Standard (D)</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-xs text-muted-foreground">Attuale: {client.discount_class || "D"}</span>
-        </div>
-      </div>
 
       {/* Dealer Portal Visibility */}
       <div className="glass-card-solid p-5">
