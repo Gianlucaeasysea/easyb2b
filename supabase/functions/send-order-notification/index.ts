@@ -3,10 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const ADMIN_EMAILS = ["business@easysea.org", "gianluca@easysea.org"];
-const BCC_EMAIL = "g.scotto@easysea.org";
+// Fallback values if DB lookup fails
+const FALLBACK_ADMIN_EMAILS = ["business@easysea.org", "gianluca@easysea.org"];
+const FALLBACK_BCC_EMAIL = "g.scotto@easysea.org";
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -17,6 +18,23 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+    // Load notification email config from app_settings
+    let adminEmails = FALLBACK_ADMIN_EMAILS;
+    let bccEmails = [FALLBACK_BCC_EMAIL];
+    try {
+      const { data: emailConfig } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "notification_emails")
+        .single();
+      if (emailConfig?.value) {
+        adminEmails = (emailConfig.value as any).to || FALLBACK_ADMIN_EMAILS;
+        bccEmails = (emailConfig.value as any).bcc || [FALLBACK_BCC_EMAIL];
+      }
+    } catch (e) {
+      console.warn("Failed to load email config, using fallback:", e);
+    }
 
     const { orderId, orderCode, type } = await req.json();
 
@@ -59,13 +77,15 @@ serve(async (req) => {
     const pushClientEmail = (templateName: string, templateData: Record<string, any>, idempotencyKey: string) => {
       if (clientEmail) {
         sends.push({ templateName, recipientEmail: clientEmail, idempotencyKey, templateData });
-        sends.push({ templateName, recipientEmail: BCC_EMAIL, idempotencyKey: `${idempotencyKey}-bcc`, templateData });
+        bccEmails.forEach((bcc, i) => {
+          sends.push({ templateName, recipientEmail: bcc, idempotencyKey: `${idempotencyKey}-bcc-${i}`, templateData });
+        });
       }
     };
 
     if (type === "order_received") {
       pushClientEmail("order-received", { clientName, orderCode: code, itemsHtml, totalAmount, notes: order.notes }, `order-received-client-${orderId}`);
-      ADMIN_EMAILS.forEach(email => {
+      adminEmails.forEach(email => {
         sends.push({
           templateName: "order-received-admin",
           recipientEmail: email,

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Settings, Shield, MailX, Trash2, Plus } from "lucide-react";
+import { Settings, Shield, MailX, Trash2, Plus, Mail, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -25,6 +25,8 @@ const AdminSettings = () => {
   const [confirmRole, setConfirmRole] = useState<{ userId: string; email: string; oldRole: string; newRole: string } | null>(null);
   const [newSuppressEmail, setNewSuppressEmail] = useState("");
   const [showAddSuppress, setShowAddSuppress] = useState(false);
+  const [newToEmail, setNewToEmail] = useState("");
+  const [newBccEmail, setNewBccEmail] = useState("");
 
   // User roles with profiles
   const { data: userRoles } = useQuery({
@@ -97,6 +99,50 @@ const AdminSettings = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Notification email config
+  const { data: notifEmails } = useQuery({
+    queryKey: ["admin-notif-emails"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "notification_emails")
+        .single();
+      if (error) throw error;
+      return (data?.value || { to: [], bcc: [] }) as { to: string[]; bcc: string[] };
+    },
+  });
+
+  const saveNotifEmails = useMutation({
+    mutationFn: async (val: { to: string[]; bcc: string[] }) => {
+      const { error } = await supabase
+        .from("app_settings")
+        .update({ value: val as any, updated_at: new Date().toISOString() })
+        .eq("key", "notification_emails");
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Destinatari notifiche aggiornati");
+      qc.invalidateQueries({ queryKey: ["admin-notif-emails"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const addEmail = (type: "to" | "bcc", email: string) => {
+    if (!isValidEmail(email)) { toast.error("Email non valida"); return; }
+    const current = notifEmails || { to: [], bcc: [] };
+    if (current[type].includes(email.toLowerCase())) { toast.error("Email già presente"); return; }
+    saveNotifEmails.mutate({ ...current, [type]: [...current[type], email.toLowerCase()] });
+    if (type === "to") setNewToEmail(""); else setNewBccEmail("");
+  };
+
+  const removeEmail = (type: "to" | "bcc", email: string) => {
+    const current = notifEmails || { to: [], bcc: [] };
+    saveNotifEmails.mutate({ ...current, [type]: current[type].filter(e => e !== email) });
+  };
+
   return (
     <div>
       <h1 className="font-heading text-2xl font-bold text-foreground mb-2">Settings</h1>
@@ -117,7 +163,69 @@ const AdminSettings = () => {
           <p className="text-sm text-muted-foreground">Configure email, WhatsApp, and in-app notification settings.</p>
         </div>
 
-        {/* User Roles Management */}
+        {/* Notification Email Recipients */}
+        <div className="glass-card-solid p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Mail size={18} className="text-primary" />
+            <h3 className="font-heading font-bold text-foreground">Notifiche Email</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">Destinatari delle notifiche email per nuovi ordini e aggiornamenti.</p>
+
+          {/* TO recipients */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-foreground mb-2">Destinatari (TO)</p>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {notifEmails?.to?.map(email => (
+                <Badge key={email} variant="secondary" className="gap-1 text-xs py-1 px-2">
+                  {email}
+                  <button onClick={() => removeEmail("to", email)} className="ml-1 hover:text-destructive"><X size={12} /></button>
+                </Badge>
+              ))}
+              {!notifEmails?.to?.length && <span className="text-xs text-muted-foreground italic">Nessun destinatario</span>}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="Aggiungi email..."
+                value={newToEmail}
+                onChange={e => setNewToEmail(e.target.value)}
+                className="h-8 text-xs max-w-xs"
+                onKeyDown={e => e.key === "Enter" && newToEmail && addEmail("to", newToEmail)}
+              />
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => addEmail("to", newToEmail)} disabled={!newToEmail}>
+                <Plus size={12} /> Aggiungi
+              </Button>
+            </div>
+          </div>
+
+          {/* BCC recipients */}
+          <div>
+            <p className="text-xs font-semibold text-foreground mb-2">Copia nascosta (BCC)</p>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {notifEmails?.bcc?.map(email => (
+                <Badge key={email} variant="outline" className="gap-1 text-xs py-1 px-2">
+                  {email}
+                  <button onClick={() => removeEmail("bcc", email)} className="ml-1 hover:text-destructive"><X size={12} /></button>
+                </Badge>
+              ))}
+              {!notifEmails?.bcc?.length && <span className="text-xs text-muted-foreground italic">Nessun destinatario BCC</span>}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="Aggiungi email BCC..."
+                value={newBccEmail}
+                onChange={e => setNewBccEmail(e.target.value)}
+                className="h-8 text-xs max-w-xs"
+                onKeyDown={e => e.key === "Enter" && newBccEmail && addEmail("bcc", newBccEmail)}
+              />
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => addEmail("bcc", newBccEmail)} disabled={!newBccEmail}>
+                <Plus size={12} /> Aggiungi
+              </Button>
+            </div>
+          </div>
+        </div>
+
         <div className="glass-card-solid p-6">
           <div className="flex items-center gap-2 mb-4">
             <Shield size={18} className="text-primary" />
