@@ -15,15 +15,22 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Verify caller is admin
-    const authHeader = req.headers.get("Authorization")!;
+    const requestBody = await req.json();
+    const { client_id, email, password, access_token } = requestBody ?? {};
+    if (!client_id || !email || !password) throw new Error("Missing fields");
+
+    // Verify caller is admin or sales
+    const authHeader = req.headers.get("Authorization");
+    const bearerToken = authHeader || (access_token ? `Bearer ${access_token}` : null);
+    if (!bearerToken) throw new Error("Not authenticated");
+
     const callerClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: bearerToken } } }
     );
-    const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) throw new Error("Not authenticated");
+    const { data: { user: caller }, error: callerError } = await callerClient.auth.getUser();
+    if (callerError || !caller) throw new Error("Not authenticated");
 
     const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
       _user_id: caller.id,
@@ -34,9 +41,6 @@ Deno.serve(async (req) => {
       _role: "sales",
     });
     if (!isAdmin && !isSales) throw new Error("Not authorized");
-
-    const { client_id, email, password } = await req.json();
-    if (!client_id || !email || !password) throw new Error("Missing fields");
 
     await cleanupOrphanedDealerAccountByEmail(supabaseAdmin, email, client_id);
 
