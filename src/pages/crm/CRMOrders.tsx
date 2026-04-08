@@ -23,7 +23,7 @@ type OrderRow = Tables<"orders"> & {
   clients: { company_name: string; contact_name: string | null } | null;
 };
 
-const statusFilterOptions = ["all", "submitted", "confirmed", "processing", "ready_to_ship", "shipped", "delivered", "cancelled"];
+const statusFilterOptions = ["all", ...Object.keys(ORDER_STATUSES)];
 const paymentFilterOptions = ["all", "unpaid", "pending", "paid"];
 
 const CRMOrders = () => {
