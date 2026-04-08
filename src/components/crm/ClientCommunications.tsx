@@ -461,7 +461,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
               {openEmail?.body?.includes("<") ? (
                 <div
                   className="prose prose-sm max-w-none text-foreground [&_a]:text-primary"
-                  dangerouslySetInnerHTML={{ __html: openEmail.body }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(openEmail.body) }}
                 />
               ) : (
                 <p className="text-sm text-foreground whitespace-pre-wrap">{openEmail?.body}</p>
