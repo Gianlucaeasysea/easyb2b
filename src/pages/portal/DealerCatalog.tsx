@@ -434,7 +434,7 @@ const DealerCatalog = () => {
               image: selectedProduct.images?.[0] || null,
             });
             toast.success(`${selectedProduct.name} added to cart`);
-          }
+          }}
         />
       )}
     </div>

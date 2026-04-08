@@ -15,6 +15,7 @@ interface ProductDetailModalProps {
   retailPrice: number;
   discountPct: number;
   isClientMode: boolean;
+  canAddToCart?: boolean;
   onAddToCart: () => void;
 }
 
@@ -27,6 +28,7 @@ const ProductDetailModal = ({
   retailPrice,
   discountPct,
   isClientMode,
+  canAddToCart = true,
   onAddToCart,
 }: ProductDetailModalProps) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
