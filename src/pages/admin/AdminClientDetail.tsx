@@ -350,6 +350,7 @@ const AdminClientDetail = () => {
   const [form, setForm] = useState({
     company_name: "", contact_name: "", email: "", phone: "", country: "", zone: "",
     status: "", discount_class: "", notes: "", address: "", website: "", business_type: "", vat_number: "",
+    payment_terms: "30_days", payment_terms_notes: "",
   });
 
   const [bank, setBank] = useState({ bank_name: "", iban: "", swift_bic: "", account_holder: "" });
@@ -363,6 +364,8 @@ const AdminClientDetail = () => {
         zone: client.zone || "", status: client.status || "lead", discount_class: client.discount_class || "standard",
         notes: client.notes || "", address: client.address || "", website: client.website || "",
         business_type: client.business_type || "", vat_number: client.vat_number || "",
+        payment_terms: (client as any).payment_terms || "30_days",
+        payment_terms_notes: (client as any).payment_terms_notes || "",
       });
     }
   }, [client]);

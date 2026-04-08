@@ -14,6 +14,12 @@ import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
 
+import { Copy, DollarSign, XCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
+
 const ORDER_PHASES = [
   { key: "confirmed", label: "Ordine Ricevuto", icon: CheckCircle },
   { key: "processing", label: "Confermato", icon: Package },

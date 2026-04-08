@@ -6,6 +6,8 @@ import {
   Clock, CheckCircle, Truck, Package, FileText, XCircle, Bell, Mail,
 } from "lucide-react";
 
+import { DollarSign } from "lucide-react";
+
 const EVENT_ICONS: Record<string, any> = {
   order_created: Package,
   status_change: CheckCircle,
@@ -14,6 +16,8 @@ const EVENT_ICONS: Record<string, any> = {
   shipping_update: Truck,
   order_rejected: XCircle,
   notification: Bell,
+  payment_received: DollarSign,
+  created: Package,
 };
 
 const EVENT_COLORS: Record<string, string> = {
@@ -24,6 +28,8 @@ const EVENT_COLORS: Record<string, string> = {
   shipping_update: "bg-primary/15 text-primary",
   order_rejected: "bg-destructive/15 text-destructive",
   notification: "bg-muted text-muted-foreground",
+  payment_received: "bg-success/15 text-success",
+  created: "bg-primary/15 text-primary",
 };
 
 const OrderEventsTimeline = ({ orderId }: { orderId: string }) => {
