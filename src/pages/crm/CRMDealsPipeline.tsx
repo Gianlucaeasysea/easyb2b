@@ -296,6 +296,11 @@ const CRMDealsPipeline = () => {
           })}
         </div>
       </DragDropContext>
+      <CRMOrderDetailModal
+        open={!!orderModalId}
+        onOpenChange={(open) => { if (!open) setOrderModalId(null); }}
+        orderId={orderModalId}
+      />
     </div>
   );
 };
