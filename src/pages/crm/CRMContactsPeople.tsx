@@ -14,6 +14,11 @@ import { useNavigate } from "react-router-dom";
 import { differenceInDays, format, isValid } from "date-fns";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import type { Tables } from "@/integrations/supabase/types";
+
+type ContactWithClient = Tables<"client_contacts"> & {
+  clients: { id: string; company_name: string } | null;
+};
 
 const contactTypeColors: Record<string, string> = {
   decision_maker: "bg-destructive/20 text-destructive",
@@ -53,7 +58,7 @@ const CRMContactsPeople = () => {
   const [filterOrg, setFilterOrg] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [filterChannel, setFilterChannel] = useState("all");
-  const [selectedContact, setSelectedContact] = useState<any>(null);
+  const [selectedContact, setSelectedContact] = useState<ContactWithClient | null>(null);
 
   const { data: contacts } = useQuery({
     queryKey: ["crm-all-contacts"],
