@@ -1,13 +1,19 @@
-const configuredOrigin = Deno.env.get("ALLOWED_ORIGIN") || "https://easyb2b.lovable.app";
+const DEFAULT_APP_ORIGIN = "https://b2b.easysea.org";
+
+const configuredOrigin =
+  Deno.env.get("ALLOWED_ORIGIN") ||
+  Deno.env.get("APP_URL") ||
+  DEFAULT_APP_ORIGIN;
 
 const allowedOrigins = [
   configuredOrigin,
+  DEFAULT_APP_ORIGIN,
   "https://easyb2b.lovable.app",
   "https://id-preview--e6574ffd-7ed8-4e30-b8a7-79b96a9a13af.lovable.app",
   "https://e6574ffd-7ed8-4e30-b8a7-79b96a9a13af.lovableproject.com",
   "http://localhost:5173",
   "http://localhost:3000",
-];
+].filter((value): value is string => Boolean(value));
 
 const isTrustedOrigin = (origin: string) => {
   if (!origin) return false;
@@ -18,7 +24,12 @@ const isTrustedOrigin = (origin: string) => {
     const { hostname, protocol } = new URL(origin);
     if (!["https:", "http:"].includes(protocol)) return false;
 
-    return hostname.endsWith(".lovable.app") || hostname.endsWith(".lovableproject.com") || hostname === "localhost";
+    return (
+      hostname.endsWith(".lovable.app") ||
+      hostname.endsWith(".lovableproject.com") ||
+      hostname.endsWith(".easysea.org") ||
+      hostname === "localhost"
+    );
   } catch {
     return false;
   }
