@@ -1076,7 +1076,7 @@ const AdminPriceLists = () => {
                     <div key={c.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border hover:bg-secondary/50 cursor-pointer" onClick={() => addClientToList(c.id)}>
                       <div>
                         <span className="text-sm font-medium">{c.company_name}</span>
-                        {c.discount_class && <span className="text-xs text-muted-foreground ml-2">{c.discount_class}</span>}
+                        
                       </div>
                       <Plus className="h-4 w-4 text-primary" />
                     </div>
