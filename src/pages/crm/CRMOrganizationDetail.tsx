@@ -108,11 +108,9 @@ const CRMOrganizationDetail = () => {
         const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            "Content-Type": "text/plain",
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...payload, access_token: session.access_token }),
         });
         const body = await res.json().catch(() => null);
         if (!res.ok) throw new Error(body?.error || body?.message || "Errore durante la chiamata al backend.");
