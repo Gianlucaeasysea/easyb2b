@@ -160,15 +160,18 @@ export type Database = {
       }
       client_communications: {
         Row: {
+          attempts: number | null
           body: string
           client_id: string
           contact_id: string | null
           created_at: string
           direction: string
+          error_details: string | null
           error_message: string | null
           gmail_message_id: string | null
           gmail_thread_id: string | null
           id: string
+          idempotency_key: string | null
           metadata: Json | null
           order_id: string | null
           recipient_email: string
@@ -179,15 +182,18 @@ export type Database = {
           template_type: string
         }
         Insert: {
+          attempts?: number | null
           body: string
           client_id: string
           contact_id?: string | null
           created_at?: string
           direction?: string
+          error_details?: string | null
           error_message?: string | null
           gmail_message_id?: string | null
           gmail_thread_id?: string | null
           id?: string
+          idempotency_key?: string | null
           metadata?: Json | null
           order_id?: string | null
           recipient_email: string
@@ -198,15 +204,18 @@ export type Database = {
           template_type?: string
         }
         Update: {
+          attempts?: number | null
           body?: string
           client_id?: string
           contact_id?: string | null
           created_at?: string
           direction?: string
+          error_details?: string | null
           error_message?: string | null
           gmail_message_id?: string | null
           gmail_thread_id?: string | null
           id?: string
+          idempotency_key?: string | null
           metadata?: Json | null
           order_id?: string | null
           recipient_email?: string
