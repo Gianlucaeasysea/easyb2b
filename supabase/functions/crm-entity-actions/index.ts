@@ -53,11 +53,12 @@ const getExistingClient = async (adminClient: any, request: Record<string, unkno
   const email = typeof request.email === "string" ? request.email : null;
   const companyName = typeof request.company_name === "string" ? request.company_name : null;
 
-  if (email) {
+  if (email && companyName) {
     const { data } = await adminClient
       .from("clients")
       .select("id, assigned_sales_id")
       .eq("email", email)
+      .eq("company_name", companyName)
       .limit(1)
       .maybeSingle();
     if (data) return data;
@@ -80,11 +81,12 @@ const getExistingLead = async (adminClient: any, request: Record<string, unknown
   const email = typeof request.email === "string" ? request.email : null;
   const companyName = typeof request.company_name === "string" ? request.company_name : null;
 
-  if (email) {
+  if (email && companyName) {
     const { data } = await adminClient
       .from("leads")
       .select("id")
       .eq("email", email)
+      .eq("company_name", companyName)
       .eq("source", "Dealer Application")
       .limit(1)
       .maybeSingle();
@@ -185,6 +187,22 @@ const convertRequestToPipeline = async (adminClient: any, requestId: string, use
 
   if (existingLead) {
     leadId = existingLead.id;
+
+    await ensure(
+      adminClient
+        .from("leads")
+        .update({
+          contact_name: request.contact_name,
+          email: request.email,
+          phone: request.phone,
+          zone: request.zone,
+          status: "new",
+          assigned_to: role === "sales" ? userId : null,
+          notes: `[Dealer Request] Business type: ${request.business_type || "—"}\nWebsite: ${request.website || "—"}\nCountry: ${request.country || "—"}\nVAT: ${request.vat_number || "—"}\nMessage: ${request.message || "—"}`,
+        })
+        .eq("id", leadId),
+      "Failed to refresh existing lead",
+    );
   } else {
     const { data: newLead, error: leadError } = await adminClient
       .from("leads")
