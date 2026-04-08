@@ -88,6 +88,40 @@ const CRMOrganizationDetail = () => {
     return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
   };
 
+  const invokeCreateDealer = async (payload: { client_id: string; email: string; password: string }) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("create-dealer-account", { body: payload });
+      if (error) {
+        const ctx = (error as any).context;
+        if (ctx instanceof Response) {
+          const body = await ctx.json().catch(() => null);
+          throw new Error(body?.error || body?.message || error.message);
+        }
+        throw new Error(error.message);
+      }
+      return data;
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (msg.includes("Failed to send a request to the Edge Function") || msg.includes("Failed to fetch")) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error("Sessione non valida. Effettua di nuovo il login.");
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(body?.error || body?.message || "Errore durante la chiamata al backend.");
+        return body;
+      }
+      throw err;
+    }
+  };
+
   const handleCreateCredentials = async () => {
     if (!client?.email) {
       toast.error("Questa organizzazione non ha un'email configurata");
@@ -96,22 +130,7 @@ const CRMOrganizationDetail = () => {
     setCreatingCredentials(true);
     try {
       const password = generatePassword();
-      const { data: result, error: invokeError } = await supabase.functions.invoke("create-dealer-account", {
-        body: { client_id: id, email: client.email, password },
-      });
-      if (invokeError) {
-        // Try to extract message from response context
-        const ctx = (invokeError as any).context;
-        if (ctx instanceof Response) {
-          try {
-            const body = await ctx.json();
-            throw new Error(body?.error || body?.message || invokeError.message);
-          } catch (e) {
-            if (e instanceof Error && e.message !== invokeError.message) throw e;
-          }
-        }
-        throw new Error(invokeError.message);
-      }
+      const result = await invokeCreateDealer({ client_id: id!, email: client.email, password });
       if (result?.error) throw new Error(result.error);
       toast.success("Credenziali create e inviate via email al dealer");
       queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
