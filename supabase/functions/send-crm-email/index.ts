@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     })
   }
 
-  const { to, subject, html, text, client_id, order_id, template_type, bcc, cc } = body
+  const { to, subject, html, text, client_id, order_id, template_type, bcc, cc, idempotency_key, contact_id } = body
 
   if (!to || !subject || (!html && !text)) {
     return new Response(JSON.stringify({ error: 'Missing required fields: to, subject, html/text' }), {
@@ -63,60 +63,116 @@ Deno.serve(async (req) => {
     })
   }
 
-  try {
-    const client = new SMTPClient({
-      connection: {
-        hostname: 'smtp.gmail.com',
-        port: 465,
-        tls: true,
-        auth: { username: GMAIL_USER, password: gmailPassword },
-      },
-    })
+  // Idempotency check: if key provided and already sent, return early
+  if (idempotency_key) {
+    const { data: existing } = await adminClient
+      .from('client_communications')
+      .select('id, status')
+      .eq('idempotency_key', idempotency_key)
+      .maybeSingle()
 
-    await client.send({
-      from: `EasySea <${GMAIL_USER}>`,
-      to,
-      cc: cc || undefined,
-      bcc: bcc || 'g.scotto@easysea.org',
-      subject,
-      content: text || '',
-      html: html || undefined,
-    })
+    if (existing?.status === 'sent') {
+      console.log(`Idempotency hit: ${idempotency_key} already sent`)
+      return new Response(JSON.stringify({ success: true, deduplicated: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+  }
 
-    await client.close()
+  // Generate a unique key if not provided
+  const commKey = idempotency_key || crypto.randomUUID()
 
-    await adminClient.from('client_communications').insert({
+  // Insert pending record BEFORE attempting send
+  const { data: commRecord, error: insertError } = await adminClient
+    .from('client_communications')
+    .insert({
       client_id,
       order_id: order_id || null,
+      contact_id: contact_id || null,
       subject,
       body: html || text,
       template_type: template_type || 'custom',
       sent_by: user.id,
       recipient_email: to,
-      status: 'sent',
+      status: 'pending',
+      idempotency_key: commKey,
+      attempts: 0,
     })
+    .select('id')
+    .single()
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  } catch (err: any) {
-    console.error('Email send failed:', err)
-
-    await adminClient.from('client_communications').insert({
-      client_id,
-      order_id: order_id || null,
-      subject,
-      body: html || text,
-      template_type: template_type || 'custom',
-      sent_by: user.id,
-      recipient_email: to,
-      status: 'failed',
-      error_message: err.message,
-    })
-
-    return new Response(JSON.stringify({ error: 'Failed to send email', details: err.message }), {
+  if (insertError) {
+    console.error('Failed to create communication record:', insertError)
+    return new Response(JSON.stringify({ error: 'Failed to create communication record' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
+
+  const commId = commRecord.id
+  const MAX_RETRIES = 3
+  let lastError: string | null = null
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`Send attempt ${attempt}/${MAX_RETRIES} for comm ${commId}`)
+
+      const client = new SMTPClient({
+        connection: {
+          hostname: 'smtp.gmail.com',
+          port: 465,
+          tls: true,
+          auth: { username: GMAIL_USER, password: gmailPassword },
+        },
+      })
+
+      await client.send({
+        from: `EasySea <${GMAIL_USER}>`,
+        to,
+        cc: cc || undefined,
+        bcc: bcc || 'g.scotto@easysea.org',
+        subject,
+        content: text || '',
+        html: html || undefined,
+      })
+
+      await client.close()
+
+      // Success: update record
+      await adminClient
+        .from('client_communications')
+        .update({ status: 'sent', attempts: attempt, error_details: null })
+        .eq('id', commId)
+
+      console.log(`Email sent successfully on attempt ${attempt}`)
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    } catch (err: any) {
+      lastError = err.message || String(err)
+      console.error(`Attempt ${attempt}/${MAX_RETRIES} failed:`, lastError)
+
+      // Update attempts count
+      await adminClient
+        .from('client_communications')
+        .update({ attempts: attempt })
+        .eq('id', commId)
+
+      if (attempt < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, 1000 * attempt))
+      }
+    }
+  }
+
+  // All retries exhausted
+  await adminClient
+    .from('client_communications')
+    .update({ status: 'failed', error_details: lastError, error_message: lastError })
+    .eq('id', commId)
+
+  console.error(`All ${MAX_RETRIES} attempts failed for comm ${commId}`)
+  return new Response(JSON.stringify({ error: 'Failed to send email after retries', details: lastError }), {
+    status: 500,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
 })
