@@ -14,6 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Send, Sparkles, Loader2, Users, Plus, X, Variable, Save, Clock, AlertTriangle, Paperclip, FileIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -194,8 +195,8 @@ export const ComposeEmailDialog = ({
       setBody(data.draft || "");
       setSubject(data.subject || subject || "");
       toast.success("Bozza AI generata");
-    } catch (err: any) {
-      toast.error("Errore generazione bozza: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "ComposeEmailDialog.generateDraft");
     } finally {
       setGenerating(false);
     }
@@ -281,8 +282,8 @@ export const ComposeEmailDialog = ({
       setCcEmails([]);
       onOpenChange(false);
       onSent?.();
-    } catch (err: any) {
-      toast.error("Errore: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "ComposeEmailDialog.send");
     } finally {
       setSending(false);
     }
@@ -419,8 +420,8 @@ export const ComposeEmailDialog = ({
                   if (error) throw error;
                   setAttachments(prev => [...prev, { name: file.name, path, size: file.size }]);
                 }
-              } catch (err: any) {
-                toast.error("Errore upload: " + err.message);
+              } catch (error) {
+                showErrorToast(error, "ComposeEmailDialog.uploadAttachment");
               } finally {
                 setUploading(false);
                 if (fileInputRef.current) fileInputRef.current.value = "";

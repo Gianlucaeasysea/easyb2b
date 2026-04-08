@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { Tables } from "@/integrations/supabase/types";
 import DOMPurify from "dompurify";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +42,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
   const [connectingGmail, setConnectingGmail] = useState(false);
   const [filterEmail, setFilterEmail] = useState<string>("all");
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
-  const [openEmail, setOpenEmail] = useState<any>(null);
+  const [openEmail, setOpenEmail] = useState<Tables<"client_communications"> | null>(null);
   const [replyTo, setReplyTo] = useState<{ to: string; subject: string; threadId?: string } | null>(null);
 
   const { data: communications, isLoading, refetch } = useQuery({
@@ -92,9 +93,13 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
     );
   }, [communications, filterEmail]);
 
+  type CommRow = Tables<"client_communications">;
+  interface EmailMetadata { from?: string; to?: string; cc?: string; [key: string]: unknown }
+  const getMeta = (comm: CommRow): EmailMetadata | null => comm.metadata as EmailMetadata | null;
+
   const groupedByThread = useMemo(() => {
-    const threads = new Map<string, any[]>();
-    const standalone: any[] = [];
+    const threads = new Map<string, CommRow[]>();
+    const standalone: CommRow[] = [];
     for (const c of filteredCommunications) {
       if (c.gmail_thread_id) {
         const existing = threads.get(c.gmail_thread_id) || [];
@@ -105,21 +110,22 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
       }
     }
     const threadGroups = Array.from(threads.entries()).map(([threadId, msgs]) => {
-      msgs.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      msgs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       return { threadId, msgs, lastDate: new Date(msgs[msgs.length - 1].created_at).getTime() };
     });
     threadGroups.sort((a, b) => b.lastDate - a.lastDate);
     const sortedStandalone = [...standalone].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    const merged: any[] = [];
+    type MergedItem = { type: "thread"; threadId: string; msgs: CommRow[]; lastDate: number } | { type: "single"; msg: CommRow; threadId: string };
+    const merged: MergedItem[] = [];
     let tIdx = 0, sIdx = 0;
     while (tIdx < threadGroups.length || sIdx < sortedStandalone.length) {
       const threadDate = tIdx < threadGroups.length ? threadGroups[tIdx].lastDate : -Infinity;
       const standaloneDate = sIdx < sortedStandalone.length ? new Date(sortedStandalone[sIdx].created_at).getTime() : -Infinity;
       if (threadDate >= standaloneDate) {
-        merged.push({ type: "thread" as const, ...threadGroups[tIdx] });
+        merged.push({ type: "thread", ...threadGroups[tIdx] });
         tIdx++;
       } else {
-        merged.push({ type: "single" as const, msg: sortedStandalone[sIdx], threadId: sortedStandalone[sIdx].id });
+        merged.push({ type: "single", msg: sortedStandalone[sIdx], threadId: sortedStandalone[sIdx].id });
         sIdx++;
       }
     }
@@ -180,12 +186,13 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
     }
   };
 
-  const handleReply = (comm: any) => {
+  const handleReply = (comm: CommRow) => {
+    const meta = getMeta(comm);
     const replyEmail = comm.direction === "inbound"
-      ? (comm.metadata as any)?.from ? extractEmailFromHeader((comm.metadata as any).from) : comm.recipient_email
+      ? meta?.from ? extractEmailFromHeader(meta.from) : comm.recipient_email
       : comm.recipient_email;
     const replySubject = comm.subject?.startsWith("Re:") ? comm.subject : `Re: ${comm.subject}`;
-    setReplyTo({ to: replyEmail, subject: replySubject, threadId: comm.gmail_thread_id });
+    setReplyTo({ to: replyEmail, subject: replySubject, threadId: comm.gmail_thread_id || undefined });
     setOpenEmail(null);
     setComposeOpen(true);
   };
@@ -204,9 +211,9 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
     return header.replace(/<[^>]+>/, "").trim() || header;
   };
 
-  const renderEmailCard = (comm: any, isNested = false) => {
+  const renderEmailCard = (comm: CommRow, isNested = false) => {
     const isInbound = comm.direction === "inbound";
-    const meta = comm.metadata as any;
+    const meta = getMeta(comm);
     const preview = stripHtml(comm.body || "").slice(0, 150);
 
     return (
@@ -330,7 +337,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
         </div>
       ) : (
         <div className="space-y-2">
-          {groupedByThread.map((item: any) => {
+          {groupedByThread.map((item) => {
             if (item.type === "single") {
               return renderEmailCard(item.msg);
             }
@@ -338,8 +345,8 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
             const isExpanded = expandedThreads.has(threadId);
             const lastMsg = msgs[msgs.length - 1];
             const firstSubject = msgs[0].subject;
-            const inboundCount = msgs.filter((m: any) => m.direction === "inbound").length;
-            const outboundCount = msgs.filter((m: any) => m.direction === "outbound").length;
+            const inboundCount = msgs.filter((m) => m.direction === "inbound").length;
+            const outboundCount = msgs.filter((m) => m.direction === "outbound").length;
 
             return (
               <div key={threadId} className="rounded-lg border border-border overflow-hidden bg-card">
@@ -380,7 +387,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
                 {/* Expanded: all messages */}
                 {isExpanded && (
                   <div className="px-3 pb-3 space-y-2 border-t border-border pt-3 bg-secondary/10">
-                    {msgs.map((msg: any) => renderEmailCard(msg, true))}
+                    {msgs.map((msg) => renderEmailCard(msg, true))}
                   </div>
                 )}
 
@@ -429,32 +436,39 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
               <span>{openEmail && format(new Date(openEmail.created_at), "dd MMMM yyyy, HH:mm", { locale: it })}</span>
             </div>
             <Separator />
-            {(openEmail?.metadata as any)?.from && (
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-foreground w-10 shrink-0">From:</span>
-                <span className="text-muted-foreground break-all">{(openEmail.metadata as any).from}</span>
-              </div>
-            )}
-            {(openEmail?.metadata as any)?.to && (
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-foreground w-10 shrink-0">To:</span>
-                <span className="text-muted-foreground break-all">{(openEmail.metadata as any).to}</span>
-              </div>
-            )}
-            {(openEmail?.metadata as any)?.cc && (
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-foreground w-10 shrink-0">CC:</span>
-                <span className="text-muted-foreground break-all">{(openEmail.metadata as any).cc}</span>
-              </div>
-            )}
-            {!(openEmail?.metadata as any)?.from && openEmail?.recipient_email && (
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-foreground w-10 shrink-0">
-                  {openEmail?.direction === "inbound" ? "From:" : "To:"}
-                </span>
-                <span className="text-muted-foreground">{openEmail?.recipient_email}</span>
-              </div>
-            )}
+            {(() => {
+              const meta = openEmail ? getMeta(openEmail) : null;
+              return (
+                <>
+                  {meta?.from && (
+                    <div className="flex items-start gap-2">
+                      <span className="font-semibold text-foreground w-10 shrink-0">From:</span>
+                      <span className="text-muted-foreground break-all">{meta.from}</span>
+                    </div>
+                  )}
+                  {meta?.to && (
+                    <div className="flex items-start gap-2">
+                      <span className="font-semibold text-foreground w-10 shrink-0">To:</span>
+                      <span className="text-muted-foreground break-all">{meta.to}</span>
+                    </div>
+                  )}
+                  {meta?.cc && (
+                    <div className="flex items-start gap-2">
+                      <span className="font-semibold text-foreground w-10 shrink-0">CC:</span>
+                      <span className="text-muted-foreground break-all">{meta.cc}</span>
+                    </div>
+                  )}
+                  {!meta?.from && openEmail?.recipient_email && (
+                    <div className="flex items-start gap-2">
+                      <span className="font-semibold text-foreground w-10 shrink-0">
+                        {openEmail?.direction === "inbound" ? "From:" : "To:"}
+                      </span>
+                      <span className="text-muted-foreground">{openEmail?.recipient_email}</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Email body */}
