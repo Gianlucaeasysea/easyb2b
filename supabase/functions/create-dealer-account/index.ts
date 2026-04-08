@@ -9,90 +9,57 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  let requestBody: Record<string, unknown> = {};
-  let transport = "json";
-  let requestId: string | null = null;
-
-  const respond = (payload: Record<string, unknown>, status = 200) => {
-    if (transport === "form_post") {
-      const targetOrigin = corsHeaders["Access-Control-Allow-Origin"] || "*";
-      const message = {
-        type: "create-dealer-account-result",
-        requestId,
-        success: status >= 200 && status < 300,
-        payload: status >= 200 && status < 300 ? payload : null,
-        error: status >= 200 && status < 300 ? null : payload.error || payload.message || "Unknown error",
-      };
-
-      return new Response(
-        `<!doctype html><html><body><script>
-          const message = ${JSON.stringify(message)};
-          const targetOrigin = ${JSON.stringify(targetOrigin)};
-          if (window.parent) window.parent.postMessage(message, targetOrigin);
-          if (window.opener) window.opener.postMessage(message, targetOrigin);
-        </script></body></html>`,
-        {
-          status,
-          headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
-        }
-      );
-    }
-
-    return new Response(JSON.stringify(payload), {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  };
-
   try {
-    const contentType = req.headers.get("content-type") || "";
-
-    if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
-      const formData = await req.formData();
-      requestBody = Object.fromEntries(
-        Array.from(formData.entries()).map(([key, value]) => [key, typeof value === "string" ? value : value.name])
-      );
-    } else if (contentType.includes("application/json") || contentType.includes("text/plain")) {
-      const raw = await req.text();
-      requestBody = raw ? JSON.parse(raw) : {};
-    }
-
-    transport = String(requestBody.transport || "json");
-    requestId = requestBody.request_id ? String(requestBody.request_id) : null;
+    const body = await req.json();
+    const { client_id, email, password, action } = body;
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const client_id = String(requestBody.client_id || "");
-    const email = String(requestBody.email || "");
-    const password = String(requestBody.password || "");
-    const access_token = requestBody.access_token ? String(requestBody.access_token) : null;
-
-    if (!client_id || !email || !password) throw new Error("Missing fields");
-
+    // Authenticate caller via Authorization header
     const authHeader = req.headers.get("Authorization");
-    const bearerToken = authHeader || (access_token ? `Bearer ${access_token}` : null);
-    if (!bearerToken) throw new Error("Not authenticated");
+    if (!authHeader) throw new Error("Not authenticated");
 
     const callerClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: bearerToken } } }
+      { global: { headers: { Authorization: authHeader } } }
     );
     const { data: { user: caller }, error: callerError } = await callerClient.auth.getUser();
     if (callerError || !caller) throw new Error("Not authenticated");
 
-    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
-      _user_id: caller.id,
-      _role: "admin",
-    });
-    const { data: isSales } = await supabaseAdmin.rpc("has_role", {
-      _user_id: caller.id,
-      _role: "sales",
-    });
+    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", { _user_id: caller.id, _role: "admin" });
+    const { data: isSales } = await supabaseAdmin.rpc("has_role", { _user_id: caller.id, _role: "sales" });
     if (!isAdmin && !isSales) throw new Error("Not authorized");
+
+    // DELETE action
+    if (action === "delete") {
+      if (!client_id) throw new Error("Missing client_id");
+
+      const { data: clientData } = await supabaseAdmin.from("clients").select("user_id, email").eq("id", client_id).single();
+      if (!clientData?.user_id) throw new Error("Nessun account dealer collegato a questa organizzazione");
+
+      const userId = clientData.user_id;
+
+      // Remove role
+      await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
+      // Unlink client
+      await supabaseAdmin.from("clients").update({ user_id: null }).eq("id", client_id);
+      // Delete profile
+      await supabaseAdmin.from("profiles").delete().eq("user_id", userId);
+      // Delete auth user
+      const { error: deleteErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
+      if (deleteErr) console.warn("Error deleting auth user:", deleteErr.message);
+
+      return new Response(JSON.stringify({ success: true, deleted: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // CREATE action (default)
+    if (!client_id || !email || !password) throw new Error("Missing fields");
 
     await cleanupOrphanedDealerAccountByEmail(supabaseAdmin, email, client_id);
 
@@ -105,33 +72,33 @@ Deno.serve(async (req) => {
 
     const userId = newUser.user.id;
 
-    const { error: roleErr } = await supabaseAdmin.from("user_roles").insert({
-      user_id: userId,
-      role: "dealer",
-    });
+    const { error: roleErr } = await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: "dealer" });
     if (roleErr) throw roleErr;
 
-    const { error: linkErr } = await supabaseAdmin.from("clients").update({
-      user_id: userId,
-    }).eq("id", client_id);
+    const { error: linkErr } = await supabaseAdmin.from("clients").update({ user_id: userId }).eq("id", client_id);
     if (linkErr) throw linkErr;
 
-    const { error: profErr } = await supabaseAdmin.from("profiles").upsert({
-      user_id: userId,
-      email,
-    }, { onConflict: "user_id" });
+    const { error: profErr } = await supabaseAdmin.from("profiles").upsert({ user_id: userId, email }, { onConflict: "user_id" });
     if (profErr) console.warn("Profile creation warning:", profErr.message);
 
+    // Send credentials email
+    let emailSent = false;
     try {
       const portalUrl = "https://easyb2b.lovable.app/login";
       await sendCredentialsEmail(supabaseAdmin, email, password, portalUrl);
+      emailSent = true;
     } catch (emailErr) {
       console.error("Failed to send credentials email:", emailErr);
     }
 
-    return respond({ success: true, user_id: userId });
+    return new Response(JSON.stringify({ success: true, user_id: userId, email_sent: emailSent }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (e) {
-    return respond({ error: e.message }, 400);
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
 
@@ -144,14 +111,17 @@ async function sendCredentialsEmail(supabaseAdmin: any, email: string, password:
 
   let accessToken = tokenData.access_token;
   if (new Date(tokenData.expires_at) < new Date()) {
+    const clientId = Deno.env.get("GOOGLE_CLIENT_ID") || Deno.env.get("CLIENTI_ID") || "";
+    const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET") || Deno.env.get("CLIENT_SECRET") || "";
+
     const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "refresh_token",
         refresh_token: tokenData.refresh_token,
-        client_id: Deno.env.get("GOOGLE_CLIENT_ID") || "",
-        client_secret: Deno.env.get("CLIENT_SECRET") || "",
+        client_id: clientId,
+        client_secret: clientSecret,
       }),
     });
     const refreshData = await refreshRes.json();
@@ -161,23 +131,14 @@ async function sendCredentialsEmail(supabaseAdmin: any, email: string, password:
         access_token: accessToken,
         expires_at: new Date(Date.now() + (refreshData.expires_in || 3600) * 1000).toISOString(),
       }).eq("id", tokenData.id);
+    } else {
+      console.error("Gmail token refresh failed:", refreshData);
+      throw new Error("Gmail token refresh failed");
     }
   }
 
   const subject = "EasySea — Your Dealer Portal Credentials";
-  const body = `Welcome to the EasySea Dealer Portal!
-
-Your account has been created. Here are your login credentials:
-
-Email: ${email}
-Password: ${password}
-
-Login here: ${portalUrl}
-
-Please change your password after your first login.
-
-Best regards,
-The EasySea Team`;
+  const body = `Welcome to the EasySea Dealer Portal!\n\nYour account has been created. Here are your login credentials:\n\nEmail: ${email}\nPassword: ${password}\n\nLogin here: ${portalUrl}\n\nPlease change your password after your first login.\n\nBest regards,\nThe EasySea Team`;
 
   const rawMessage = `From: EasySea <business@easysea.org>\r\nTo: ${email}\r\nBcc: g.scotto@easysea.org\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
   const encoded = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");

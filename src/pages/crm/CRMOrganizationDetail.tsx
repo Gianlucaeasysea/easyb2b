@@ -89,68 +89,12 @@ const CRMOrganizationDetail = () => {
   };
 
   const invokeCreateDealer = async (payload: { client_id: string; email: string; password: string }) => {
-    const accessToken = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
-    if (!accessToken) throw new Error("Sessione non valida. Effettua di nuovo il login.");
-
-    return new Promise<any>((resolve, reject) => {
-      const requestId = `dealer-create-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const iframe = document.createElement("iframe");
-      iframe.name = requestId;
-      iframe.style.display = "none";
-
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`;
-      form.target = requestId;
-      form.style.display = "none";
-
-      const appendField = (name: string, value: string) => {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = name;
-        input.value = value;
-        form.appendChild(input);
-      };
-
-      appendField("client_id", payload.client_id);
-      appendField("email", payload.email);
-      appendField("password", payload.password);
-      appendField("access_token", accessToken);
-      appendField("request_id", requestId);
-      appendField("transport", "form_post");
-
-      const cleanup = () => {
-        window.removeEventListener("message", handleMessage);
-        window.clearTimeout(timeoutId);
-        iframe.remove();
-        form.remove();
-      };
-
-      const handleMessage = (event: MessageEvent) => {
-        const expectedOrigin = new URL(import.meta.env.VITE_SUPABASE_URL).origin;
-        if (event.origin !== expectedOrigin) return;
-
-        const data = event.data;
-        if (data?.type !== "create-dealer-account-result" || data?.requestId !== requestId) return;
-
-        cleanup();
-        if (data.success) {
-          resolve(data.payload);
-        } else {
-          reject(new Error(data.error || "Errore nella creazione delle credenziali"));
-        }
-      };
-
-      const timeoutId = window.setTimeout(() => {
-        cleanup();
-        reject(new Error("La richiesta di creazione credenziali non ha ricevuto risposta. Riprova."));
-      }, 20000);
-
-      window.addEventListener("message", handleMessage);
-      document.body.appendChild(iframe);
-      document.body.appendChild(form);
-      form.submit();
+    const { data, error } = await supabase.functions.invoke("create-dealer-account", {
+      body: payload,
     });
+    if (error) throw new Error(error.message || "Errore nella creazione delle credenziali");
+    if (data?.error) throw new Error(data.error);
+    return data;
   };
 
   const handleCreateCredentials = async () => {
@@ -162,13 +106,36 @@ const CRMOrganizationDetail = () => {
     try {
       const password = generatePassword();
       const result = await invokeCreateDealer({ client_id: id!, email: client.email, password });
-      if (result?.error) throw new Error(result.error);
-      toast.success("Credenziali create e inviate via email al dealer");
+      if (result?.email_sent) {
+        toast.success("Credenziali create e inviate via email al dealer");
+      } else {
+        toast.success("Credenziali create (email non inviata — controlla la configurazione Gmail)");
+      }
       queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
     } catch (err: any) {
       toast.error(err.message || "Errore nella creazione delle credenziali");
     } finally {
       setCreatingCredentials(false);
+    }
+  };
+
+  const [deletingCredentials, setDeletingCredentials] = useState(false);
+
+  const handleDeleteCredentials = async () => {
+    if (!confirm("Sei sicuro di voler eliminare le credenziali dealer? L'account verrà rimosso definitivamente.")) return;
+    setDeletingCredentials(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-dealer-account", {
+        body: { client_id: id!, action: "delete" },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success("Credenziali dealer eliminate");
+      queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
+    } catch (err: any) {
+      toast.error(err.message || "Errore nell'eliminazione delle credenziali");
+    } finally {
+      setDeletingCredentials(false);
     }
   };
 
@@ -557,6 +524,10 @@ const CRMOrganizationDetail = () => {
                           } catch (e: any) { toast.error(e.message || "Errore invio reset"); }
                         }}>
                           <KeyRound size={10} /> Reset Password
+                        </Button>
+                        <Button variant="destructive" size="sm" className="gap-1 text-xs h-7" disabled={deletingCredentials} onClick={handleDeleteCredentials}>
+                          {deletingCredentials ? <RefreshCw size={10} className="animate-spin" /> : <Trash2 size={10} />}
+                          Elimina Account
                         </Button>
                       </div>
                     </div>
