@@ -1260,7 +1260,10 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
             })}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground mb-4">Nessun listino assegnato</p>
+          <div className="p-4 bg-warning/10 border border-warning/30 rounded-lg mb-4">
+            <p className="text-sm font-semibold text-warning">⚠️ Nessun listino prezzi assegnato</p>
+            <p className="text-xs text-muted-foreground mt-1">Il cliente non può visualizzare i prezzi nel portale. Assegna un listino per abilitare gli ordini.</p>
+          </div>
         )}
       </div>
 
