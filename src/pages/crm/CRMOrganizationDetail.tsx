@@ -230,6 +230,16 @@ const CRMOrganizationDetail = () => {
     enabled: !!id,
   });
 
+  const { data: priceListItemCounts } = useQuery({
+    queryKey: ["price-list-item-counts"],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_list_items").select("price_list_id");
+      const counts: Record<string, number> = {};
+      data?.forEach((i: any) => { counts[i.price_list_id] = (counts[i.price_list_id] || 0) + 1; });
+      return counts;
+    },
+  });
+
   const { data: allPriceLists } = useQuery({
     queryKey: ["all-price-lists"],
     queryFn: async () => {
