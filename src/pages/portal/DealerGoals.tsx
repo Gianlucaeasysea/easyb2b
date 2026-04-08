@@ -5,10 +5,10 @@ import { Trophy, Target, Star, TrendingUp, Award, Zap, Lock } from "lucide-react
 import { Badge } from "@/components/ui/badge";
 
 const tiers = [
-  { name: "standard", label: "Standard", discount: 10, minSpend: 0, color: "text-muted-foreground" },
-  { name: "bronze", label: "Bronze", discount: 15, minSpend: 2000, color: "text-chart-4" },
-  { name: "silver", label: "Silver", discount: 20, minSpend: 5000, color: "text-primary" },
-  { name: "gold", label: "Gold", discount: 30, minSpend: 10000, color: "text-warning" },
+  { name: "D", label: "Base", discount: 10, minSpend: 0, color: "text-muted-foreground" },
+  { name: "C", label: "Standard", discount: 20, minSpend: 2000, color: "text-chart-4" },
+  { name: "B", label: "Plus", discount: 25, minSpend: 5000, color: "text-primary" },
+  { name: "A", label: "Premium", discount: 35, minSpend: 10000, color: "text-warning" },
 ];
 
 const achievements = [
@@ -54,7 +54,7 @@ const DealerGoals = () => {
   }
 
   const totalSpent = orders?.reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
-  const currentTier = tiers.find(t => t.name === (client?.discount_class || "standard")) || tiers[0];
+  const currentTier = tiers.find(t => t.name === (client?.discount_class || "D")) || tiers[0];
   const currentTierIndex = tiers.indexOf(currentTier);
   const nextTier = currentTierIndex < tiers.length - 1 ? tiers[currentTierIndex + 1] : null;
   const progressToNext = nextTier ? Math.min((totalSpent / nextTier.minSpend) * 100, 100) : 100;

@@ -168,7 +168,7 @@ const convertRequestToPipeline = async (adminClient: any, requestId: string, use
         business_type: request.business_type,
         website: request.website,
         status: "lead",
-        discount_class: "standard",
+        discount_class: "D",
         assigned_sales_id: role === "sales" ? userId : null,
       })
       .select("id")

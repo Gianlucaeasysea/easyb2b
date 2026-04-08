@@ -153,9 +153,9 @@ export default function DataImporter() {
           const validStatuses = ["active", "lead", "inactive"];
           const status = validStatuses.includes(rawStatus) ? rawStatus : "active";
 
-          const rawDiscount = first.discount_class ? String(first.discount_class).trim().toLowerCase() : "standard";
-          const validDiscounts = ["gold", "silver", "bronze", "standard", "custom"];
-          const discount_class = validDiscounts.includes(rawDiscount) ? rawDiscount : "standard";
+          const rawDiscount = first.discount_class ? String(first.discount_class).trim().toUpperCase() : "D";
+          const validDiscounts = ["A", "B", "C", "D", "custom"];
+          const discount_class = validDiscounts.includes(rawDiscount) ? rawDiscount : "D";
 
           const clientRow = {
             company_name: String(first.company_name || ""),

@@ -108,7 +108,7 @@ const CRMLeads = () => {
         phone: form.phone || null,
         zone: form.zone || null,
         status: "lead",
-        discount_class: "standard",
+        discount_class: "D",
       }).select().single();
 
       if (newClient && form.contact_name) {
