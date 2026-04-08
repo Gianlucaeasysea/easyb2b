@@ -226,7 +226,7 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
             </div>
 
             {/* Documents */}
-            {documents && documents.length > 0 && (
+            {documents && (
               <div className="mt-5">
                 <h3 className="font-heading font-bold text-foreground mb-2 flex items-center gap-2 text-sm">
                   <FileText size={14} /> Documenti ({documents.length})
