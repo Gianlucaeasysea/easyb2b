@@ -82,6 +82,28 @@ export const getClientStatusColor = (status: string): string =>
 export const getClientStatusLabel = (status: string): string =>
   CLIENT_STATUS_LABELS[status] ?? status;
 
+// ── Order Status Transitions ─────────────────────────────────
+export const VALID_ORDER_TRANSITIONS: Record<string, string[]> = {
+  draft: ["submitted", "cancelled"],
+  submitted: ["confirmed", "cancelled"],
+  confirmed: ["processing", "cancelled"],
+  processing: ["ready_to_ship", "cancelled"],
+  ready_to_ship: ["shipped", "cancelled"],
+  shipped: ["delivered", "returned"],
+  delivered: ["returned"],
+  cancelled: [],
+  returned: [],
+};
+
+export function getAvailableTransitions(currentStatus: string): string[] {
+  return VALID_ORDER_TRANSITIONS[currentStatus] || [];
+}
+
+export function canTransitionTo(currentStatus: string, newStatus: string): boolean {
+  const allowed = VALID_ORDER_TRANSITIONS[currentStatus];
+  return allowed ? allowed.includes(newStatus) : false;
+}
+
 // ── Helpers ──────────────────────────────────────────────────
 export const getOrderStatusLabel = (dbStatus: string): string =>
   ORDER_STATUSES[dbStatus as keyof typeof ORDER_STATUSES] ?? dbStatus;
