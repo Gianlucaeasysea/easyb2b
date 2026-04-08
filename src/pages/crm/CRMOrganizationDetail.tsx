@@ -64,7 +64,7 @@ const CRMOrganizationDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeOrderCtx, setComposeOrderCtx] = useState<any>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -89,34 +89,37 @@ const CRMOrganizationDetail = () => {
   };
 
   const invokeCreateDealer = async (payload: { client_id: string; email: string; password: string }) => {
+    const accessToken = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
+    if (!accessToken) {
+      throw new Error("Sessione non valida. Effettua di nuovo il login.");
+    }
+
     try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+        },
+        body: JSON.stringify({ ...payload, access_token: accessToken }),
+      });
+
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(body?.error || body?.message || "Errore durante la chiamata al backend.");
+      }
+
+      return body;
+    } catch (directError: any) {
       const { data, error } = await supabase.functions.invoke("create-dealer-account", { body: payload });
       if (error) {
         const ctx = (error as any).context;
         if (ctx instanceof Response) {
           const body = await ctx.json().catch(() => null);
-          throw new Error(body?.error || body?.message || error.message);
+          throw new Error(body?.error || body?.message || error.message || directError?.message);
         }
-        throw new Error(error.message);
+        throw new Error(error.message || directError?.message || "Errore nella creazione delle credenziali");
       }
       return data;
-    } catch (err: any) {
-      const msg = err?.message || "";
-      if (msg.includes("Failed to send a request to the Edge Function") || msg.includes("Failed to fetch")) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) throw new Error("Sessione non valida. Effettua di nuovo il login.");
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain",
-          },
-          body: JSON.stringify({ ...payload, access_token: session.access_token }),
-        });
-        const body = await res.json().catch(() => null);
-        if (!res.ok) throw new Error(body?.error || body?.message || "Errore durante la chiamata al backend.");
-        return body;
-      }
-      throw err;
     }
   };
 
