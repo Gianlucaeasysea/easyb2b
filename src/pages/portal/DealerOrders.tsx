@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronUp, FileText, Download, Bell, Loader2, Send,
 } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
@@ -54,6 +54,13 @@ const DealerOrders = () => {
   const [pageSize, setPageSize] = useState(20);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [confirmDuplicate, setConfirmDuplicate] = useState<any>(null);
+  const [priceCheckData, setPriceCheckData] = useState<{
+    order: any;
+    items: { product_id: string; name: string; sku: string; quantity: number; originalPrice: number; currentPrice: number | null; available: boolean }[];
+    originalTotal: number;
+    newTotal: number;
+    hasChanges: boolean;
+  } | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<any>(null);
   const { data: client } = useQuery({
@@ -95,8 +102,8 @@ const DealerOrders = () => {
     return idx >= 0 ? idx : -1;
   };
 
-  // Duplicate order handler
-  const handleDuplicate = async (order: any) => {
+  // Step 1: Check prices before duplicating
+  const handlePrepareDuplicate = async (order: any) => {
     if (!client) return;
     setDuplicatingId(order.id);
     try {
@@ -117,18 +124,60 @@ const DealerOrders = () => {
       const { data: products } = await supabase.from("products").select("id, name, price, active_b2b, stock_quantity").in("id", productIds);
       const productMap = new Map(products?.map(p => [p.id, p]) || []);
 
-      const validItems: { product_id: string; quantity: number; unit_price: number; subtotal: number }[] = [];
-      let excludedCount = 0;
-
-      for (const item of items) {
+      const comparisonItems = items.map((item: any) => {
         const product = productMap.get(item.product_id);
-        if (!product || !product.active_b2b) { excludedCount++; continue; }
-        const price = priceMap[item.product_id] || Number(product.price || 0);
-        const qty = Math.min(item.quantity, product.stock_quantity || item.quantity);
-        validItems.push({ product_id: item.product_id, quantity: qty, unit_price: price, subtotal: price * qty });
+        const available = !!(product && product.active_b2b);
+        const currentPrice = available ? (priceMap[item.product_id] ?? (product?.price ? Number(product.price) : null)) : null;
+        return {
+          product_id: item.product_id,
+          name: item.products?.name || "Prodotto sconosciuto",
+          sku: item.products?.sku || "—",
+          quantity: item.quantity,
+          originalPrice: Number(item.unit_price || 0),
+          currentPrice,
+          available,
+        };
+      });
+
+      const originalTotal = comparisonItems.reduce((s, i) => s + i.originalPrice * i.quantity, 0);
+      const newTotal = comparisonItems.filter(i => i.available && i.currentPrice !== null).reduce((s, i) => s + (i.currentPrice! * i.quantity), 0);
+      const hasChanges = comparisonItems.some(i => !i.available || i.currentPrice === null || i.currentPrice !== i.originalPrice);
+
+      if (!hasChanges) {
+        // No changes — duplicate directly
+        await executeDuplicate(order, comparisonItems);
+      } else {
+        // Show price comparison dialog
+        setPriceCheckData({ order, items: comparisonItems, originalTotal, newTotal, hasChanges });
       }
+    } catch (error) {
+      showErrorToast(error, "DealerOrders.prepareDuplicate");
+    } finally {
+      setDuplicatingId(null);
+      setConfirmDuplicate(null);
+    }
+  };
+
+  // Step 2: Execute the actual duplication
+  const executeDuplicate = async (order: any, comparisonItems?: typeof priceCheckData extends null ? never : NonNullable<typeof priceCheckData>["items"]) => {
+    if (!client) return;
+    setDuplicatingId(order.id);
+    try {
+      const itemsToUse = comparisonItems || priceCheckData?.items;
+      if (!itemsToUse) return;
+
+      const validItems = itemsToUse
+        .filter(i => i.available && i.currentPrice !== null)
+        .map(i => ({
+          product_id: i.product_id,
+          quantity: i.quantity,
+          unit_price: i.currentPrice!,
+          subtotal: i.currentPrice! * i.quantity,
+        }));
 
       if (!validItems.length) { toast.error("Nessun prodotto disponibile per la duplicazione"); return; }
+
+      const excludedCount = itemsToUse.length - validItems.length;
 
       const { data: newOrder, error: orderErr } = await supabase.rpc("create_order_with_items", {
         p_client_id: client.id,
@@ -140,16 +189,17 @@ const DealerOrders = () => {
       if (orderErr) throw orderErr;
 
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+      const newCode = (newOrder as any)?.order_code || (newOrder as any)?.id?.slice(0, 8);
       if (excludedCount > 0) {
-        toast.warning(`Ordine duplicato come bozza. ${excludedCount} prodotti non disponibili esclusi.`);
+        toast.warning(`Ordine duplicato come bozza #${newCode}. ${excludedCount} prodotti non disponibili esclusi. Verificalo prima di inviarlo.`);
       } else {
-        toast.success(`Ordine duplicato come bozza #${(newOrder as any)?.order_code || (newOrder as any)?.id?.slice(0, 8)}`);
+        toast.success(`Ordine duplicato come bozza #${newCode}. Verificalo prima di inviarlo.`);
       }
     } catch (error) {
       showErrorToast(error, "DealerOrders.duplicate");
     } finally {
       setDuplicatingId(null);
-      setConfirmDuplicate(null);
+      setPriceCheckData(null);
     }
   };
 
