@@ -407,6 +407,8 @@ export type Database = {
           id: string
           order_id: string | null
           read: boolean
+          target_role: string | null
+          target_user_id: string | null
           title: string
           type: string
         }
@@ -417,6 +419,8 @@ export type Database = {
           id?: string
           order_id?: string | null
           read?: boolean
+          target_role?: string | null
+          target_user_id?: string | null
           title: string
           type?: string
         }
@@ -427,6 +431,8 @@ export type Database = {
           id?: string
           order_id?: string | null
           read?: boolean
+          target_role?: string | null
+          target_user_id?: string | null
           title?: string
           type?: string
         }
