@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ShoppingBag, Search, Filter, CalendarIcon, Download, X } from "lucide-react";
+import { ShoppingBag, Search, Filter, CalendarIcon, Download, CreditCard, RefreshCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
@@ -19,6 +20,7 @@ import {
   getPaymentStatusLabel, getPaymentStatusColor,
 } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
+import BulkActionBar, { runBulkOperation, bulkResultToast } from "@/components/admin/BulkActionBar";
 
 const AdminOrders = () => {
   const navigate = useNavigate();
@@ -28,11 +30,15 @@ const AdminOrders = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkStatus, setBulkStatus] = useState("confirmed");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  // Reset page on filter change
+  // Bulk dialogs
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState("confirmed");
+  const [showPaidConfirm, setShowPaidConfirm] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
+
   useEffect(() => { setPage(1); }, [search, statusFilter, dateFrom, dateTo]);
 
   const { data, isLoading, isFetching } = useQuery({
@@ -44,23 +50,13 @@ const AdminOrders = () => {
         .not("order_type", "in", '("MANUAL B2C","B2C","CUSTOM")')
         .order("created_at", { ascending: false });
 
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
-      if (dateFrom) {
-        query = query.gte("created_at", `${dateFrom}T00:00:00`);
-      }
-      if (dateTo) {
-        query = query.lte("created_at", `${dateTo}T23:59:59`);
-      }
-      // Text search via ilike on order_code or tracking_number
-      if (search) {
-        query = query.or(`order_code.ilike.%${search}%,tracking_number.ilike.%${search}%`);
-      }
+      if (statusFilter !== "all") query = query.eq("status", statusFilter);
+      if (dateFrom) query = query.gte("created_at", `${dateFrom}T00:00:00`);
+      if (dateTo) query = query.lte("created_at", `${dateTo}T23:59:59`);
+      if (search) query = query.or(`order_code.ilike.%${search}%,tracking_number.ilike.%${search}%`);
 
       const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-      query = query.range(from, to);
+      query = query.range(from, from + pageSize - 1);
 
       const { data, error, count } = await query;
       if (error) throw error;
@@ -73,7 +69,6 @@ const AdminOrders = () => {
   const totalCount = data?.totalCount || 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  // Fetch all statuses for filter dropdown
   const { data: allStatuses } = useQuery({
     queryKey: ["admin-order-statuses"],
     queryFn: async () => {
@@ -101,31 +96,64 @@ const AdminOrders = () => {
     else setSelected(new Set(orders.map(o => o.id)));
   };
 
-  const bulkUpdate = useMutation({
-    mutationFn: async () => {
+  // Bulk: update status
+  const handleBulkStatus = async () => {
+    setBulkLoading(true);
+    try {
       const ids = Array.from(selected);
-      const { error } = await supabase.from("orders").update({ status: bulkStatus }).in("id", ids);
-      if (error) throw error;
-      return ids.length;
-    },
-    onSuccess: (count) => {
-      toast.success(`Status aggiornato per ${count} ordini`);
+      const result = await runBulkOperation(ids, async (id) => {
+        const { error } = await supabase.from("orders").update({ status: bulkStatus }).eq("id", id);
+        if (error) throw error;
+      });
+      bulkResultToast(toast.success, toast.error, result, "ordini");
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["admin-orders"] });
-    },
-    onError: (error) => showErrorToast(error, "AdminOrders.bulkUpdate"),
-  });
+    } catch (error) {
+      showErrorToast(error, "AdminOrders.bulkStatus");
+    } finally {
+      setBulkLoading(false);
+      setShowStatusDialog(false);
+    }
+  };
 
-  const exportCSV = async () => {
-    // Fetch all for export (no pagination)
-    let query = supabase.from("orders").select("*, clients(company_name)").not("order_type", "in", '("MANUAL B2C","B2C","CUSTOM")').order("created_at", { ascending: false });
-    if (statusFilter !== "all") query = query.eq("status", statusFilter);
-    if (dateFrom) query = query.gte("created_at", `${dateFrom}T00:00:00`);
-    if (dateTo) query = query.lte("created_at", `${dateTo}T23:59:59`);
-    if (search) query = query.or(`order_code.ilike.%${search}%,tracking_number.ilike.%${search}%`);
-    const { data: allOrders } = await query;
+  // Bulk: mark as paid
+  const handleBulkPaid = async () => {
+    setBulkLoading(true);
+    try {
+      const ids = Array.from(selected);
+      const today = format(new Date(), "yyyy-MM-dd");
+      const result = await runBulkOperation(ids, async (id) => {
+        const { error } = await supabase.from("orders").update({ payment_status: "paid", payed_date: today }).eq("id", id);
+        if (error) throw error;
+      });
+      bulkResultToast(toast.success, toast.error, result, "ordini");
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["admin-orders"] });
+    } catch (error) {
+      showErrorToast(error, "AdminOrders.bulkPaid");
+    } finally {
+      setBulkLoading(false);
+      setShowPaidConfirm(false);
+    }
+  };
 
-    const rows = (allOrders || []).map(o => ({
+  // Export CSV — selected or all filtered
+  const exportCSV = async (onlySelected = false) => {
+    let exportOrders: any[] = [];
+
+    if (onlySelected) {
+      exportOrders = orders.filter(o => selected.has(o.id));
+    } else {
+      let query = supabase.from("orders").select("*, clients(company_name)").not("order_type", "in", '("MANUAL B2C","B2C","CUSTOM")').order("created_at", { ascending: false });
+      if (statusFilter !== "all") query = query.eq("status", statusFilter);
+      if (dateFrom) query = query.gte("created_at", `${dateFrom}T00:00:00`);
+      if (dateTo) query = query.lte("created_at", `${dateTo}T23:59:59`);
+      if (search) query = query.or(`order_code.ilike.%${search}%,tracking_number.ilike.%${search}%`);
+      const { data: allOrders } = await query;
+      exportOrders = allOrders || [];
+    }
+
+    const rows = exportOrders.map(o => ({
       "Codice Ordine": o.order_code || o.id.slice(0, 8),
       "Organizzazione": (o as any).clients?.company_name || "",
       "Status": o.status || "",
@@ -154,34 +182,34 @@ const AdminOrders = () => {
     </>
   );
 
+  const tableHeaders = (
+    <TableRow>
+      <TableHead className="w-10">
+        <Checkbox checked={selected.size === orders.length && orders.length > 0} onCheckedChange={toggleAll} />
+      </TableHead>
+      <TableHead className="text-xs">Business</TableHead>
+      <TableHead className="text-xs">Order Code</TableHead>
+      <TableHead className="text-xs">Order Date</TableHead>
+      <TableHead className="text-xs">Status</TableHead>
+      <TableHead className="text-xs">Payment</TableHead>
+      <TableHead className="text-xs text-right">Total</TableHead>
+      <TableHead className="text-xs text-right">Shipping</TableHead>
+      <TableHead className="text-xs">Payed Date</TableHead>
+      <TableHead className="text-xs">Delivery Date</TableHead>
+    </TableRow>
+  );
+
   return (
-    <div>
+    <div className="pb-20">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">Orders</h1>
           <p className="text-sm text-muted-foreground">{totalCount} ordini</p>
         </div>
-        <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1">
+        <Button variant="outline" size="sm" onClick={() => exportCSV(false)} className="gap-1">
           <Download size={14} /> Esporta CSV
         </Button>
       </div>
-
-      {selected.size > 0 && (
-        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
-          <span className="text-sm font-medium">{selected.size} ordini selezionati</span>
-          <Select value={bulkStatus} onValueChange={setBulkStatus}>
-            <SelectTrigger className="w-[180px] h-8 text-xs"><SelectValue placeholder="Cambia status a..." /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="confirmed">Confirmed</SelectItem>
-              <SelectItem value="processing">Processing</SelectItem>
-              <SelectItem value="shipped">Shipped</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button size="sm" onClick={() => bulkUpdate.mutate()} disabled={bulkUpdate.isPending}>Applica</Button>
-          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())} className="gap-1"><X size={14} /> Deseleziona</Button>
-        </div>
-      )}
 
       <div className="flex gap-3 mb-6 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
@@ -211,20 +239,7 @@ const AdminOrders = () => {
       {isLoading ? (
         <div className="glass-card-solid overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10"><Checkbox disabled /></TableHead>
-                <TableHead className="text-xs">Business</TableHead>
-                <TableHead className="text-xs">Order Code</TableHead>
-                <TableHead className="text-xs">Order Date</TableHead>
-                <TableHead className="text-xs">Status</TableHead>
-                <TableHead className="text-xs">Payment</TableHead>
-                <TableHead className="text-xs text-right">Total</TableHead>
-                <TableHead className="text-xs text-right">Shipping</TableHead>
-                <TableHead className="text-xs">Payed Date</TableHead>
-                <TableHead className="text-xs">Delivery Date</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader>{tableHeaders}</TableHeader>
             <TableBody><SkeletonRows /></TableBody>
           </Table>
         </div>
@@ -236,22 +251,7 @@ const AdminOrders = () => {
       ) : (
         <div className={`glass-card-solid overflow-x-auto ${isFetching ? "opacity-60" : ""}`}>
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <Checkbox checked={selected.size === orders.length && orders.length > 0} onCheckedChange={toggleAll} />
-                </TableHead>
-                <TableHead className="text-xs">Business</TableHead>
-                <TableHead className="text-xs">Order Code</TableHead>
-                <TableHead className="text-xs">Order Date</TableHead>
-                <TableHead className="text-xs">Status</TableHead>
-                <TableHead className="text-xs">Payment</TableHead>
-                <TableHead className="text-xs text-right">Total</TableHead>
-                <TableHead className="text-xs text-right">Shipping</TableHead>
-                <TableHead className="text-xs">Payed Date</TableHead>
-                <TableHead className="text-xs">Delivery Date</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader>{tableHeaders}</TableHeader>
             <TableBody>
               {orders.map(o => (
                 <TableRow key={o.id} className="cursor-pointer hover:bg-secondary/50">
@@ -301,6 +301,57 @@ const AdminOrders = () => {
           />
         </div>
       )}
+
+      {/* Floating Bulk Action Bar */}
+      <BulkActionBar count={selected.size} onDeselect={() => setSelected(new Set())}>
+        <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => setShowStatusDialog(true)}>
+          <RefreshCw size={14} /> Aggiorna Stato
+        </Button>
+        <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => setShowPaidConfirm(true)}>
+          <CreditCard size={14} /> Segna come Pagato
+        </Button>
+        <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => exportCSV(true)}>
+          <Download size={14} /> Esporta CSV
+        </Button>
+      </BulkActionBar>
+
+      {/* Status Dialog */}
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Aggiorna Stato ({selected.size} ordini)</DialogTitle></DialogHeader>
+          <Select value={bulkStatus} onValueChange={setBulkStatus}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+              <SelectItem value="processing">Processing</SelectItem>
+              <SelectItem value="shipped">Shipped</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowStatusDialog(false)}>Annulla</Button>
+            <Button onClick={handleBulkStatus} disabled={bulkLoading}>
+              {bulkLoading ? "Aggiornamento..." : "Applica"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Paid Confirmation Dialog */}
+      <Dialog open={showPaidConfirm} onOpenChange={setShowPaidConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Conferma Pagamento</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Vuoi segnare {selected.size} ordini come pagati con data di oggi?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPaidConfirm(false)}>Annulla</Button>
+            <Button onClick={handleBulkPaid} disabled={bulkLoading}>
+              {bulkLoading ? "Aggiornamento..." : "Conferma"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
