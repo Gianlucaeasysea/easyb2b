@@ -2,7 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShoppingCart, FileDown, ExternalLink, ChevronLeft, ChevronRight, Package, Info, Wrench, FileText } from "lucide-react";
+import { ShoppingCart, FileDown, ExternalLink, ChevronLeft, ChevronRight, Info, Wrench, FileText } from "lucide-react";
+import OptimizedImage from "@/components/ui/OptimizedImage";
 import { useState } from "react";
 
 interface ProductDetailModalProps {
@@ -49,10 +50,12 @@ const ProductDetailModal = ({
             {galleryImages.length > 0 ? (
               <>
                 <div className="aspect-square flex items-center justify-center">
-                  <img
+                  <OptimizedImage
                     src={galleryImages[currentImageIndex]}
                     alt={product.name}
+                    loading={currentImageIndex === 0 ? "eager" : "lazy"}
                     className="w-full h-full object-cover"
+                    containerClassName="w-full h-full"
                   />
                 </div>
                 {galleryImages.length > 1 && (
@@ -85,7 +88,7 @@ const ProductDetailModal = ({
               </>
             ) : (
               <div className="aspect-square flex items-center justify-center">
-                <Package className="text-muted-foreground" size={64} />
+                <OptimizedImage src={null} alt={product.name} className="w-full h-full" containerClassName="w-full h-full" />
               </div>
             )}
           </div>

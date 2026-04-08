@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClientMode } from "@/contexts/ClientModeContext";
-import { Package, Search, ShoppingCart, Minus, Plus } from "lucide-react";
+import { Search, ShoppingCart, Minus, Plus } from "lucide-react";
+import OptimizedImage from "@/components/ui/OptimizedImage";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -238,11 +239,13 @@ const DealerCatalog = () => {
                     onClick={() => setSelectedProduct(p)}
                   >
                     <div className="aspect-square bg-secondary flex items-center justify-center relative">
-                      {p.images && p.images[0] ? (
-                        <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Package className="text-muted-foreground" size={40} />
-                      )}
+                      <OptimizedImage
+                        src={p.images?.[0]}
+                        alt={p.name}
+                        loading={i < 4 ? "eager" : "lazy"}
+                        className="w-full h-full object-cover"
+                        containerClassName="w-full h-full"
+                      />
                       {p.category && (
                         <Badge className="absolute top-2 left-2 text-[10px] bg-background/80 text-foreground border-0 backdrop-blur-sm">
                           {p.category}
