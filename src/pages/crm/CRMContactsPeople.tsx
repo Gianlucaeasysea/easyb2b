@@ -9,6 +9,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Users, Phone, Mail, MessageCircle, Linkedin, Globe, Crown, Star, Download } from "lucide-react";
 import { useState } from "react";
+import { usePaginatedData } from "@/hooks/usePaginatedData";
+import { PaginationControls } from "@/components/PaginationControls";
 import { useNavigate } from "react-router-dom";
 import { differenceInDays, format, isValid } from "date-fns";
 import { toast } from "sonner";
