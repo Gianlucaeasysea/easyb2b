@@ -1,8 +1,6 @@
 import { LayoutDashboard, ShoppingBag, Package, HelpCircle, ShoppingCart, UserCircle, Bell, Receipt } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { CartSavedIndicator } from "@/contexts/CartContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { CartSavedIndicator } from "@/contexts/CartContext";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
