@@ -1163,21 +1163,6 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
           </Button>
         </div>
 
-        {!client.user_id && (
-          <div className="flex items-center justify-between gap-2 p-3 mb-4 rounded-lg bg-warning/10 border border-warning/20">
-            <span className="text-warning text-xs">⚠️ Questa organizzazione non ha ancora un account cliente collegato</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs gap-1 border-warning/30 text-warning hover:bg-warning/20"
-              disabled={creatingCredentials}
-              onClick={handleCreateCredentials}
-            >
-              {creatingCredentials ? <RefreshCw size={12} className="animate-spin" /> : <UserCheck size={12} />}
-              Crea Credenziali
-            </Button>
-          </div>
-        )}
 
         {assignedPriceLists.length > 0 ? (
           <div className="space-y-2 mb-4">
