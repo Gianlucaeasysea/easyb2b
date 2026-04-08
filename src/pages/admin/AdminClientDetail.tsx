@@ -17,6 +17,7 @@ import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 

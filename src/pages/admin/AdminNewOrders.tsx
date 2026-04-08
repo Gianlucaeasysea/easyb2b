@@ -6,6 +6,7 @@ import { PackagePlus, Eye, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 
 const AdminNewOrders = () => {

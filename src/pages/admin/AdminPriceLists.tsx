@@ -19,6 +19,7 @@ import {
   Percent, ShoppingBag, BarChart3, Eye, Copy
 } from "lucide-react";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import * as XLSX from "xlsx";
 
 const AdminPriceLists = () => {
