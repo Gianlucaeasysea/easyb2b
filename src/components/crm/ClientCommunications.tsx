@@ -345,8 +345,8 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
             const isExpanded = expandedThreads.has(threadId);
             const lastMsg = msgs[msgs.length - 1];
             const firstSubject = msgs[0].subject;
-            const inboundCount = msgs.filter((m: any) => m.direction === "inbound").length;
-            const outboundCount = msgs.filter((m: any) => m.direction === "outbound").length;
+            const inboundCount = msgs.filter((m) => m.direction === "inbound").length;
+            const outboundCount = msgs.filter((m) => m.direction === "outbound").length;
 
             return (
               <div key={threadId} className="rounded-lg border border-border overflow-hidden bg-card">
@@ -387,7 +387,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
                 {/* Expanded: all messages */}
                 {isExpanded && (
                   <div className="px-3 pb-3 space-y-2 border-t border-border pt-3 bg-secondary/10">
-                    {msgs.map((msg: any) => renderEmailCard(msg, true))}
+                    {msgs.map((msg) => renderEmailCard(msg, true))}
                   </div>
                 )}
 
