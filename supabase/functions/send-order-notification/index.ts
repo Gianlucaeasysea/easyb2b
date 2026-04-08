@@ -85,7 +85,7 @@ serve(async (req) => {
 
     if (type === "order_received") {
       pushClientEmail("order-received", { clientName, orderCode: code, itemsHtml, totalAmount, notes: order.notes }, `order-received-client-${orderId}`);
-      ADMIN_EMAILS.forEach(email => {
+      adminEmails.forEach(email => {
         sends.push({
           templateName: "order-received-admin",
           recipientEmail: email,
