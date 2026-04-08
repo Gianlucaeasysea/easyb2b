@@ -16,6 +16,8 @@ import {
   ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor,
   getPaymentStatusLabel, getPaymentStatusColor,
 } from "@/lib/constants";
+import { usePaginatedData } from "@/hooks/usePaginatedData";
+import { PaginationControls } from "@/components/PaginationControls";
 
 const AdminOrders = () => {
   const navigate = useNavigate();
@@ -53,6 +55,8 @@ const AdminOrders = () => {
     const matchDateTo = !dateTo || orderDate <= dateTo;
     return matchSearch && matchStatus && matchDateFrom && matchDateTo;
   }) || [];
+
+  const { pageData, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: filtered, pageSize: 25 });
 
   const totalRevenue = filtered.reduce((s, o) => s + Number(o.total_amount || 0), 0);
 
@@ -196,7 +200,7 @@ const AdminOrders = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(o => (
+              {pageData.map(o => (
                 <TableRow key={o.id} className="cursor-pointer hover:bg-secondary/50">
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Checkbox checked={selected.has(o.id)} onCheckedChange={() => toggleSelect(o.id)} />
@@ -234,6 +238,7 @@ const AdminOrders = () => {
               ))}
             </TableBody>
           </Table>
+          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
         </div>
       )}
     </div>
