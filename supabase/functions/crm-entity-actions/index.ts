@@ -345,6 +345,26 @@ Deno.serve(async (req) => {
       return json({ success: true, deletedIds: ids }, corsHeaders);
     }
 
+    if (action === "delete_contacts") {
+      const ids = Array.isArray(body?.ids) ? body.ids.filter((id: unknown) => typeof id === "string") : [];
+      if (!ids.length) return json({ error: "Missing contact ids" }, corsHeaders, 400);
+
+      for (const id of ids) {
+        // Delete activities linked to this contact
+        await ensure(adminClient.from("activities").delete().eq("contact_id", id), "Failed to delete contact activities");
+        // Delete tasks linked to this contact
+        await ensure(adminClient.from("tasks").delete().eq("contact_id", id), "Failed to delete contact tasks");
+        // Delete deals linked to this contact
+        await ensure(adminClient.from("deals").update({ contact_id: null }).eq("contact_id", id), "Failed to unlink contact deals");
+        // Delete communications linked to this contact
+        await ensure(adminClient.from("client_communications").update({ contact_id: null }).eq("contact_id", id), "Failed to unlink contact communications");
+        // Delete the contact
+        await ensure(adminClient.from("client_contacts").delete().eq("id", id), "Failed to delete contact");
+      }
+
+      return json({ success: true, deletedIds: ids }, corsHeaders);
+    }
+
     return json({ error: "Unsupported action" }, corsHeaders, 400);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";

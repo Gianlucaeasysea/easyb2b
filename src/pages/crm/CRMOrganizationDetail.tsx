@@ -26,6 +26,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
+import { deleteContactsCascade } from "@/lib/crmEntityActions";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
 import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
 import {
@@ -315,10 +316,14 @@ const CRMOrganizationDetail = () => {
   };
 
   const deleteContact = async (contactId: string) => {
-    const { error } = await supabase.from("client_contacts").delete().eq("id", contactId);
-    if (error) { toast.error("Errore eliminazione"); return; }
-    toast.success("Contatto rimosso");
-    refetchContacts();
+    try {
+      await deleteContactsCascade([contactId]);
+      toast.success("Contatto rimosso");
+      refetchContacts();
+    } catch (err: any) {
+      toast.error(err.message || "Errore eliminazione");
+    }
+  };
   };
 
   const editContact = (c: any) => {
