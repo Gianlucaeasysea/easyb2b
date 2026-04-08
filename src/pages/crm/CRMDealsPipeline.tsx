@@ -10,6 +10,7 @@ import { Building2, ArrowLeft, Calendar, ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
 
 const stages = ["qualification", "proposal", "negotiation", "closed_won", "closed_lost"];
 
@@ -80,6 +81,7 @@ const CRMDealsPipeline = () => {
   const navigate = useNavigate();
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
+  const [orderModalId, setOrderModalId] = useState<string | null>(null);
 
   const { data: deals } = useQuery({
     queryKey: ["crm-deals-pipeline"],
@@ -234,9 +236,7 @@ const CRMDealsPipeline = () => {
                                     exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                                     transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                                     onClick={() => {
-                                      if (deal.source === "order" && (deal as any).order?.id) {
-                                        navigate(`/admin/orders/${(deal as any).order.id}`);
-                                      } else {
+                                      if (deal.source !== "order") {
                                         navigate("/crm/deals");
                                       }
                                     }}
@@ -248,10 +248,15 @@ const CRMDealsPipeline = () => {
                                       <p className="text-xs font-heading font-semibold text-foreground truncate flex-1">
                                         {deal.title}
                                       </p>
-                                      {deal.source === "order" && (
-                                        <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 gap-0.5 border-primary/30 text-primary">
-                                          <ShoppingBag size={8} /> Da ordine
-                                        </Badge>
+                                      {deal.source === "order" && (deal as any).order?.id && (
+                                        <button
+                                          className="shrink-0"
+                                          onClick={(e) => { e.stopPropagation(); setOrderModalId((deal as any).order.id); }}
+                                        >
+                                          <Badge variant="outline" className="text-[9px] px-1 py-0 gap-0.5 border-primary/30 text-primary hover:bg-primary/10 cursor-pointer">
+                                            <ShoppingBag size={8} /> {(deal as any).order.order_code || "Ordine"}
+                                          </Badge>
+                                        </button>
                                       )}
                                     </div>
                                     {org && (
@@ -291,6 +296,11 @@ const CRMDealsPipeline = () => {
           })}
         </div>
       </DragDropContext>
+      <CRMOrderDetailModal
+        open={!!orderModalId}
+        onOpenChange={(open) => { if (!open) setOrderModalId(null); }}
+        orderId={orderModalId}
+      />
     </div>
   );
 };

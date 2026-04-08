@@ -1,13 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Calendar, Truck, FileText, Clock, Download, ExternalLink } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ShoppingBag, Calendar, Truck, FileText, Download, ExternalLink, Building2, Mail, Handshake, Save } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { getOrderStatusLabel, getOrderStatusColor, getPaymentStatusLabel, getPaymentStatusColor } from "@/lib/constants";
+import OrderEventsTimeline from "@/components/OrderEventsTimeline";
+import { toast } from "sonner";
 
 interface CRMOrderDetailModalProps {
   open: boolean;
@@ -21,15 +27,38 @@ const fmtDate = (d: string | null | undefined) => {
 };
 
 export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDetailModalProps) => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [internalNotes, setInternalNotes] = useState("");
+  const [notesChanged, setNotesChanged] = useState(false);
+
   const { data: order, isLoading } = useQuery({
     queryKey: ["crm-order-detail", orderId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("*, order_items(*, products(name, sku, barcode, images))")
+        .select("*, clients(id, company_name, contact_name, email), order_items(*, products(name, sku, barcode, images))")
         .eq("id", orderId!)
         .maybeSingle();
       if (error) throw error;
+      if (data) {
+        setInternalNotes((data as any).internal_notes || "");
+        setNotesChanged(false);
+      }
+      return data;
+    },
+    enabled: !!orderId && open,
+  });
+
+  const { data: linkedDeal } = useQuery({
+    queryKey: ["crm-order-linked-deal", orderId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("deals")
+        .select("id, title, stage")
+        .eq("order_id", orderId!)
+        .maybeSingle();
       return data;
     },
     enabled: !!orderId && open,
@@ -48,26 +77,27 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
     enabled: !!orderId && open,
   });
 
-  const { data: events } = useQuery({
-    queryKey: ["crm-order-events", orderId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("order_events")
-        .select("*")
-        .eq("order_id", orderId!)
-        .order("created_at", { ascending: false });
-      return data || [];
+  const saveNotesMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("orders").update({ internal_notes: internalNotes }).eq("id", orderId!);
+      if (error) throw error;
     },
-    enabled: !!orderId && open,
+    onSuccess: () => {
+      toast.success("Note interne salvate");
+      setNotesChanged(false);
+      queryClient.invalidateQueries({ queryKey: ["crm-order-detail", orderId] });
+    },
+    onError: () => toast.error("Errore nel salvataggio"),
   });
 
-  const handleDownloadDoc = async (filePath: string, fileName: string) => {
+  const handleDownloadDoc = async (filePath: string) => {
     const { data } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 300);
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   };
 
   const items = (order as any)?.order_items || [];
   const itemsTotal = items.reduce((s: number, i: any) => s + Number(i.subtotal || 0), 0);
+  const client = (order as any)?.clients;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -76,6 +106,7 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
           <div className="p-8 text-center text-muted-foreground text-sm">Caricamento...</div>
         ) : (
           <>
+            {/* HEADER */}
             <DialogHeader>
               <DialogTitle className="font-heading text-lg flex items-center gap-2">
                 <ShoppingBag size={18} />
@@ -83,8 +114,7 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
               </DialogTitle>
             </DialogHeader>
 
-            {/* Status & dates row */}
-            <div className="flex flex-wrap gap-3 mt-2">
+            <div className="flex flex-wrap items-center gap-2 mt-1">
               <Badge className={`border-0 ${getOrderStatusColor((order as any).status || "draft")}`}>
                 {getOrderStatusLabel((order as any).status || "draft")}
               </Badge>
@@ -100,27 +130,38 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
               )}
             </div>
 
-            {/* Dates grid */}
+            {/* Client info */}
+            {client && (
+              <div className="flex items-center gap-2 mt-2">
+                <Building2 size={14} className="text-primary" />
+                <button
+                  className="text-sm font-medium text-primary hover:underline"
+                  onClick={() => { onOpenChange(false); navigate(`/crm/organizations/${client.id}`); }}
+                >
+                  {client.company_name}
+                </button>
+                {client.contact_name && <span className="text-xs text-muted-foreground">· {client.contact_name}</span>}
+              </div>
+            )}
+
+            {/* Dates */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-              <div className="p-3 bg-secondary/50 rounded-lg">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading flex items-center gap-1"><Calendar size={10} /> Data Ordine</p>
-                <p className="text-sm font-semibold text-foreground mt-1">{fmtDate(order.created_at)}</p>
-              </div>
-              <div className="p-3 bg-secondary/50 rounded-lg">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading flex items-center gap-1"><Truck size={10} /> Consegna</p>
-                <p className="text-sm font-semibold text-foreground mt-1">{fmtDate((order as any).delivery_date)}</p>
-              </div>
-              <div className="p-3 bg-secondary/50 rounded-lg">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading flex items-center gap-1"><Calendar size={10} /> Ritiro</p>
-                <p className="text-sm font-semibold text-foreground mt-1">{fmtDate((order as any).pickup_date)}</p>
-              </div>
-              <div className="p-3 bg-secondary/50 rounded-lg">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading flex items-center gap-1"><Calendar size={10} /> Pagamento</p>
-                <p className="text-sm font-semibold text-foreground mt-1">{fmtDate((order as any).payed_date)}</p>
-              </div>
+              {[
+                { label: "Data Ordine", icon: Calendar, value: fmtDate(order.created_at) },
+                { label: "Consegna", icon: Truck, value: fmtDate((order as any).delivery_date) },
+                { label: "Ritiro", icon: Calendar, value: fmtDate((order as any).pickup_date) },
+                { label: "Pagamento", icon: Calendar, value: fmtDate((order as any).payed_date) },
+              ].map(d => (
+                <div key={d.label} className="p-3 bg-secondary/50 rounded-lg">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading flex items-center gap-1">
+                    <d.icon size={10} /> {d.label}
+                  </p>
+                  <p className="text-sm font-semibold text-foreground mt-1">{d.value}</p>
+                </div>
+              ))}
             </div>
 
-            {/* Line items */}
+            {/* ORDER ITEMS TABLE */}
             <div className="mt-5">
               <h3 className="font-heading font-bold text-foreground mb-2 flex items-center gap-2 text-sm">
                 <ShoppingBag size={14} /> Articoli ({items.length})
@@ -129,8 +170,8 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs">SKU</TableHead>
                       <TableHead className="text-xs">Prodotto</TableHead>
+                      <TableHead className="text-xs">SKU</TableHead>
                       <TableHead className="text-xs text-center">Qtà</TableHead>
                       <TableHead className="text-xs text-right">Prezzo Unit.</TableHead>
                       <TableHead className="text-xs text-right">Sconto</TableHead>
@@ -140,30 +181,29 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
                   <TableBody>
                     {items.map((item: any) => (
                       <TableRow key={item.id}>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{item.products?.sku || "—"}</TableCell>
                         <TableCell className="text-xs font-medium text-foreground">
                           {item.products?.name || "Prodotto rimosso"}
-                          {item.products?.barcode && (
-                            <span className="block text-[10px] text-muted-foreground">EAN: {item.products.barcode}</span>
-                          )}
                         </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{item.products?.sku || "—"}</TableCell>
                         <TableCell className="text-xs text-center">{item.quantity}</TableCell>
                         <TableCell className="text-xs text-right font-mono">€{Number(item.unit_price || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
                         <TableCell className="text-xs text-right">{item.discount_pct ? `${item.discount_pct}%` : "—"}</TableCell>
                         <TableCell className="text-xs text-right font-mono font-semibold">€{Number(item.subtotal || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
                       </TableRow>
                     ))}
-                    {/* Totals */}
+                    {/* Summary rows */}
                     <TableRow className="bg-secondary/30">
                       <TableCell colSpan={5} className="text-xs font-semibold text-right text-foreground">Subtotale Prodotti</TableCell>
                       <TableCell className="text-xs text-right font-mono font-bold text-foreground">€{itemsTotal.toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
                     </TableRow>
-                    {((order as any).shipping_cost_client || 0) > 0 && (
-                      <TableRow className="bg-secondary/30">
-                        <TableCell colSpan={5} className="text-xs text-right text-muted-foreground">Spedizione</TableCell>
-                        <TableCell className="text-xs text-right font-mono text-muted-foreground">€{Number((order as any).shipping_cost_client || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
-                      </TableRow>
-                    )}
+                    <TableRow className="bg-secondary/30">
+                      <TableCell colSpan={5} className="text-xs text-right text-muted-foreground">Spedizione</TableCell>
+                      <TableCell className="text-xs text-right font-mono text-muted-foreground">
+                        {((order as any).shipping_cost_client || 0) > 0
+                          ? `€${Number((order as any).shipping_cost_client).toLocaleString("it-IT", { minimumFractionDigits: 2 })}`
+                          : "Da calcolare"}
+                      </TableCell>
+                    </TableRow>
                     <TableRow className="bg-primary/5">
                       <TableCell colSpan={5} className="text-sm font-bold text-right text-foreground">Totale Ordine</TableCell>
                       <TableCell className="text-sm text-right font-mono font-bold text-primary">€{Number(order.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
@@ -171,6 +211,11 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
                   </TableBody>
                 </Table>
               </div>
+              {(order as any).payment_terms && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  <span className="font-medium">Termini di pagamento:</span> {(order as any).payment_terms}
+                </p>
+              )}
             </div>
 
             {/* Documents */}
@@ -189,21 +234,12 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
                           <p className="text-[10px] text-muted-foreground">{doc.doc_type} · {fmtDate(doc.created_at)}</p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => handleDownloadDoc(doc.file_path, doc.file_name)}>
+                      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => handleDownloadDoc(doc.file_path)}>
                         <Download size={12} /> Scarica
                       </Button>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Tracking link */}
-            {(order as any).tracking_url && (
-              <div className="mt-4">
-                <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => window.open((order as any).tracking_url, "_blank")}>
-                  <ExternalLink size={12} /> Traccia Spedizione
-                </Button>
               </div>
             )}
 
@@ -215,31 +251,60 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
               </div>
             )}
 
-            {/* Timeline / Storyline */}
-            {events && events.length > 0 && (
-              <div className="mt-5">
-                <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
-                  <Clock size={14} /> Storyline
-                </h3>
-                <div className="relative border-l-2 border-border ml-3 space-y-3">
-                  {events.map((ev: any) => (
-                    <div key={ev.id} className="ml-6 relative">
-                      <div className="absolute -left-[31px] top-1 w-3 h-3 rounded-full bg-primary border-2 border-background" />
-                      <div className="p-2.5 bg-secondary/50 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-semibold text-foreground">{ev.title}</p>
-                          <span className="text-[10px] text-muted-foreground">
-                            {format(new Date(ev.created_at), "dd MMM yyyy HH:mm", { locale: it })}
-                          </span>
-                        </div>
-                        {ev.description && <p className="text-[11px] text-muted-foreground mt-1">{ev.description}</p>}
-                        {ev.event_type && <Badge variant="outline" className="text-[10px] mt-1">{ev.event_type}</Badge>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Internal notes (editable for sales) */}
+            <div className="mt-4">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading mb-1">Note Interne</p>
+              <Textarea
+                value={internalNotes}
+                onChange={e => { setInternalNotes(e.target.value); setNotesChanged(true); }}
+                placeholder="Aggiungi note interne..."
+                className="text-xs min-h-[60px]"
+              />
+              {notesChanged && (
+                <Button size="sm" className="mt-2 gap-1 text-xs" onClick={() => saveNotesMutation.mutate()} disabled={saveNotesMutation.isPending}>
+                  <Save size={12} /> Salva Note
+                </Button>
+              )}
+            </div>
+
+            {/* Timeline */}
+            <div className="mt-5">
+              <h3 className="font-heading font-bold text-foreground mb-3 text-sm">Storyline</h3>
+              <OrderEventsTimeline orderId={orderId!} />
+            </div>
+
+            {/* Actions */}
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
+              {client?.email && (
+                <Button
+                  variant="outline" size="sm" className="gap-1 text-xs"
+                  onClick={() => { onOpenChange(false); navigate(`/crm/organizations/${client.id}`); }}
+                >
+                  <Mail size={12} /> Contatta Cliente
+                </Button>
+              )}
+              {client && (
+                <Button
+                  variant="outline" size="sm" className="gap-1 text-xs"
+                  onClick={() => { onOpenChange(false); navigate(`/crm/organizations/${client.id}`); }}
+                >
+                  <Building2 size={12} /> Vai all'Organizzazione
+                </Button>
+              )}
+              {linkedDeal && (
+                <Button
+                  variant="outline" size="sm" className="gap-1 text-xs"
+                  onClick={() => { onOpenChange(false); navigate("/crm/deals"); }}
+                >
+                  <Handshake size={12} /> Deal: {linkedDeal.title}
+                </Button>
+              )}
+              {(order as any).tracking_url && (
+                <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => window.open((order as any).tracking_url, "_blank")}>
+                  <ExternalLink size={12} /> Traccia Spedizione
+                </Button>
+              )}
+            </div>
           </>
         )}
       </DialogContent>
