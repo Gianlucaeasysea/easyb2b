@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { convertDealerRequestToPipeline } from "@/lib/crmRequestPipeline";
 
 type InvokePayload = {
   action: "convert_request_to_pipeline" | "delete_clients" | "delete_leads";
@@ -71,12 +72,12 @@ const invokeCrmEntityAction = async <T>(payload: InvokePayload): Promise<T> => {
 };
 
 export const convertRequestToPipeline = async (requestId: string) => {
-  return invokeCrmEntityAction<{
+  return convertDealerRequestToPipeline(requestId) as Promise<{
     success: true;
     clientId: string;
     leadId: string;
     requestId: string;
-  }>({ action: "convert_request_to_pipeline", requestId });
+  }>;
 };
 
 export const deleteClientsCascade = async (ids: string[]) => {
