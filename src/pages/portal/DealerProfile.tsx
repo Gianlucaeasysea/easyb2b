@@ -208,7 +208,7 @@ const DealerProfile = () => {
               <div><span className="text-muted-foreground text-xs">Phone</span><p className="text-foreground">{client?.phone || "—"}</p></div>
               <div><span className="text-muted-foreground text-xs">Address</span><p className="text-foreground">{client?.address || "—"}</p></div>
               <div><span className="text-muted-foreground text-xs">Discount Class</span>
-                <Badge variant="outline" className="mt-1">{client?.discount_class || "standard"}</Badge>
+                <Badge variant="outline" className="mt-1">{client?.discount_class || "D"}</Badge>
               </div>
             </div>
           </div>

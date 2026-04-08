@@ -144,7 +144,7 @@ export const ComposeEmailDialog = ({
     const contactName = selectedContact?.contact_name || clientName;
     const companyName = clientData?.company_name || clientName;
     const lastOrderCode = orderCode || lastOrder?.order_code || "N/A";
-    const discount = clientData?.discount_class || "Standard";
+    const discount = clientData?.discount_class || "D";
     return text
       .replace(/\{\{nome_contatto\}\}/g, contactName)
       .replace(/\{\{azienda\}\}/g, companyName)

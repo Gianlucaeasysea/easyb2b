@@ -57,8 +57,8 @@ const DealerDashboard = () => {
 
   const monthlyTarget = 5000;
   const monthlyProgress = Math.min((totalSpent / monthlyTarget) * 100, 100);
-  const discountClass = client?.discount_class || "standard";
-  const discountPct = { gold: 30, silver: 20, bronze: 15, standard: 10, A: 35, B: 25, C: 20, D: 10 }[discountClass] || 10;
+  const discountClass = client?.discount_class || "D";
+  const discountPct = { A: 35, B: 25, C: 20, D: 10, custom: 0 }[discountClass] || 10;
 
   const statCards = [
     { icon: TrendingUp, label: "Discount Tier", value: `Class ${discountClass}`, sub: `-${discountPct}% on all products` },

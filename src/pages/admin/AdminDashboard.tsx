@@ -172,7 +172,7 @@ const AdminDashboard = () => {
   const discountDistribution = (() => {
     const map: Record<string, number> = {};
     (clients || []).forEach(c => {
-      const cls = c.discount_class || "Standard";
+      const cls = c.discount_class || "D";
       map[cls] = (map[cls] || 0) + 1;
     });
     return Object.entries(map).map(([name, value]) => ({ name, value }));
