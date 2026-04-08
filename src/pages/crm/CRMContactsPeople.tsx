@@ -9,6 +9,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Users, Phone, Mail, MessageCircle, Linkedin, Globe, Crown, Star, Download } from "lucide-react";
 import { useState } from "react";
+import { usePaginatedData } from "@/hooks/usePaginatedData";
+import { PaginationControls } from "@/components/PaginationControls";
 import { useNavigate } from "react-router-dom";
 import { differenceInDays, format, isValid } from "date-fns";
 import { toast } from "sonner";
@@ -115,6 +117,8 @@ const CRMContactsPeople = () => {
     return true;
   }) || [];
 
+  const { pageData, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: filtered, pageSize: 25 });
+
   const exportCsv = () => {
     const rows = filtered.map(c => ({
       "Nome": c.contact_name,
@@ -211,7 +215,7 @@ const CRMContactsPeople = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(c => {
+              {pageData.map(c => {
                 const ChannelIcon = channelIcons[(c as any).preferred_channel || "email"] || Mail;
                 const lastContactedAt = (c as any).last_contacted_at;
                 const daysAgo = lastContactedAt ? differenceInDays(new Date(), new Date(lastContactedAt)) : null;
@@ -260,6 +264,7 @@ const CRMContactsPeople = () => {
               })}
             </TableBody>
           </Table>
+          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
         </div>
       )}
 

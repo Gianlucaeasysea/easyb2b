@@ -12,6 +12,8 @@ import { format } from "date-fns";
 import { useState } from "react";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
+import { usePaginatedData } from "@/hooks/usePaginatedData";
+import { PaginationControls } from "@/components/PaginationControls";
 
 const ORDER_PHASES = [
   { key: "confirmed", label: "Ordine Ricevuto", icon: CheckCircle },
@@ -64,6 +66,8 @@ const DealerOrders = () => {
     enabled: !!client,
   });
 
+  const { pageData, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: orders || [], pageSize: 20 });
+
   const getDownloadUrl = (filePath: string) => {
     const { data } = supabase.storage.from("order-documents").getPublicUrl(filePath);
     return data.publicUrl;
@@ -94,8 +98,9 @@ const DealerOrders = () => {
           <p className="text-muted-foreground">Nessun ordine ancora. Sfoglia il catalogo per effettuare il primo ordine.</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {orders.map(order => {
+        <>
+          <div className="space-y-4">
+          {pageData.map(order => {
             const status = order.status || "draft";
             const statusLabel = getOrderStatusLabel(status);
             const statusColor = getOrderStatusColor(status);
@@ -310,6 +315,8 @@ const DealerOrders = () => {
             );
           })}
         </div>
+        <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
+      </>
       )}
     </div>
   );

@@ -14,6 +14,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { differenceInDays } from "date-fns";
 import { deleteClientsCascade } from "@/lib/crmEntityActions";
+import { usePaginatedData } from "@/hooks/usePaginatedData";
+import { PaginationControls } from "@/components/PaginationControls";
 
 const AdminClients = () => {
   const navigate = useNavigate();
@@ -91,6 +93,8 @@ const AdminClients = () => {
 
     return true;
   }) || [];
+
+  const { pageData, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: filtered, pageSize: 25 });
 
   const createClient = useMutation({
     mutationFn: async () => {
@@ -234,7 +238,7 @@ const AdminClients = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(c => (
+              {pageData.map(c => (
                 <TableRow key={c.id} className="cursor-pointer hover:bg-secondary/50">
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggleSelect(c.id)} />
@@ -289,6 +293,7 @@ const AdminClients = () => {
               ))}
             </TableBody>
           </Table>
+          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
         </div>
       )}
 

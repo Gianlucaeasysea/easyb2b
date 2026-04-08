@@ -18,6 +18,8 @@ import LeadDetailPanel from "@/components/crm/LeadDetailPanel";
 import { differenceInDays } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { deleteLeadsCascade } from "@/lib/crmEntityActions";
+import { usePaginatedData } from "@/hooks/usePaginatedData";
+import { PaginationControls } from "@/components/PaginationControls";
 
 const LEAD_STAGES = [
   { value: "request", label: "Request", color: "border-muted-foreground text-muted-foreground", bg: "bg-muted/50" },
@@ -175,6 +177,8 @@ const CRMLeads = () => {
     if (filterZone !== "all" && l.zone !== filterZone) return false;
     return true;
   }), [leads, search, filterStatus, filterZone]);
+
+  const { pageData: pageLeads, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: filtered || [], pageSize: 25 });
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {
@@ -340,7 +344,7 @@ const CRMLeads = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(l => (
+              {pageLeads.map(l => (
                 <TableRow key={l.id} className="cursor-pointer">
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggleSelect(l.id)} />
@@ -387,6 +391,7 @@ const CRMLeads = () => {
               ))}
             </TableBody>
           </Table>
+          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
         </div>
       ) : (
         /* ────── KANBAN VIEW ────── */
