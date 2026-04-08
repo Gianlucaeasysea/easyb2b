@@ -475,10 +475,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
           <ScrollArea className="flex-1 mt-2">
             <div className="pr-4">
               {openEmail?.body?.includes("<") ? (
-                <div
-                  className="prose prose-sm max-w-none text-foreground [&_a]:text-primary"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(openEmail.body) }}
-                />
+                <SafeHtml html={openEmail.body} className="prose prose-sm max-w-none text-foreground [&_a]:text-primary" />
               ) : (
                 <p className="text-sm text-foreground whitespace-pre-wrap">{openEmail?.body}</p>
               )}
