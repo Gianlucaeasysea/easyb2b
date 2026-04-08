@@ -1,10 +1,65 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation, Link } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut } from "lucide-react";
+import { LogOut, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/easysea-logo.png";
+
+const adminRouteNames: Record<string, string> = {
+  "orders": "Ordini",
+  "clients": "Clienti",
+  "products": "Prodotti",
+  "requests": "Richieste",
+  "price-lists": "Listini Prezzi",
+  "settings": "Impostazioni",
+  "marketing": "Marketing",
+  "changelog": "Changelog",
+  "import": "Importa",
+  "cms": "CMS",
+  "new-orders": "Nuovi Ordini",
+  "system-map": "Mappa Sistema",
+};
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function AdminBreadcrumbs() {
+  const location = useLocation();
+  const pathParts = location.pathname.replace("/admin", "").split("/").filter(Boolean);
+
+  if (pathParts.length === 0) return null;
+
+  const crumbs: { label: string; path: string }[] = [];
+  let currentPath = "/admin";
+
+  for (const part of pathParts) {
+    currentPath += `/${part}`;
+    const label = adminRouteNames[part];
+    if (label) {
+      crumbs.push({ label, path: currentPath });
+    } else if (UUID_RE.test(part) || /^\d+$/.test(part)) {
+      crumbs.push({ label: `Dettaglio #${part.substring(0, 8)}…`, path: currentPath });
+    } else {
+      crumbs.push({ label: part, path: currentPath });
+    }
+  }
+
+  return (
+    <nav className="flex items-center gap-1 text-xs text-muted-foreground mb-4">
+      <Link to="/admin" className="hover:text-foreground transition-colors">Admin</Link>
+      {crumbs.map((crumb, i) => (
+        <span key={crumb.path} className="flex items-center gap-1">
+          <ChevronRight className="h-3 w-3" />
+          {i === crumbs.length - 1 ? (
+            <span className="text-foreground font-medium">{crumb.label}</span>
+          ) : (
+            <Link to={crumb.path} className="hover:text-foreground transition-colors">{crumb.label}</Link>
+          )}
+        </span>
+      ))}
+    </nav>
+  );
+}
 
 const AdminLayout = () => {
   const { signOut, user } = useAuth();
@@ -28,6 +83,7 @@ const AdminLayout = () => {
             </div>
           </header>
           <main className="flex-1 p-6 overflow-auto">
+            <AdminBreadcrumbs />
             <Outlet />
           </main>
         </div>
