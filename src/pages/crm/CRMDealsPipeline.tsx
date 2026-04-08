@@ -270,7 +270,8 @@ const CRMDealsPipeline = () => {
                                     )}
                                   </div>
                                 </motion.div>
-                              )}
+                                );
+                              }}
                             </Draggable>
                           );
                         })}
