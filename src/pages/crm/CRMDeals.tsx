@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Handshake, Plus, Search, Trash2, Building2, User, Calendar,
-  TrendingUp, CheckCircle2, XCircle, Pencil, Save, X
+  TrendingUp, CheckCircle2, XCircle, Pencil, Save, X, ShoppingBag
 } from "lucide-react";
 import { useState } from "react";
 import { format, isValid } from "date-fns";
@@ -488,7 +488,16 @@ const CRMDeals = () => {
                     <TableCell onClick={e => e.stopPropagation()}>
                       <Checkbox checked={selected.has(d.id)} onCheckedChange={() => toggleSelect(d.id)} />
                     </TableCell>
-                    <TableCell onClick={() => openDetail(d)} className="font-heading font-semibold">{d.title}</TableCell>
+                    <TableCell onClick={() => openDetail(d)} className="font-heading font-semibold">
+                      <span className="flex items-center gap-1.5">
+                        {d.title}
+                        {(d as any).source === "order" && (
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 gap-0.5 border-primary/30 text-primary">
+                            <ShoppingBag size={8} /> Da ordine
+                          </Badge>
+                        )}
+                      </span>
+                    </TableCell>
                     <TableCell onClick={() => openDetail(d)}>
                       {org ? (
                         <button className="text-xs text-primary hover:underline flex items-center gap-1" onClick={e => { e.stopPropagation(); navigate(`/crm/organizations/${org.id}`); }}>
