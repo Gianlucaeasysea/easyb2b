@@ -436,32 +436,39 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
               <span>{openEmail && format(new Date(openEmail.created_at), "dd MMMM yyyy, HH:mm", { locale: it })}</span>
             </div>
             <Separator />
-            {(openEmail?.metadata as any)?.from && (
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-foreground w-10 shrink-0">From:</span>
-                <span className="text-muted-foreground break-all">{(openEmail.metadata as any).from}</span>
-              </div>
-            )}
-            {(openEmail?.metadata as any)?.to && (
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-foreground w-10 shrink-0">To:</span>
-                <span className="text-muted-foreground break-all">{(openEmail.metadata as any).to}</span>
-              </div>
-            )}
-            {(openEmail?.metadata as any)?.cc && (
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-foreground w-10 shrink-0">CC:</span>
-                <span className="text-muted-foreground break-all">{(openEmail.metadata as any).cc}</span>
-              </div>
-            )}
-            {!(openEmail?.metadata as any)?.from && openEmail?.recipient_email && (
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-foreground w-10 shrink-0">
-                  {openEmail?.direction === "inbound" ? "From:" : "To:"}
-                </span>
-                <span className="text-muted-foreground">{openEmail?.recipient_email}</span>
-              </div>
-            )}
+            {(() => {
+              const meta = openEmail ? getMeta(openEmail) : null;
+              return (
+                <>
+                  {meta?.from && (
+                    <div className="flex items-start gap-2">
+                      <span className="font-semibold text-foreground w-10 shrink-0">From:</span>
+                      <span className="text-muted-foreground break-all">{meta.from}</span>
+                    </div>
+                  )}
+                  {meta?.to && (
+                    <div className="flex items-start gap-2">
+                      <span className="font-semibold text-foreground w-10 shrink-0">To:</span>
+                      <span className="text-muted-foreground break-all">{meta.to}</span>
+                    </div>
+                  )}
+                  {meta?.cc && (
+                    <div className="flex items-start gap-2">
+                      <span className="font-semibold text-foreground w-10 shrink-0">CC:</span>
+                      <span className="text-muted-foreground break-all">{meta.cc}</span>
+                    </div>
+                  )}
+                  {!meta?.from && openEmail?.recipient_email && (
+                    <div className="flex items-start gap-2">
+                      <span className="font-semibold text-foreground w-10 shrink-0">
+                        {openEmail?.direction === "inbound" ? "From:" : "To:"}
+                      </span>
+                      <span className="text-muted-foreground">{openEmail?.recipient_email}</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Email body */}
