@@ -423,7 +423,7 @@ const CRMDashboard = () => {
                         <span className="font-heading font-bold text-foreground">
                           {(o as any).order_code || `#${o.id.slice(0, 8)}`}
                         </span>
-                        <Badge className={`border-0 text-[10px] ${phase.color}`}>{phase.label}</Badge>
+                        <Badge className={`border-0 text-[10px] ${phaseColor}`}>{phaseLabel}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {(o as any).clients?.company_name || "—"}
