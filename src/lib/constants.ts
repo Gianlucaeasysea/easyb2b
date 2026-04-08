@@ -42,12 +42,18 @@ export const PAYMENT_STATUS_MAP: Record<string, string> = {
   unpaid: "Non pagato",
   pending: "In attesa",
   paid: "Pagato",
+  // Legacy
+  "Payed": "Pagato",
+  "To be paid": "Da pagare",
 };
 
 export const PAYMENT_STATUS_COLORS: Record<string, string> = {
   unpaid: "bg-red-100 text-red-800",
   pending: "bg-yellow-100 text-yellow-800",
   paid: "bg-green-100 text-green-800",
+  // Legacy
+  "Payed": "bg-green-100 text-green-800",
+  "To be paid": "bg-red-100 text-red-800",
 };
 
 // ── Chart Colors (hex for recharts) ──────────────────────────
@@ -60,6 +66,14 @@ export const ORDER_STATUS_CHART_COLORS: Record<string, string> = {
   shipped: "#8b5cf6",
   delivered: "#22c55e",
   cancelled: "#ef4444",
+  // Legacy
+  "To be prepared": "#f59e0b",
+  "Ready": "#f97316",
+  "On the road": "#8b5cf6",
+  "Delivered": "#22c55e",
+  "Payed": "#22c55e",
+  "Returned": "#ef4444",
+  "lost": "#ef4444",
 };
 
 // ── Client Status ────────────────────────────────────────────
