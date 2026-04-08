@@ -128,7 +128,7 @@ const AdminOrders = () => {
       });
       const skipped = transitionInfo.invalid.length;
       if (skipped > 0) {
-        toast.success(`Aggiornati: ${result.success} ordini. Saltati: ${skipped} (stato non compatibile).`);
+        toast.success(`Aggiornati: ${result.ok} ordini. Saltati: ${skipped} (stato non compatibile).`);
       } else {
         bulkResultToast(toast.success, toast.error, result, "ordini");
       }
