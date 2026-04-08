@@ -53,6 +53,7 @@ import AdminMarketing from "./pages/admin/AdminMarketing";
 import AdminCMS from "./pages/admin/AdminCMS";
 import AdminChangelog from "./pages/admin/AdminChangelog";
 import AdminNotifications from "./pages/admin/AdminNotifications";
+import AdminAuditLog from "./pages/admin/AdminAuditLog";
 
 // CRM
 import CRMDashboard from "./pages/crm/CRMDashboard";
@@ -134,6 +135,7 @@ const App = () => (
               <Route path="automations" element={<CRMAutomations />} />
               <Route path="changelog" element={<AdminChangelog />} />
               <Route path="notifications" element={<AdminNotifications />} />
+              <Route path="audit-log" element={<AdminAuditLog />} />
             </Route>
 
             {/* CRM */}
