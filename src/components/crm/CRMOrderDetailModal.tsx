@@ -231,22 +231,26 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
                 <h3 className="font-heading font-bold text-foreground mb-2 flex items-center gap-2 text-sm">
                   <FileText size={14} /> Documenti ({documents.length})
                 </h3>
-                <div className="space-y-2">
-                  {documents.map((doc: any) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <FileText size={14} className="text-primary" />
-                        <div>
-                          <p className="text-xs font-medium text-foreground">{doc.file_name}</p>
-                          <p className="text-[10px] text-muted-foreground">{docTypeLabel(doc.doc_type)} · {fmtDate(doc.created_at)}</p>
+                {documents.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">Nessun documento disponibile</p>
+                ) : (
+                  <div className="space-y-2">
+                    {documents.map((doc: any) => (
+                      <div key={doc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <FileText size={14} className="text-primary" />
+                          <div>
+                            <p className="text-xs font-medium text-foreground">{doc.file_name}</p>
+                            <p className="text-[10px] text-muted-foreground">{docTypeLabel(doc.doc_type)} · {fmtDate(doc.created_at)}</p>
+                          </div>
                         </div>
+                        <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => handleDownloadDoc(doc.file_path)}>
+                          <Download size={12} /> Scarica
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => handleDownloadDoc(doc.file_path)}>
-                        <Download size={12} /> Scarica
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
