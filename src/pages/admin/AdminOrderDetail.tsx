@@ -16,7 +16,7 @@ import OrderDocuments from "@/components/OrderDocuments";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import {
-  ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor,
+  ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor,
   getPaymentStatusLabel, getPaymentStatusColor,
 } from "@/lib/constants";
 import type { Tables } from "@/integrations/supabase/types";
@@ -43,7 +43,7 @@ interface OrderWithRelations extends OrderRow {
   }>;
 }
 
-const statusOptions = Object.keys(ORDER_STATUS_MAP);
+const statusOptions = Object.keys(ORDER_STATUSES);
 
 const AdminOrderDetail = () => {
   const { id } = useParams<{ id: string }>();

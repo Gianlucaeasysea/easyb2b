@@ -1,40 +1,27 @@
 // ── Order Status ──────────────────────────────────────────────
-export const ORDER_STATUS_MAP: Record<string, string> = {
+export const ORDER_STATUSES = {
   draft: "Bozza",
-  submitted: "Inviato",
   confirmed: "Confermato",
   processing: "In lavorazione",
-  ready_to_ship: "Pronto per la spedizione",
+  ready_to_ship: "Pronto per spedizione",
   shipped: "Spedito",
   delivered: "Consegnato",
   cancelled: "Annullato",
-  // Legacy values from Google Sheet import
-  "To be prepared": "Da preparare",
-  "Ready": "Pronto",
-  "On the road": "In transito",
-  "Delivered": "Consegnato",
-  "Payed": "Pagato",
-  "Returned": "Reso",
-  "lost": "Perso",
-};
+  returned: "Reso",
+} as const;
+
+/** @deprecated Use ORDER_STATUSES instead */
+export const ORDER_STATUS_MAP = ORDER_STATUSES as Record<string, string>;
 
 export const ORDER_STATUS_COLORS: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-800",
-  submitted: "bg-blue-100 text-blue-800",
-  confirmed: "bg-indigo-100 text-indigo-800",
-  processing: "bg-yellow-100 text-yellow-800",
-  ready_to_ship: "bg-orange-100 text-orange-800",
-  shipped: "bg-purple-100 text-purple-800",
-  delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
-  // Legacy
-  "To be prepared": "bg-yellow-100 text-yellow-800",
-  "Ready": "bg-orange-100 text-orange-800",
-  "On the road": "bg-purple-100 text-purple-800",
-  "Delivered": "bg-green-100 text-green-800",
-  "Payed": "bg-green-100 text-green-800",
-  "Returned": "bg-red-100 text-red-800",
-  "lost": "bg-red-100 text-red-800",
+  draft: "bg-gray-100 text-gray-700",
+  confirmed: "bg-blue-100 text-blue-700",
+  processing: "bg-yellow-100 text-yellow-700",
+  ready_to_ship: "bg-orange-100 text-orange-700",
+  shipped: "bg-purple-100 text-purple-700",
+  delivered: "bg-green-100 text-green-700",
+  cancelled: "bg-red-100 text-red-700",
+  returned: "bg-pink-100 text-pink-700",
 };
 
 // ── Payment Status ───────────────────────────────────────────
@@ -42,38 +29,24 @@ export const PAYMENT_STATUS_MAP: Record<string, string> = {
   unpaid: "Non pagato",
   pending: "In attesa",
   paid: "Pagato",
-  // Legacy
-  "Payed": "Pagato",
-  "To be paid": "Da pagare",
 };
 
 export const PAYMENT_STATUS_COLORS: Record<string, string> = {
   unpaid: "bg-red-100 text-red-800",
   pending: "bg-yellow-100 text-yellow-800",
   paid: "bg-green-100 text-green-800",
-  // Legacy
-  "Payed": "bg-green-100 text-green-800",
-  "To be paid": "bg-red-100 text-red-800",
 };
 
 // ── Chart Colors (hex for recharts) ──────────────────────────
 export const ORDER_STATUS_CHART_COLORS: Record<string, string> = {
   draft: "#9ca3af",
-  submitted: "#3b82f6",
-  confirmed: "#6366f1",
+  confirmed: "#3b82f6",
   processing: "#f59e0b",
   ready_to_ship: "#f97316",
   shipped: "#8b5cf6",
   delivered: "#22c55e",
   cancelled: "#ef4444",
-  // Legacy
-  "To be prepared": "#f59e0b",
-  "Ready": "#f97316",
-  "On the road": "#8b5cf6",
-  "Delivered": "#22c55e",
-  "Payed": "#22c55e",
-  "Returned": "#ef4444",
-  "lost": "#ef4444",
+  returned: "#ec4899",
 };
 
 // ── Client Status ────────────────────────────────────────────
@@ -105,7 +78,7 @@ export const getClientStatusLabel = (status: string): string =>
 
 // ── Helpers ──────────────────────────────────────────────────
 export const getOrderStatusLabel = (dbStatus: string): string =>
-  ORDER_STATUS_MAP[dbStatus] ?? dbStatus;
+  ORDER_STATUSES[dbStatus as keyof typeof ORDER_STATUSES] ?? dbStatus;
 
 export const getOrderStatusColor = (dbStatus: string): string =>
   ORDER_STATUS_COLORS[dbStatus] ?? "bg-gray-100 text-gray-800";
