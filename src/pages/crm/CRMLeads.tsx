@@ -54,7 +54,7 @@ const CRMLeads = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [detailLead, setDetailLead] = useState<any>(null);
+  const [detailLead, setDetailLead] = useState<Tables<"leads"> | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterZone, setFilterZone] = useState("all");
