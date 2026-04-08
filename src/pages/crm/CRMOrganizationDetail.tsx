@@ -493,22 +493,17 @@ const CRMOrganizationDetail = () => {
                           </Button>
                         </div>
                       </div>
-                      {client.portal_password && (
-                        <div className="flex items-center justify-between p-2 bg-secondary/50 rounded">
-                          <span className="text-xs text-muted-foreground">Password</span>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-mono text-foreground">
-                              {showPassword ? client.portal_password : "••••••••"}
-                            </span>
-                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setShowPassword(!showPassword)}>
-                              {showPassword ? <EyeOff size={10} /> : <Eye size={10} />}
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { navigator.clipboard.writeText(client.portal_password || ""); toast.success("Password copiata"); }}>
-                              <Copy size={10} />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
+                      <div className="flex gap-2 mt-1">
+                        <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={async () => {
+                          try {
+                            const { error } = await supabase.functions.invoke("reset-dealer-password", { body: { email: client.email } });
+                            if (error) throw error;
+                            toast.success(`Email di reset password inviata a ${client.email}`);
+                          } catch (e: any) { toast.error(e.message || "Errore invio reset"); }
+                        }}>
+                          <KeyRound size={10} /> Reset Password
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ) : (

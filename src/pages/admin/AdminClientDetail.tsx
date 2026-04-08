@@ -742,17 +742,17 @@ const AdminClientDetail = () => {
                         </Button>
                       </div>
                     </div>
-                    {(client as any).portal_password && (
-                      <div>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Password</p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-mono text-foreground">{(client as any).portal_password}</p>
-                          <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => copyToClipboard((client as any).portal_password, "password")}>
-                            {copied === "password" ? <Check size={10} className="text-success" /> : <Copy size={10} />}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                    <div className="flex gap-2 mt-2">
+                      <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={async () => {
+                        try {
+                          const { error } = await supabase.functions.invoke("reset-dealer-password", { body: { email: client.email } });
+                          if (error) throw error;
+                          toast.success(`Email di reset password inviata a ${client.email}`);
+                        } catch (e: any) { toast.error(e.message || "Errore invio reset"); }
+                      }}>
+                        <KeyRound size={12} /> Reset Password
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

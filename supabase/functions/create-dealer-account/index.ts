@@ -57,10 +57,9 @@ Deno.serve(async (req) => {
     });
     if (roleErr) throw roleErr;
 
-    // Link client to user and store password for admin reference
+    // Link client to user (password is only stored in Supabase Auth)
     const { error: linkErr } = await supabaseAdmin.from("clients").update({
       user_id: userId,
-      portal_password: password,
     }).eq("id", client_id);
     if (linkErr) throw linkErr;
 
