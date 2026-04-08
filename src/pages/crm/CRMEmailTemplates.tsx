@@ -292,7 +292,7 @@ export default function CRMEmailTemplates() {
           <DialogHeader>
             <DialogTitle className="font-heading">Anteprima Template</DialogTitle>
           </DialogHeader>
-          <div className="border rounded-lg p-6 bg-white" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml) }} />
+          <SafeHtml html={previewHtml} className="border rounded-lg p-6 bg-white" />
         </DialogContent>
       </Dialog>
     </div>

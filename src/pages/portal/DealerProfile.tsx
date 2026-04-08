@@ -349,7 +349,7 @@ const DealerProfile = () => {
                         {comm.body.length > 300 ? (
                           <p className="whitespace-pre-wrap">{comm.body.slice(0, 300)}...</p>
                         ) : (
-                          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(comm.body.replace(/\n/g, "<br/>")) }} />
+                          <SafeHtml html={comm.body.replace(/\n/g, "<br/>")} />
                         )}
                       </div>
                       {comm.order_id && (
