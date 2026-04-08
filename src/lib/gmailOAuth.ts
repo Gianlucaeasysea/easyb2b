@@ -228,8 +228,15 @@ function requestGmailAuthorizationCodeFromPublishedBridge(loginHint: string) {
       reject(new Error(event.data.message || "Errore durante l'autorizzazione Google."));
     };
 
+    let closedCount = 0;
     const closeWatcher = window.setInterval(() => {
-      if (!popup.closed) return;
+      if (!popup.closed) {
+        closedCount = 0;
+        return;
+      }
+      closedCount++;
+      // Wait for 3 consecutive checks (1.5s) to avoid false positives during redirects
+      if (closedCount < 3) return;
       cleanup();
       reject(new Error(getPopupErrorMessage({ type: "popup_closed" })));
     }, 500);
