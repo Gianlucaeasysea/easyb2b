@@ -187,7 +187,7 @@ const AdminProducts = () => {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {familyEntries.map(([key, { detail, variants, totalStock, image }]) => {
+            {familyEntries.map(([key, { detail, variants, totalStock, image }], i) => {
               const hasSpecs = Object.keys((detail.specifications as Record<string, string>) || {}).length > 0;
               const hasDesc = !!detail.description;
               const hasTechSheet = !!detail.technical_sheet_url;

@@ -223,7 +223,7 @@ const DealerCatalog = () => {
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filtered.map(p => {
+              {filtered.map((p, i) => {
                 const plEntry = priceListProductMap.get(p.id);
                 const retailPrice = Number(p.compare_at_price || p.price);
                 const b2bPrice = plEntry?.customPrice ?? Number(p.price);
