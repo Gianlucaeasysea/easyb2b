@@ -74,6 +74,10 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
   const [newNote, setNewNote] = useState("");
   const [newActType, setNewActType] = useState("note");
   const [newActTitle, setNewActTitle] = useState("");
+  const [localStatus, setLocalStatus] = useState<string | null>(null);
+
+  // Reset local status when lead changes
+  const currentStatus = localStatus ?? lead?.status ?? "new";
 
   // Fetch activities for this lead
   const { data: activities } = useQuery({
@@ -109,6 +113,9 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
       if (error) throw error;
       return status;
     },
+    onMutate: (newStatus) => {
+      setLocalStatus(newStatus);
+    },
     onSuccess: (newStatus) => {
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       toast({ title: "Status updated" });
@@ -118,6 +125,9 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
         to_stage: newStatus,
         client_name: lead.company_name,
       });
+    },
+    onError: () => {
+      setLocalStatus(null);
     },
   });
 
@@ -192,8 +202,8 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
                 <DialogTitle className="font-heading text-xl">{lead.company_name}</DialogTitle>
               </DialogHeader>
               <div className="flex items-center gap-2 mt-2">
-                <Badge variant="outline" className={statusColors[lead.status || "new"]}>
-                  {stageLabels[lead.status || "new"] || lead.status}
+                <Badge variant="outline" className={statusColors[currentStatus]}>
+                  {stageLabels[currentStatus] || currentStatus}
                 </Badge>
                 {lead.source && (
                   <Badge variant="secondary" className="text-[10px]">{lead.source}</Badge>
@@ -249,7 +259,7 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
                 key={s}
                 onClick={() => updateStatus.mutate(s)}
                 className={`flex-1 h-2 rounded-full transition-all cursor-pointer hover:opacity-80 ${
-                  stages.indexOf(lead.status || "new") >= i
+                  stages.indexOf(currentStatus) >= i
                     ? stageBarColors[s] || "bg-primary"
                     : "bg-muted"
                 }`}

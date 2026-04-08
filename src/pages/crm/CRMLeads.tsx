@@ -466,10 +466,10 @@ const CRMLeads = () => {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`min-w-[260px] w-[260px] flex-shrink-0 rounded-xl border border-border p-3 transition-colors ${snapshot.isDraggingOver ? "bg-primary/5 border-primary/30" : "bg-secondary/30"}`}
+                    className={`min-w-[260px] w-[260px] flex-shrink-0 rounded-xl border border-border p-3 transition-colors ${stage.columnColor} ${snapshot.isDraggingOver ? "bg-primary/5 border-primary/30" : "bg-secondary/30"}`}
                     style={{ borderTopWidth: "3px" }}
                   >
-                    <div className={`flex items-center justify-between mb-3 ${stage.columnColor}`}>
+                    <div className="flex items-center justify-between mb-3">
                       <h3 className={`text-xs font-heading font-bold uppercase tracking-wider ${stage.color.split(" ").find(c => c.startsWith("text-")) || "text-muted-foreground"}`}>{stage.label}</h3>
                       <Badge variant="outline" className="text-[10px] h-5 px-1.5">{kanbanLeads[stage.value]?.length || 0}</Badge>
                     </div>
