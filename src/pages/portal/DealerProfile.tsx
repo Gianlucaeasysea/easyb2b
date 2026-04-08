@@ -19,7 +19,7 @@ const DealerProfile = () => {
   const { data: client } = useQuery({
     queryKey: ["my-client"],
     queryFn: async () => {
-      const { data } = await supabase.from("clients").select("*").eq("user_id", user!.id).single();
+      const { data } = await supabase.from("clients").select("*").eq("user_id", user!.id).maybeSingle();
       return data;
     },
     enabled: !!user,

@@ -22,7 +22,7 @@ const AdminProductDetail = () => {
         .from("product_details")
         .select("*")
         .eq("product_family", family!)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },

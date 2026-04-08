@@ -120,7 +120,7 @@ const CRMOrganizationDetail = () => {
   const { data: client, isLoading } = useQuery({
     queryKey: ["crm-org", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("clients").select("*").eq("id", id!).single();
+      const { data, error } = await supabase.from("clients").select("*").eq("id", id!).maybeSingle();
       if (error) throw error;
       return data;
     },

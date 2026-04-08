@@ -28,7 +28,7 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
         .from("orders")
         .select("*, order_items(*, products(name, sku, barcode, images))")
         .eq("id", orderId!)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },

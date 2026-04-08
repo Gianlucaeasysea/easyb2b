@@ -32,7 +32,7 @@ export function DealerSidebar() {
   const { data: client } = useQuery({
     queryKey: ["my-client-visibility"],
     queryFn: async () => {
-      const { data } = await supabase.from("clients").select("show_discount_tiers, show_goals").eq("user_id", user!.id).single();
+      const { data } = await supabase.from("clients").select("show_discount_tiers, show_goals").eq("user_id", user!.id).maybeSingle();
       return data;
     },
     enabled: !!user,

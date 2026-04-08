@@ -90,7 +90,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
 
       // Create in-app notification for the dealer
       try {
-        const { data: order } = await supabase.from("orders").select("client_id").eq("id", orderId).single();
+        const { data: order } = await supabase.from("orders").select("client_id").eq("id", orderId).maybeSingle();
         if (order?.client_id) {
           await supabase.from("client_notifications").insert({
             client_id: order.client_id,

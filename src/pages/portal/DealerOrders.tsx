@@ -55,7 +55,7 @@ const DealerOrders = () => {
   const { data: client } = useQuery({
     queryKey: ["my-client"],
     queryFn: async () => {
-      const { data } = await supabase.from("clients").select("*").eq("user_id", user!.id).single();
+      const { data } = await supabase.from("clients").select("*").eq("user_id", user!.id).maybeSingle();
       return data;
     },
     enabled: !!user,
@@ -133,7 +133,7 @@ const DealerOrders = () => {
         total_amount: totalAmount,
         notes: `Duplicato da ordine ${(order as any).order_code || order.id.slice(0, 8)}`,
         payment_terms: (client as any).payment_terms || null,
-      }).select().single();
+      }).select().maybeSingle();
       if (orderErr) throw orderErr;
 
       const orderItemsToInsert = validItems.map(i => ({ order_id: newOrder.id, ...i }));

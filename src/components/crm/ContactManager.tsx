@@ -62,7 +62,7 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
     if (error) { toast.error("Errore nel salvataggio"); return; }
 
     if (form.email.trim()) {
-      const { data: client } = await supabase.from("clients").select("email, contact_name").eq("id", clientId).single();
+      const { data: client } = await supabase.from("clients").select("email, contact_name").eq("id", clientId).maybeSingle();
       if (client && !client.email) {
         await supabase.from("clients").update({
           email: form.email.trim(),
