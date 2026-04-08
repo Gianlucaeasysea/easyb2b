@@ -540,6 +540,8 @@ export type Database = {
           last_order_value: number | null
           next_reorder_expected_date: string | null
           notes: string | null
+          payment_terms: string | null
+          payment_terms_notes: string | null
           phone: string | null
           platform_client_id: string | null
           portal_password: string | null
@@ -573,6 +575,8 @@ export type Database = {
           last_order_value?: number | null
           next_reorder_expected_date?: string | null
           notes?: string | null
+          payment_terms?: string | null
+          payment_terms_notes?: string | null
           phone?: string | null
           platform_client_id?: string | null
           portal_password?: string | null
@@ -606,6 +610,8 @@ export type Database = {
           last_order_value?: number | null
           next_reorder_expected_date?: string | null
           notes?: string | null
+          payment_terms?: string | null
+          payment_terms_notes?: string | null
           phone?: string | null
           platform_client_id?: string | null
           portal_password?: string | null
@@ -744,6 +750,7 @@ export type Database = {
       }
       distributor_requests: {
         Row: {
+          admin_notes: string | null
           business_type: string | null
           company_name: string
           contact_name: string
@@ -760,6 +767,7 @@ export type Database = {
           zone: string | null
         }
         Insert: {
+          admin_notes?: string | null
           business_type?: string | null
           company_name: string
           contact_name: string
@@ -776,6 +784,7 @@ export type Database = {
           zone?: string | null
         }
         Update: {
+          admin_notes?: string | null
           business_type?: string | null
           company_name?: string
           contact_name?: string
@@ -1160,6 +1169,7 @@ export type Database = {
           order_type: string | null
           payed_date: string | null
           payment_status: string | null
+          payment_terms: string | null
           pickup_date: string | null
           shipping_cost_client: number | null
           shipping_cost_easysea: number | null
@@ -1180,6 +1190,7 @@ export type Database = {
           order_type?: string | null
           payed_date?: string | null
           payment_status?: string | null
+          payment_terms?: string | null
           pickup_date?: string | null
           shipping_cost_client?: number | null
           shipping_cost_easysea?: number | null
@@ -1200,6 +1211,7 @@ export type Database = {
           order_type?: string | null
           payed_date?: string | null
           payment_status?: string | null
+          payment_terms?: string | null
           pickup_date?: string | null
           shipping_cost_client?: number | null
           shipping_cost_easysea?: number | null

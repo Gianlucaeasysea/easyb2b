@@ -14,6 +14,12 @@ import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
 
+import { Copy, DollarSign, XCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
+
 const ORDER_PHASES = [
   { key: "confirmed", label: "Ordine Ricevuto", icon: CheckCircle },
   { key: "processing", label: "Confermato", icon: Package },
@@ -40,9 +46,12 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 
 const DealerOrders = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [confirmDuplicate, setConfirmDuplicate] = useState<any>(null);
   const { data: client } = useQuery({
     queryKey: ["my-client"],
     queryFn: async () => {

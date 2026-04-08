@@ -350,6 +350,7 @@ const AdminClientDetail = () => {
   const [form, setForm] = useState({
     company_name: "", contact_name: "", email: "", phone: "", country: "", zone: "",
     status: "", discount_class: "", notes: "", address: "", website: "", business_type: "", vat_number: "",
+    payment_terms: "30_days", payment_terms_notes: "",
   });
 
   const [bank, setBank] = useState({ bank_name: "", iban: "", swift_bic: "", account_holder: "" });
@@ -363,6 +364,8 @@ const AdminClientDetail = () => {
         zone: client.zone || "", status: client.status || "lead", discount_class: client.discount_class || "standard",
         notes: client.notes || "", address: client.address || "", website: client.website || "",
         business_type: client.business_type || "", vat_number: client.vat_number || "",
+        payment_terms: (client as any).payment_terms || "30_days",
+        payment_terms_notes: (client as any).payment_terms_notes || "",
       });
     }
   }, [client]);
@@ -535,10 +538,12 @@ const AdminClientDetail = () => {
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={16} className="text-primary" />
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading">Discount Tier</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading">Payment Terms</span>
           </div>
-          <p className="font-heading text-xl font-bold text-foreground">{tier.label}</p>
-          <p className="text-xs text-success">-{tier.discount_pct}% on all products</p>
+          <p className="font-heading text-xl font-bold text-foreground">
+            {{ prepaid: "Anticipato", "30_days": "30 gg", "60_days": "60 gg", "90_days": "90 gg", end_of_month: "Fine mese" }[(client as any).payment_terms] || tier.label}
+          </p>
+          <p className="text-xs text-muted-foreground">Listino: {assignedPriceLists && assignedPriceLists.length > 0 ? (assignedPriceLists as any[]).map((plc: any) => plc.price_lists?.name).join(", ") : "—"}</p>
         </div>
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-2">
@@ -771,7 +776,32 @@ const AdminClientDetail = () => {
             <h2 className="font-heading font-bold text-foreground mb-4">Pricing & Status</h2>
             <div className="space-y-3">
               <div>
-                <Label className="text-xs text-muted-foreground">Discount Class</Label>
+                <Label className="text-xs text-muted-foreground">Listino Prezzi</Label>
+                <p className="text-sm font-semibold text-foreground mt-1">
+                  {assignedPriceLists && assignedPriceLists.length > 0
+                    ? (assignedPriceLists as any[]).map((plc: any) => plc.price_lists?.name).filter(Boolean).join(", ")
+                    : "Nessun listino assegnato"}
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground font-semibold">Termini di Pagamento</Label>
+                <Select value={form.payment_terms || "30_days"} onValueChange={v => setForm(f => ({ ...f, payment_terms: v }))}>
+                  <SelectTrigger className="mt-1 bg-secondary border-border rounded-lg"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="prepaid">Anticipato</SelectItem>
+                    <SelectItem value="30_days">30 giorni</SelectItem>
+                    <SelectItem value="60_days">60 giorni</SelectItem>
+                    <SelectItem value="90_days">90 giorni</SelectItem>
+                    <SelectItem value="end_of_month">Fine mese</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Note pagamento</Label>
+                <Textarea value={form.payment_terms_notes || ""} onChange={e => setForm(f => ({ ...f, payment_terms_notes: e.target.value }))} className="mt-1 bg-secondary border-border rounded-lg" rows={2} placeholder="Condizioni speciali..." />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Discount Class (deprecated)</Label>
                 <Select value={form.discount_class} onValueChange={v => setForm(f => ({ ...f, discount_class: v }))}>
                   <SelectTrigger className="mt-1 bg-secondary border-border rounded-lg"><SelectValue /></SelectTrigger>
                   <SelectContent>

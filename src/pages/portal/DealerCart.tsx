@@ -6,13 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Trash2, Minus, Plus, CheckCircle, ArrowLeft, AlertTriangle, Clock, Truck } from "lucide-react";
+import { ShoppingCart, Trash2, Minus, Plus, CheckCircle, ArrowLeft, AlertTriangle, Clock, Truck, Save } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
 
-const MIN_ORDER_AMOUNT = 100; // Minimum order €100
+const MIN_ORDER_AMOUNT = 100;
+
+const PAYMENT_TERMS_LABELS: Record<string, string> = {
+  prepaid: "Anticipato",
+  "30_days": "30 giorni data fattura",
+  "60_days": "60 giorni data fattura",
+  "90_days": "90 giorni data fattura",
+  end_of_month: "Fine mese",
+};
 
 // Same mapping as DealerCatalog
 const getProductFamily = (name: string): string | null => {
@@ -50,6 +58,7 @@ const DealerCart = () => {
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState<{ id: string; code: string } | null>(null);
 
   const { data: client } = useQuery({
@@ -61,7 +70,6 @@ const DealerCart = () => {
     enabled: !!user,
   });
 
-  // Fetch product details for lead times
   const { data: productDetails } = useQuery({
     queryKey: ["product-details-cart"],
     queryFn: async () => {
@@ -82,9 +90,12 @@ const DealerCart = () => {
 
   const belowMinimum = totalAmount < MIN_ORDER_AMOUNT;
 
-  const handleSubmitOrder = async () => {
-    if (!client || items.length === 0 || belowMinimum) return;
-    setSubmitting(true);
+  const createOrder = async (status: "confirmed" | "draft") => {
+    if (!client || items.length === 0) return;
+    if (status === "confirmed" && belowMinimum) return;
+
+    const setLoading = status === "draft" ? setSavingDraft : setSubmitting;
+    setLoading(true);
 
     try {
       const { data: order, error: orderError } = await supabase
@@ -92,9 +103,10 @@ const DealerCart = () => {
         .insert({
           client_id: client.id,
           total_amount: totalAmount,
-          status: "confirmed",
+          status,
           notes: notes || null,
-        })
+          payment_terms: (client as any).payment_terms || null,
+        } as any)
         .select()
         .single();
 
@@ -112,31 +124,32 @@ const DealerCart = () => {
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
       if (itemsError) throw itemsError;
 
-      // Send confirmation email to client
-      try {
-        await supabase.functions.invoke('send-order-notification', {
-          body: {
-            orderId: order.id,
-            orderCode: order.order_code || `ES-${order.id.slice(0, 4).toUpperCase()}`,
-            type: 'order_received',
-          },
-        });
-      } catch (emailErr) {
-        showErrorToast(emailErr, "DealerCart.emailNotification");
+      if (status === "confirmed") {
+        try {
+          await supabase.functions.invoke('send-order-notification', {
+            body: {
+              orderId: order.id,
+              orderCode: order.order_code || `ES-${order.id.slice(0, 4).toUpperCase()}`,
+              type: 'order_received',
+            },
+          });
+        } catch (emailErr) {
+          showErrorToast(emailErr, "DealerCart.emailNotification");
+        }
+        setOrderConfirmed({ id: order.id, code: order.order_code || `#${order.id.slice(0, 8).toUpperCase()}` });
+      } else {
+        toast.success("Bozza salvata! Puoi completare l'ordine in qualsiasi momento dalla sezione Ordini.");
       }
 
-      setOrderConfirmed({ id: order.id, code: order.order_code || `#${order.id.slice(0, 8).toUpperCase()}` });
       clearCart();
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      toast.success("Order placed successfully!");
     } catch (error) {
-      showErrorToast(error, "DealerCart.submitOrder");
+      showErrorToast(error, "DealerCart.createOrder");
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  // Order confirmation screen
   if (orderConfirmed) {
     return (
       <div className="max-w-lg mx-auto text-center py-20">
@@ -145,25 +158,16 @@ const DealerCart = () => {
         <p className="text-muted-foreground mb-2">
           Your order <span className="font-mono font-semibold text-foreground">{orderConfirmed.code}</span> has been placed.
         </p>
-        <p className="text-sm text-muted-foreground mb-2">
-          A confirmation email has been sent to your registered email address.
-        </p>
-        <p className="text-sm text-muted-foreground mb-8">
-          We'll process it shortly. You can track it in your orders page.
-        </p>
+        <p className="text-sm text-muted-foreground mb-2">A confirmation email has been sent to your registered email address.</p>
+        <p className="text-sm text-muted-foreground mb-8">We'll process it shortly. You can track it in your orders page.</p>
         <div className="flex gap-3 justify-center">
-          <Button onClick={() => navigate("/portal/orders")} className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">
-            View My Orders
-          </Button>
-          <Button variant="outline" onClick={() => { setOrderConfirmed(null); navigate("/portal/catalog"); }}>
-            Continue Shopping
-          </Button>
+          <Button onClick={() => navigate("/portal/orders")} className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">View My Orders</Button>
+          <Button variant="outline" onClick={() => { setOrderConfirmed(null); navigate("/portal/catalog"); }}>Continue Shopping</Button>
         </div>
       </div>
     );
   }
 
-  // Empty cart
   if (items.length === 0) {
     return (
       <div className="text-center py-20">
@@ -171,13 +175,13 @@ const DealerCart = () => {
         <h1 className="font-heading text-2xl font-bold text-foreground mb-2">Your cart is empty</h1>
         <p className="text-muted-foreground mb-6">Browse the catalog to add products to your order.</p>
         <Link to="/portal/catalog">
-          <Button className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">
-            Browse Catalog
-          </Button>
+          <Button className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">Browse Catalog</Button>
         </Link>
       </div>
     );
   }
+
+  const paymentTermsLabel = PAYMENT_TERMS_LABELS[(client as any)?.payment_terms] || (client as any)?.payment_terms || "—";
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -193,7 +197,6 @@ const DealerCart = () => {
         </Link>
       </div>
 
-      {/* Minimum order warning */}
       {belowMinimum && (
         <div className="flex items-center gap-3 p-4 rounded-lg bg-warning/10 border border-warning/30 mb-6">
           <AlertTriangle className="text-warning shrink-0" size={20} />
@@ -203,6 +206,19 @@ const DealerCart = () => {
               The minimum order amount is <span className="font-semibold text-foreground">€{MIN_ORDER_AMOUNT.toFixed(2)}</span>. 
               You need <span className="font-semibold text-foreground">€{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)}</span> more to place your order.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Terms Card */}
+      {client && (
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/10 mb-6">
+          <Clock size={18} className="text-primary shrink-0" />
+          <div>
+            <p className="text-sm font-heading font-semibold text-foreground">Termini di Pagamento: {paymentTermsLabel}</p>
+            {(client as any)?.payment_terms_notes && (
+              <p className="text-xs text-muted-foreground mt-0.5">{(client as any).payment_terms_notes}</p>
+            )}
           </div>
         </div>
       )}
@@ -230,41 +246,23 @@ const DealerCart = () => {
                   <span className="text-sm font-semibold text-foreground">€{item.b2bPrice.toFixed(2)}</span>
                   <span className="text-xs text-success">-{item.discountPct}%</span>
                 </div>
-                {/* Lead time info */}
                 {leadTime && (
                   <div className="flex items-center gap-1 mt-1">
                     <Clock size={10} className="text-muted-foreground" />
-                    <span className="text-[11px] text-muted-foreground">
-                      Lead time: <span className="font-semibold text-foreground">{leadTime}</span>
-                    </span>
+                    <span className="text-[11px] text-muted-foreground">Lead time: <span className="font-semibold text-foreground">{leadTime}</span></span>
                   </div>
                 )}
                 {outOfStock && (
-                  <Badge variant="outline" className="mt-1 text-[10px] text-destructive border-destructive/30">
-                    Out of stock
-                  </Badge>
+                  <Badge variant="outline" className="mt-1 text-[10px] text-destructive border-destructive/30">Out of stock</Badge>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity - 1)}>
-                  <Minus size={14} />
-                </Button>
-                <Input
-                  type="number"
-                  min={1}
-                  max={item.stock}
-                  value={item.quantity}
-                  onChange={e => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
-                  className="w-16 text-center h-8 text-sm"
-                />
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock}>
-                  <Plus size={14} />
-                </Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity - 1)}><Minus size={14} /></Button>
+                <Input type="number" min={1} max={item.stock} value={item.quantity} onChange={e => updateQuantity(item.productId, parseInt(e.target.value) || 1)} className="w-16 text-center h-8 text-sm" />
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock}><Plus size={14} /></Button>
               </div>
               <p className="font-heading font-bold text-foreground w-24 text-right">€{(item.b2bPrice * item.quantity).toFixed(2)}</p>
-              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => removeItem(item.productId)}>
-                <Trash2 size={14} />
-              </Button>
+              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => removeItem(item.productId)}><Trash2 size={14} /></Button>
             </div>
           );
         })}
@@ -274,13 +272,7 @@ const DealerCart = () => {
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <label className="text-sm font-heading font-semibold text-foreground mb-2 block">Order Notes (optional)</label>
-          <Textarea
-            placeholder="Special instructions, delivery preferences..."
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            className="rounded-lg bg-secondary border-border resize-none"
-            rows={4}
-          />
+          <Textarea placeholder="Special instructions, delivery preferences..." value={notes} onChange={e => setNotes(e.target.value)} className="rounded-lg bg-secondary border-border resize-none" rows={4} />
         </div>
         <div className="glass-card-solid p-6">
           <h3 className="font-heading font-bold text-foreground mb-4">Order Summary</h3>
@@ -313,17 +305,26 @@ const DealerCart = () => {
             </p>
           </div>
           {belowMinimum && (
-            <p className="text-xs text-warning mb-4">
-              Minimum order: €{MIN_ORDER_AMOUNT.toFixed(2)} — add €{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)} more
-            </p>
+            <p className="text-xs text-warning mb-4">Minimum order: €{MIN_ORDER_AMOUNT.toFixed(2)} — add €{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)} more</p>
           )}
-          <Button
-            onClick={handleSubmitOrder}
-            disabled={submitting || belowMinimum}
-            className="w-full bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6 text-base disabled:opacity-50"
-          >
-            {submitting ? "Placing Order..." : belowMinimum ? `Minimum €${MIN_ORDER_AMOUNT} required` : "Confirm & Place Order"}
-          </Button>
+          <div className="space-y-2">
+            <Button
+              onClick={() => createOrder("confirmed")}
+              disabled={submitting || belowMinimum}
+              className="w-full bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6 text-base disabled:opacity-50"
+            >
+              {submitting ? "Placing Order..." : belowMinimum ? `Minimum €${MIN_ORDER_AMOUNT} required` : "Confirm & Place Order"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => createOrder("draft")}
+              disabled={savingDraft}
+              className="w-full gap-2 font-heading font-semibold"
+            >
+              <Save size={14} />
+              {savingDraft ? "Saving..." : "Salva come Bozza"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
