@@ -117,6 +117,8 @@ const CRMContactsPeople = () => {
     return true;
   }) || [];
 
+  const { pageData, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: filtered, pageSize: 25 });
+
   const exportCsv = () => {
     const rows = filtered.map(c => ({
       "Nome": c.contact_name,
