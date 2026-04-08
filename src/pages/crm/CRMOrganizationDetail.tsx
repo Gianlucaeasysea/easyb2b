@@ -1235,6 +1235,7 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
           <div className="space-y-2 mb-4">
             {assignedPriceLists.map((plc) => {
               const tier = discountTiers.find(t => t.id === plc.price_lists?.discount_tier_id);
+              const itemCount = priceListItemCounts[plc.price_list_id] || 0;
               return (
                 <div key={plc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
                   <div className="flex-1">
@@ -1242,6 +1243,8 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
                     <div className="flex items-center gap-2 mt-0.5">
                       {plc.price_lists?.description && <p className="text-xs text-muted-foreground">{plc.price_lists.description}</p>}
                       {tier && <Badge variant="outline" className="text-[10px]">-{tier.discount_pct}%</Badge>}
+                      <span className="text-[10px] text-muted-foreground">{itemCount} prodotti</span>
+                      <span className="text-[10px] text-muted-foreground">· Assegnato il: {fmtDate(plc.created_at)}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
