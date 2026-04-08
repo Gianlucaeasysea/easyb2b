@@ -8,26 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Package, Search, Filter } from "lucide-react";
-
-const fmt = (d: string | null | undefined, f: string) => {
-  if (!d) return "—";
-  const dt = new Date(d);
-  return isValid(dt) ? format(dt, f) : "—";
-};
-
-const statusBadge: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  confirmed: "bg-warning/20 text-warning",
-  processing: "bg-primary/20 text-primary",
-  shipped: "bg-chart-2/20 text-chart-2",
-  delivered: "bg-chart-4/20 text-chart-4",
-  Delivered: "bg-chart-4/20 text-chart-4",
-  cancelled: "bg-destructive/20 text-destructive",
-  "To be prepared": "bg-warning/20 text-warning",
-  Ready: "bg-chart-4/20 text-chart-4",
-  "On the road": "bg-primary/20 text-primary",
-  Payed: "bg-chart-4/20 text-chart-4",
-};
+import { ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 
 interface OrderDetailsTableProps {
   limit?: number;

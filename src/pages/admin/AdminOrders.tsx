@@ -12,28 +12,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
-
-const statusColors: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  confirmed: "bg-chart-4/20 text-chart-4",
-  shipped: "bg-primary/20 text-primary",
-  delivered: "bg-success/20 text-success",
-  Delivered: "bg-success/20 text-success",
-  cancelled: "bg-destructive/20 text-destructive",
-  Returned: "bg-destructive/20 text-destructive",
-  lost: "bg-destructive/20 text-destructive",
-  Payed: "bg-success/20 text-success",
-  "To be prepared": "bg-warning/20 text-warning",
-  Ready: "bg-chart-4/20 text-chart-4",
-  "On the road": "bg-primary/20 text-primary",
-  completed: "bg-success/20 text-success",
-};
-
-const paymentColors: Record<string, string> = {
-  Payed: "bg-success/20 text-success",
-  "To be paid": "bg-warning/20 text-warning",
-  lost: "bg-destructive/20 text-destructive",
-};
+import {
+  ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor,
+  getPaymentStatusLabel, getPaymentStatusColor,
+} from "@/lib/constants";
 
 const AdminOrders = () => {
   const navigate = useNavigate();

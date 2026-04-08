@@ -5,13 +5,7 @@ import { Package, ShoppingBag, TrendingUp, ArrowUpRight, Clock, CheckCircle, Tru
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-
-const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  draft: { label: "Draft", color: "text-muted-foreground border-muted", icon: Clock },
-  confirmed: { label: "Confirmed", color: "text-chart-4 border-chart-4", icon: CheckCircle },
-  shipped: { label: "Shipped", color: "text-primary border-primary", icon: Truck },
-  delivered: { label: "Delivered", color: "text-success border-success", icon: CheckCircle },
-};
+import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 
 const DealerDashboard = () => {
   const { user } = useAuth();

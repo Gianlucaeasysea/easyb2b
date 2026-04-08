@@ -7,26 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingBag, Calendar, Truck, FileText, Clock, Download, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-
-interface CRMOrderDetailModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  orderId: string | null;
-}
-
-const statusColors: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  confirmed: "bg-chart-4/20 text-chart-4",
-  processing: "bg-primary/20 text-primary",
-  shipped: "bg-primary/20 text-primary",
-  delivered: "bg-success/20 text-success",
-  Delivered: "bg-success/20 text-success",
-  "To be prepared": "bg-warning/20 text-warning",
-  Ready: "bg-chart-4/20 text-chart-4",
-  "On the road": "bg-primary/20 text-primary",
-  Payed: "bg-success/20 text-success",
-  cancelled: "bg-destructive/20 text-destructive",
-};
+import { getOrderStatusLabel, getOrderStatusColor, getPaymentStatusLabel, getPaymentStatusColor } from "@/lib/constants";
 
 const fmtDate = (d: string | null | undefined) => {
   if (!d) return "—";
