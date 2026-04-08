@@ -262,7 +262,7 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
                 key={s}
                 onClick={() => updateStatus.mutate(s)}
                 className={`flex-1 h-2 rounded-full transition-all cursor-pointer hover:opacity-80 ${
-                  stages.indexOf(lead.status || "new") >= i
+                  stages.indexOf(currentStatus) >= i
                     ? stageBarColors[s] || "bg-primary"
                     : "bg-muted"
                 }`}
