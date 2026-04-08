@@ -205,8 +205,8 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
                 <DialogTitle className="font-heading text-xl">{lead.company_name}</DialogTitle>
               </DialogHeader>
               <div className="flex items-center gap-2 mt-2">
-                <Badge variant="outline" className={statusColors[lead.status || "new"]}>
-                  {stageLabels[lead.status || "new"] || lead.status}
+                <Badge variant="outline" className={statusColors[currentStatus]}>
+                  {stageLabels[currentStatus] || currentStatus}
                 </Badge>
                 {lead.source && (
                   <Badge variant="secondary" className="text-[10px]">{lead.source}</Badge>
