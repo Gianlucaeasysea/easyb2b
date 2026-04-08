@@ -1,13 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { checkAndRunAutomations } from "@/hooks/useAutomations";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { format, isValid, differenceInDays } from "date-fns";
+import { format, isValid } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Building2, ArrowLeft, Calendar } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState, useCallback, useRef } from "react";
 
 const stages = ["qualification", "proposal", "negotiation", "closed_won", "closed_lost"];
 
@@ -37,10 +38,47 @@ const fmtDate = (d: string | null | undefined) => {
   return isValid(dt) ? format(dt, "dd/MM") : "";
 };
 
+/* ── Animated counter badge ────────────────────────────── */
+const AnimatedCount = ({ value }: { value: number }) => {
+  const [display, setDisplay] = useState(value);
+  const prev = useRef(value);
+
+  useEffect(() => {
+    if (prev.current === value) return;
+    const from = prev.current;
+    const diff = value - from;
+    const steps = Math.min(Math.abs(diff), 12);
+    const duration = 300;
+    const stepTime = duration / steps;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      setDisplay(Math.round(from + (diff * step) / steps));
+      if (step >= steps) clearInterval(timer);
+    }, stepTime);
+    prev.current = value;
+    return () => clearInterval(timer);
+  }, [value]);
+
+  return (
+    <motion.span
+      key={value}
+      initial={{ scale: 1.3, opacity: 0.6 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="text-xs font-mono bg-background/60 rounded-full px-2 py-0.5 text-muted-foreground inline-block"
+    >
+      {display}
+    </motion.span>
+  );
+};
+
 const CRMDealsPipeline = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
+  const [isDragging, setIsDragging] = useState(false);
 
   const { data: deals } = useQuery({
     queryKey: ["crm-deals-pipeline"],
@@ -54,33 +92,65 @@ const CRMDealsPipeline = () => {
     },
   });
 
-  const updateStage = useMutation({
-    mutationFn: async ({ id, stage }: { id: string; stage: string }) => {
-      const updates: any = { stage, probability: stageProbMap[stage] ?? 20 };
-      if (stage === "closed_won" || stage === "closed_lost") {
-        updates.closed_at = new Date().toISOString();
-      }
-      const { error } = await supabase.from("deals").update(updates).eq("id", id);
-      if (error) throw error;
-      return { id, stage };
-    },
-    onSuccess: ({ id, stage }) => {
+  /* ── Realtime subscription ───────────────────────────── */
+  const highlightDeal = useCallback((id: string) => {
+    setHighlightedIds(prev => new Set(prev).add(id));
+    setTimeout(() => {
+      setHighlightedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 2000);
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("deals-pipeline-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "deals" },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
+          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+            const id = (payload.new as { id: string }).id;
+            highlightDeal(id);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient, highlightDeal]);
+
+  const updateStage = async (id: string, stage: string) => {
+    const updates: Record<string, unknown> = { stage, probability: stageProbMap[stage] ?? 20 };
+    if (stage === "closed_won" || stage === "closed_lost") {
+      updates.closed_at = new Date().toISOString();
+    }
+    const { error } = await supabase.from("deals").update(updates).eq("id", id);
+    if (error) {
       queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
-      const deal = deals?.find((d: any) => d.id === id);
-      if (deal) {
-        checkAndRunAutomations("deal_stage_changed", {
-          deal_id: id, to_stage: stage, deal_title: deal.title, client_id: deal.client_id || undefined,
-        });
-      }
-    },
-  });
+      toast({ title: "Errore nello spostamento", variant: "destructive" });
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
+    const deal = deals?.find(d => d.id === id);
+    if (deal) {
+      checkAndRunAutomations("deal_stage_changed", {
+        deal_id: id, to_stage: stage, deal_title: deal.title, client_id: deal.client_id || undefined,
+      });
+    }
+    toast({ title: `Spostato in ${stageConfig[stage]?.label}` });
+  };
 
   const grouped = stages.reduce((acc, s) => {
     acc[s] = deals?.filter(d => d.stage === s) || [];
     return acc;
-  }, {} as Record<string, any[]>);
+  }, {} as Record<string, typeof deals extends (infer U)[] | undefined ? U[] : never[]>);
 
   const onDragEnd = (result: DropResult) => {
+    setIsDragging(false);
     if (!result.destination) return;
     const newStage = result.destination.droppableId;
     const dealId = result.draggableId;
@@ -88,22 +158,12 @@ const CRMDealsPipeline = () => {
     if (!deal || deal.stage === newStage) return;
 
     // Optimistic update
-    queryClient.setQueryData(["crm-deals-pipeline"], (old: any) =>
-      old?.map((d: any) => d.id === dealId ? { ...d, stage: newStage, probability: stageProbMap[newStage] ?? d.probability } : d)
+    queryClient.setQueryData(["crm-deals-pipeline"], (old: typeof deals) =>
+      old?.map(d => d.id === dealId ? { ...d, stage: newStage, probability: stageProbMap[newStage] ?? d.probability } : d)
     );
 
-    updateStage.mutate(
-      { id: dealId, stage: newStage },
-      {
-        onError: () => {
-          queryClient.invalidateQueries({ queryKey: ["crm-deals-pipeline"] });
-          toast({ title: "Errore nello spostamento", variant: "destructive" });
-        },
-        onSuccess: () => {
-          toast({ title: `Spostato in ${stageConfig[newStage]?.label}` });
-        },
-      }
-    );
+    highlightDeal(dealId);
+    updateStage(dealId, newStage);
   };
 
   return (
@@ -118,7 +178,7 @@ const CRMDealsPipeline = () => {
         </Button>
       </div>
 
-      <DragDropContext onDragEnd={onDragEnd}>
+      <DragDropContext onDragEnd={onDragEnd} onDragStart={() => setIsDragging(true)}>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 flex-1">
           {stages.map(stage => {
             const sc = stageConfig[stage];
@@ -131,9 +191,7 @@ const CRMDealsPipeline = () => {
                     <span className="text-xs font-heading font-bold text-foreground uppercase tracking-wider">
                       {sc.label}
                     </span>
-                    <span className="text-xs font-mono bg-background/60 rounded-full px-2 py-0.5 text-muted-foreground">
-                      {stageDeals.length}
-                    </span>
+                    <AnimatedCount value={stageDeals.length} />
                   </div>
                   <p className="text-[10px] font-mono text-muted-foreground mt-0.5">{fmtCurrency(totalValue)}</p>
                 </div>
@@ -147,50 +205,68 @@ const CRMDealsPipeline = () => {
                         snapshot.isDraggingOver ? "bg-primary/10" : "bg-card/30"
                       }`}
                     >
-                      {stageDeals.map((deal: any, index: number) => {
-                        const org = deal.clients;
-                        const contact = deal.contact;
-                        return (
-                          <Draggable key={deal.id} draggableId={deal.id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                onClick={() => navigate("/crm/deals")}
-                                className={`glass-card-solid p-3 border-l-2 ${cardAccents[stage]} cursor-pointer hover:shadow-md transition-all ${
-                                  snapshot.isDragging ? "shadow-lg ring-2 ring-primary/30 rotate-1" : ""
-                                }`}
-                              >
-                                <p className="text-xs font-heading font-semibold text-foreground truncate">
-                                  {deal.title}
-                                </p>
-                                {org && (
-                                  <button
-                                    className="text-[10px] text-primary truncate flex items-center gap-1 mt-0.5 hover:underline"
-                                    onClick={(e) => { e.stopPropagation(); navigate(`/crm/organizations/${org.id}`); }}
-                                  >
-                                    <Building2 size={8} /> {org.company_name}
-                                  </button>
-                                )}
-                                {contact && (
-                                  <p className="text-[10px] text-muted-foreground truncate">
-                                    {contact.contact_name}
+                      <AnimatePresence mode="popLayout">
+                        {stageDeals.map((deal, index) => {
+                          const org = deal.clients;
+                          const contact = deal.contact;
+                          const isHighlighted = highlightedIds.has(deal.id);
+                          return (
+                            <Draggable key={deal.id} draggableId={deal.id} index={index}>
+                              {(provided, snapshot) => (
+                                <motion.div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  layout={!isDragging}
+                                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                  animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: 1,
+                                    boxShadow: isHighlighted
+                                      ? "0 0 16px 4px hsl(var(--success) / 0.35)"
+                                      : "none",
+                                  }}
+                                  exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                                  onClick={() => navigate("/crm/deals")}
+                                  className={`glass-card-solid p-3 border-l-2 ${cardAccents[stage]} cursor-pointer hover:shadow-md transition-colors ${
+                                    snapshot.isDragging ? "shadow-lg ring-2 ring-primary/30 rotate-1" : ""
+                                  }`}
+                                  style={{
+                                    ...provided.draggableProps.style,
+                                  }}
+                                >
+                                  <p className="text-xs font-heading font-semibold text-foreground truncate">
+                                    {deal.title}
                                   </p>
-                                )}
-                                <div className="flex items-center justify-between mt-1.5">
-                                  <span className="text-xs font-mono font-bold text-foreground">{fmtCurrency(deal.value)}</span>
-                                  {deal.expected_close_date && (
-                                    <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                                      <Calendar size={8} /> {fmtDate(deal.expected_close_date)}
-                                    </span>
+                                  {org && (
+                                    <button
+                                      className="text-[10px] text-primary truncate flex items-center gap-1 mt-0.5 hover:underline"
+                                      onClick={(e) => { e.stopPropagation(); navigate(`/crm/organizations/${org.id}`); }}
+                                    >
+                                      <Building2 size={8} /> {org.company_name}
+                                    </button>
                                   )}
-                                </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        );
-                      })}
+                                  {contact && (
+                                    <p className="text-[10px] text-muted-foreground truncate">
+                                      {contact.contact_name}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center justify-between mt-1.5">
+                                    <span className="text-xs font-mono font-bold text-foreground">{fmtCurrency(deal.value)}</span>
+                                    {deal.expected_close_date && (
+                                      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                                        <Calendar size={8} /> {fmtDate(deal.expected_close_date)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </Draggable>
+                          );
+                        })}
+                      </AnimatePresence>
                       {provided.placeholder}
                     </div>
                   )}
