@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { deleteContactsCascade } from "@/lib/crmEntityActions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -93,10 +94,13 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
   };
 
   const handleDelete = async (contactId: string) => {
-    const { error } = await supabase.from("client_contacts").delete().eq("id", contactId);
-    if (error) { toast.error("Errore nella cancellazione"); return; }
-    toast.success("Contatto rimosso");
-    invalidateAll();
+    try {
+      await deleteContactsCascade([contactId]);
+      toast.success("Contatto rimosso");
+      invalidateAll();
+    } catch (err: any) {
+      toast.error(err.message || "Errore nella cancellazione");
+    }
   };
 
   const startEdit = (contact: any) => {
