@@ -186,12 +186,13 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
     }
   };
 
-  const handleReply = (comm: any) => {
+  const handleReply = (comm: CommRow) => {
+    const meta = getMeta(comm);
     const replyEmail = comm.direction === "inbound"
-      ? (comm.metadata as any)?.from ? extractEmailFromHeader((comm.metadata as any).from) : comm.recipient_email
+      ? meta?.from ? extractEmailFromHeader(meta.from) : comm.recipient_email
       : comm.recipient_email;
     const replySubject = comm.subject?.startsWith("Re:") ? comm.subject : `Re: ${comm.subject}`;
-    setReplyTo({ to: replyEmail, subject: replySubject, threadId: comm.gmail_thread_id });
+    setReplyTo({ to: replyEmail, subject: replySubject, threadId: comm.gmail_thread_id || undefined });
     setOpenEmail(null);
     setComposeOpen(true);
   };
@@ -210,9 +211,9 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
     return header.replace(/<[^>]+>/, "").trim() || header;
   };
 
-  const renderEmailCard = (comm: any, isNested = false) => {
+  const renderEmailCard = (comm: CommRow, isNested = false) => {
     const isInbound = comm.direction === "inbound";
-    const meta = comm.metadata as any;
+    const meta = getMeta(comm);
     const preview = stripHtml(comm.body || "").slice(0, 150);
 
     return (
