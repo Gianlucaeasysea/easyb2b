@@ -178,6 +178,8 @@ const CRMLeads = () => {
     return true;
   }), [leads, search, filterStatus, filterZone]);
 
+  const { pageData: pageLeads, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: filtered || [], pageSize: 25 });
+
   const toggleSelect = (id: string) => {
     setSelected(prev => {
       const next = new Set(prev);
