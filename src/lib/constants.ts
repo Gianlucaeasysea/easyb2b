@@ -25,16 +25,19 @@ export const ORDER_STATUS_COLORS: Record<string, string> = {
 };
 
 // ── Payment Status ───────────────────────────────────────────
-export const PAYMENT_STATUS_MAP: Record<string, string> = {
+export const PAYMENT_STATUSES = {
   unpaid: "Non pagato",
   pending: "In attesa",
   paid: "Pagato",
-};
+} as const;
+
+/** @deprecated Use PAYMENT_STATUSES instead */
+export const PAYMENT_STATUS_MAP = PAYMENT_STATUSES as Record<string, string>;
 
 export const PAYMENT_STATUS_COLORS: Record<string, string> = {
-  unpaid: "bg-red-100 text-red-800",
-  pending: "bg-yellow-100 text-yellow-800",
-  paid: "bg-green-100 text-green-800",
+  unpaid: "bg-red-100 text-red-700",
+  pending: "bg-yellow-100 text-yellow-700",
+  paid: "bg-green-100 text-green-700",
 };
 
 // ── Chart Colors (hex for recharts) ──────────────────────────
