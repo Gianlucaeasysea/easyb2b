@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ShoppingBag, Search, Filter, CalendarIcon, Download, CreditCard, RefreshCw, CheckCircle } from "lucide-react";
+import { ShoppingBag, Search, Filter, CalendarIcon, Download, CreditCard, RefreshCw, CheckCircle, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -307,9 +307,16 @@ const AdminOrders = () => {
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.created_at)}</TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)}>
-                    <Badge className={`border-0 text-[10px] ${getOrderStatusColor(o.status || "draft")}`}>
-                      {getOrderStatusLabel(o.status || "draft")}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <Badge className={`border-0 text-[10px] ${getOrderStatusColor(o.status || "draft")}`}>
+                        {getOrderStatusLabel(o.status || "draft")}
+                      </Badge>
+                      {["confirmed", "processing"].includes(o.status || "") && !Number(o.shipping_cost_client) && (
+                        <span title="Costo spedizione non ancora impostato">
+                          <AlertTriangle size={14} className="text-orange-500" />
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)}>
                     {o.payment_status ? (

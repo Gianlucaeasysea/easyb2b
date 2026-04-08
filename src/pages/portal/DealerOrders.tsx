@@ -440,7 +440,7 @@ const DealerOrders = () => {
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Spedizione</span>
                         <span className={shippingCost > 0 ? "font-semibold text-foreground" : "text-muted-foreground italic text-xs"}>
-                          {shippingCost > 0 ? `€${shippingCost.toLocaleString("it-IT", { minimumFractionDigits: 2 })}` : "Da calcolare"}
+                          {shippingCost > 0 ? `€${shippingCost.toLocaleString("it-IT", { minimumFractionDigits: 2 })}` : "In fase di calcolo"}
                         </span>
                       </div>
                       <div className="flex justify-between pt-2 border-t border-border">

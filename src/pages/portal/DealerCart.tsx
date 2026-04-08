@@ -277,22 +277,22 @@ const DealerCart = () => {
           </div>
           <div className="border-t border-border pt-3 mb-2">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-muted-foreground">Products</span>
+              <span className="text-sm text-muted-foreground">Subtotale prodotti</span>
               <span className="font-heading font-semibold text-foreground">€{totalAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-muted-foreground">Shipping</span>
-              <span className="text-xs text-muted-foreground italic">Calculated upon confirmation</span>
+              <span className="text-sm text-muted-foreground">Spedizione</span>
+              <span className="text-xs text-muted-foreground italic">Calcolata dopo la conferma</span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t border-border mt-2">
-              <span className="font-heading font-bold text-foreground">Total</span>
+              <span className="font-heading font-bold text-foreground">Subtotale</span>
               <span className="font-heading text-2xl font-bold text-foreground">€{totalAmount.toFixed(2)}</span>
             </div>
           </div>
           <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10 mb-4">
             <Truck size={14} className="text-primary shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground">
-              Shipping costs will be calculated and added upon order confirmation. You will receive an updated invoice with the final total.
+              Le spese di spedizione verranno calcolate dopo la conferma dell'ordine. Riceverai una fattura aggiornata con il totale finale.
             </p>
           </div>
           {belowMinimum && (
