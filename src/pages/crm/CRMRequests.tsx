@@ -115,11 +115,8 @@ const CRMRequests = () => {
                     <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                       {r.status === "new" && (
                         <>
-                          <Button size="sm" variant="ghost" className="text-success hover:text-success h-8 gap-1" onClick={() => convertToLead.mutate(r)} title="Convert to Lead + Organization">
-                            <ArrowRight size={14} /> Pipeline
-                          </Button>
-                          <Button size="sm" variant="ghost" className="text-warning hover:text-warning h-8 gap-1" onClick={() => updateStatus.mutate({ id: r.id, status: "approved" })} title="Approve">
-                            <Check size={14} />
+                          <Button size="sm" variant="ghost" className="text-success hover:text-success h-8 gap-1" onClick={() => convertToLead.mutate(r)} title="Approva e apri in Pipeline">
+                            <Check size={14} /> Approva
                           </Button>
                           <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive h-8" onClick={() => updateStatus.mutate({ id: r.id, status: "rejected" })} title="Reject">
                             <X size={14} />
@@ -127,7 +124,6 @@ const CRMRequests = () => {
                         </>
                       )}
                       {r.status === "converted" && <Badge className="bg-success/20 text-success border-0 text-[10px]">In Pipeline</Badge>}
-                      {r.status === "approved" && <Badge className="bg-primary/20 text-primary border-0 text-[10px]">Approvato</Badge>}
                       {r.status === "rejected" && <Badge className="bg-destructive/20 text-destructive border-0 text-[10px]">Rifiutato</Badge>}
                     </div>
                   </TableCell>
