@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { Tables } from "@/integrations/supabase/types";
 import DOMPurify from "dompurify";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +42,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
   const [connectingGmail, setConnectingGmail] = useState(false);
   const [filterEmail, setFilterEmail] = useState<string>("all");
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
-  const [openEmail, setOpenEmail] = useState<any>(null);
+  const [openEmail, setOpenEmail] = useState<Tables<"client_communications"> | null>(null);
   const [replyTo, setReplyTo] = useState<{ to: string; subject: string; threadId?: string } | null>(null);
 
   const { data: communications, isLoading, refetch } = useQuery({
