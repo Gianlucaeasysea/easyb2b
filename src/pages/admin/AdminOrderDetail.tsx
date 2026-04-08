@@ -401,18 +401,70 @@ const AdminOrderDetail = () => {
             )}
           </TableBody>
         </Table>
-        <div className="px-4 py-3 border-t border-border space-y-1">
+        <div className="px-4 py-3 border-t border-border space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">Prodotti</span>
+            <span className="text-xs text-muted-foreground">Subtotale prodotti</span>
             <span className="text-sm text-foreground">€{productsTotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">Spedizione</span>
-            <span className="text-sm text-foreground">{shippingVal > 0 ? `€${shippingVal.toFixed(2)}` : "Da calcolare"}</span>
+            <span className="text-xs text-muted-foreground">Costo spedizione</span>
+            {["submitted", "confirmed", "processing"].includes(currentStatus) ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={shippingCost}
+                  onChange={e => setShippingCost(e.target.value)}
+                  className="w-24 h-7 text-sm text-right bg-secondary border-border rounded-lg"
+                  placeholder="0.00"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 gap-1 text-xs"
+                  disabled={saving}
+                  onClick={async () => {
+                    if (!id) return;
+                    setSaving(true);
+                    try {
+                      const shipVal = parseFloat(shippingCost) || 0;
+                      const newTotal = productsTotal + shipVal;
+                      const { error } = await supabase.from("orders").update({
+                        shipping_cost_client: shipVal,
+                        total_amount: newTotal,
+                      }).eq("id", id);
+                      if (error) throw error;
+                      // Notify dealer
+                      if (shipVal > 0) {
+                        await supabase.from("client_notifications").insert({
+                          client_id: order.client_id,
+                          title: "Spedizione calcolata",
+                          body: `Il costo di spedizione per il tuo ordine #${order.order_code || id.slice(0, 8)} è €${shipVal.toFixed(2)}. Totale aggiornato: €${newTotal.toFixed(2)}`,
+                          type: "order",
+                          order_id: id,
+                        });
+                      }
+                      queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
+                      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+                      toast.success(`Costo spedizione aggiornato: €${shipVal.toFixed(2)}`);
+                    } catch (error) {
+                      showErrorToast(error, "AdminOrderDetail.saveShipping");
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                >
+                  <CheckCircle size={12} /> Salva
+                </Button>
+              </div>
+            ) : (
+              <span className="text-sm text-foreground">{shippingVal > 0 ? `€${shippingVal.toFixed(2)}` : "—"}</span>
+            )}
           </div>
           <div className="flex justify-between items-center pt-2 border-t border-border">
-            <span className="text-sm font-heading font-bold text-foreground">Totale</span>
-            <span className="font-heading text-lg font-bold text-foreground">€{(productsTotal + shippingVal).toFixed(2)}</span>
+            <span className="text-sm font-heading font-bold text-foreground">Totale ordine</span>
+            <span className="font-heading text-lg font-bold text-foreground">€{(productsTotal + (parseFloat(shippingCost) || 0)).toFixed(2)}</span>
           </div>
         </div>
       </div>
