@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Package, Search, Filter } from "lucide-react";
-import { ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
+import { ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 
 const fmt = (d: string | null | undefined, f: string) => {
   if (!d) return "—";
@@ -101,8 +101,8 @@ const OrderDetailsTable = ({ limit, showFilters = true, title = "Dettaglio Ordin
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutti</SelectItem>
-              {Object.entries(ORDER_STATUS_MAP).map(([key, label]) => (
-                <SelectItem key={key} value={key}>{label}</SelectItem>
+              {Object.entries(ORDER_STATUSES).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label as string}</SelectItem>
               ))}
             </SelectContent>
           </Select>

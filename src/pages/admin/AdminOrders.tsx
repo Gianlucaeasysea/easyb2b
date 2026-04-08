@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
 import * as XLSX from "xlsx";
 import {
-  ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor,
+  ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor,
   getPaymentStatusLabel, getPaymentStatusColor,
 } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
@@ -322,10 +322,9 @@ const AdminOrders = () => {
           <Select value={bulkStatus} onValueChange={setBulkStatus}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="confirmed">Confirmed</SelectItem>
-              <SelectItem value="processing">Processing</SelectItem>
-              <SelectItem value="shipped">Shipped</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
+              {Object.entries(ORDER_STATUSES).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <DialogFooter>

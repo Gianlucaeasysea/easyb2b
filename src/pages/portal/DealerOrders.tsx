@@ -11,7 +11,7 @@ import {
 import { format } from "date-fns";
 import { useState } from "react";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
-import { ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
+import { ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
 
 import { Copy, DollarSign, XCircle } from "lucide-react";
@@ -186,7 +186,7 @@ const DealerOrders = () => {
             const items = (order.order_items || []) as any[];
             const shippingCost = Number((order as any).shipping_cost_client || 0);
             const phaseIdx = getPhaseIndex(status);
-            const isPaid = (order as any).payment_status === "paid" || (order as any).payment_status === "Payed";
+            const isPaid = (order as any).payment_status === "paid";
             const isCancelled = status === "cancelled";
             const isDraft = status === "draft";
 
@@ -199,7 +199,7 @@ const DealerOrders = () => {
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      status === "Delivered" || status === "delivered" ? "bg-success/10" :
+                      status === "delivered" ? "bg-success/10" :
                       status === "confirmed" || status === "processing" ? "bg-primary/10" :
                       "bg-muted"
                     }`}>

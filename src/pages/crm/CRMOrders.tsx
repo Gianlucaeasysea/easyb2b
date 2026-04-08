@@ -14,7 +14,7 @@ import { Package, Clock, Truck, CheckCircle, Search } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
-  ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor,
+  ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor,
   getPaymentStatusLabel, getPaymentStatusColor,
 } from "@/lib/constants";
 import type { Tables } from "@/integrations/supabase/types";
@@ -23,7 +23,7 @@ type OrderRow = Tables<"orders"> & {
   clients: { company_name: string; contact_name: string | null } | null;
 };
 
-const statusFilterOptions = ["all", "submitted", "confirmed", "processing", "ready_to_ship", "shipped", "delivered", "cancelled"];
+const statusFilterOptions = ["all", ...Object.keys(ORDER_STATUSES)];
 const paymentFilterOptions = ["all", "unpaid", "pending", "paid"];
 
 const CRMOrders = () => {
