@@ -213,65 +213,58 @@ const CRMDealsPipeline = () => {
                           const isHighlighted = highlightedIds.has(deal.id);
                           return (
                             <Draggable key={deal.id} draggableId={deal.id} index={index}>
-                              {(dragProvided, dragSnapshot) => {
-                                const dragProps = { ...dragProvided.draggableProps };
-                                const handleProps = { ...dragProvided.dragHandleProps };
-                                // Remove conflicting drag handlers for framer-motion compatibility
-                                delete (dragProps as Record<string, unknown>).onDragStart;
-                                delete (handleProps as Record<string, unknown>).onDragStart;
-                                return (
-                                <motion.div
+                              {(dragProvided, dragSnapshot) => (
+                                <div
                                   ref={dragProvided.innerRef}
-                                  {...dragProps}
-                                  {...handleProps}
-                                  onDragStart={dragProvided.draggableProps.onDragStart as unknown as React.DragEventHandler}
-                                  layout={!isDragging}
-                                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                                  animate={{
-                                    opacity: 1,
-                                    y: 0,
-                                    scale: 1,
-                                    boxShadow: isHighlighted
-                                      ? "0 0 16px 4px hsl(var(--success) / 0.35)"
-                                      : "none",
-                                  }}
-                                  exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-                                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                                  onClick={() => navigate("/crm/deals")}
-                                  className={`glass-card-solid p-3 border-l-2 ${cardAccents[stage]} cursor-pointer hover:shadow-md transition-colors ${
-                                    dragSnapshot.isDragging ? "shadow-lg ring-2 ring-primary/30 rotate-1" : ""
-                                  }`}
-                                  style={{
-                                    ...dragProvided.draggableProps.style,
-                                  }}
+                                  {...dragProvided.draggableProps}
+                                  {...dragProvided.dragHandleProps}
                                 >
-                                  <p className="text-xs font-heading font-semibold text-foreground truncate">
-                                    {deal.title}
-                                  </p>
-                                  {org && (
-                                    <button
-                                      className="text-[10px] text-primary truncate flex items-center gap-1 mt-0.5 hover:underline"
-                                      onClick={(e) => { e.stopPropagation(); navigate(`/crm/organizations/${org.id}`); }}
-                                    >
-                                      <Building2 size={8} /> {org.company_name}
-                                    </button>
-                                  )}
-                                  {contact && (
-                                    <p className="text-[10px] text-muted-foreground truncate">
-                                      {contact.contact_name}
+                                  <motion.div
+                                    layout={!isDragging}
+                                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                    animate={{
+                                      opacity: 1,
+                                      y: 0,
+                                      scale: 1,
+                                      boxShadow: isHighlighted
+                                        ? "0 0 16px 4px hsl(var(--success) / 0.35)"
+                                        : "0 0 0 0 transparent",
+                                    }}
+                                    exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                                    onClick={() => navigate("/crm/deals")}
+                                    className={`glass-card-solid p-3 border-l-2 ${cardAccents[stage]} cursor-pointer hover:shadow-md transition-colors ${
+                                      dragSnapshot.isDragging ? "shadow-lg ring-2 ring-primary/30 rotate-1" : ""
+                                    }`}
+                                  >
+                                    <p className="text-xs font-heading font-semibold text-foreground truncate">
+                                      {deal.title}
                                     </p>
-                                  )}
-                                  <div className="flex items-center justify-between mt-1.5">
-                                    <span className="text-xs font-mono font-bold text-foreground">{fmtCurrency(deal.value)}</span>
-                                    {deal.expected_close_date && (
-                                      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                                        <Calendar size={8} /> {fmtDate(deal.expected_close_date)}
-                                      </span>
+                                    {org && (
+                                      <button
+                                        className="text-[10px] text-primary truncate flex items-center gap-1 mt-0.5 hover:underline"
+                                        onClick={(e) => { e.stopPropagation(); navigate(`/crm/organizations/${org.id}`); }}
+                                      >
+                                        <Building2 size={8} /> {org.company_name}
+                                      </button>
                                     )}
-                                  </div>
-                                </motion.div>
-                                );
-                              }}
+                                    {contact && (
+                                      <p className="text-[10px] text-muted-foreground truncate">
+                                        {contact.contact_name}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center justify-between mt-1.5">
+                                      <span className="text-xs font-mono font-bold text-foreground">{fmtCurrency(deal.value)}</span>
+                                      {deal.expected_close_date && (
+                                        <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                                          <Calendar size={8} /> {fmtDate(deal.expected_close_date)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                </div>
+                              )}
+                            </Draggable>
                             </Draggable>
                           );
                         })}
