@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { CartSavedIndicator } from "@/contexts/CartContext";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
@@ -55,6 +56,7 @@ export function DealerSidebar() {
                     <NavLink to={item.url} end={item.url === "/portal"} className="hover:bg-muted/50" activeClassName="bg-muted text-primary font-medium">
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
+                      {!collapsed && item.title === "Cart" && <CartSavedIndicator />}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
