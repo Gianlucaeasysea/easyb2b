@@ -55,7 +55,10 @@ type GoogleIdentityServices = {
 
 const GOOGLE_IDENTITY_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
 const GOOGLE_CLIENT_ID = "495157225927-5vl858qj6audau88lafer0d2hq69e0aj.apps.googleusercontent.com";
-const GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+const GMAIL_SCOPES = [
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.send",
+].join(" ");
 export const GMAIL_POPUP_BRIDGE_URL = "https://easyb2b.lovable.app/oauth/gmail-popup";
 
 let googleIdentityScriptPromise: Promise<void> | null = null;
@@ -147,7 +150,7 @@ export async function requestGmailAuthorizationCodeOnCurrentOrigin(loginHint = "
 
     const client = googleOauth.initCodeClient({
       client_id: GOOGLE_CLIENT_ID,
-      scope: GMAIL_READONLY_SCOPE,
+      scope: GMAIL_SCOPES,
       ux_mode: "popup",
       ...(loginHint ? { login_hint: loginHint } : {}),
       prompt: "select_account consent",
