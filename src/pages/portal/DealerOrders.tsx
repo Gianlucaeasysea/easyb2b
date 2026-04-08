@@ -12,8 +12,7 @@ import { format } from "date-fns";
 import { useState } from "react";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
-import { usePaginatedData } from "@/hooks/usePaginatedData";
-import { PaginationControls } from "@/components/PaginationControls";
+import { TablePagination } from "@/components/ui/TablePagination";
 
 const ORDER_PHASES = [
   { key: "confirmed", label: "Ordine Ricevuto", icon: CheckCircle },
@@ -42,7 +41,8 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 const DealerOrders = () => {
   const { user } = useAuth();
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
-
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const { data: client } = useQuery({
     queryKey: ["my-client"],
     queryFn: async () => {
@@ -66,7 +66,10 @@ const DealerOrders = () => {
     enabled: !!client,
   });
 
-  const { pageData, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: orders || [], pageSize: 20 });
+  const allOrders = orders || [];
+  const totalPages = Math.max(1, Math.ceil(allOrders.length / pageSize));
+  const sliceFrom = (page - 1) * pageSize;
+  const pageData = allOrders.slice(sliceFrom, sliceFrom + pageSize);
 
   const getDownloadUrl = (filePath: string) => {
     const { data } = supabase.storage.from("order-documents").getPublicUrl(filePath);
@@ -315,7 +318,14 @@ const DealerOrders = () => {
             );
           })}
         </div>
-        <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
+        <TablePagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={allOrders.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+        />
       </>
       )}
     </div>

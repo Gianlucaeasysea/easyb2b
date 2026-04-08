@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Plus, Phone, Mail, MessageCircle, Search, Trash2, ArrowRight, LayoutList, Columns3 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,8 +18,7 @@ import LeadDetailPanel from "@/components/crm/LeadDetailPanel";
 import { differenceInDays } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { deleteLeadsCascade } from "@/lib/crmEntityActions";
-import { usePaginatedData } from "@/hooks/usePaginatedData";
-import { PaginationControls } from "@/components/PaginationControls";
+import { TablePagination } from "@/components/ui/TablePagination";
 
 const LEAD_STAGES = [
   { value: "request", label: "Request", color: "border-muted-foreground text-muted-foreground", bg: "bg-muted/50" },
@@ -59,6 +58,10 @@ const CRMLeads = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
   const [form, setForm] = useState({ company_name: "", contact_name: "", email: "", phone: "", zone: "", source: "" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  useEffect(() => { setPage(1); }, [search, filterStatus, filterZone]);
 
   const { data: leads, isLoading } = useQuery({
     queryKey: ["crm-leads"],
@@ -178,7 +181,10 @@ const CRMLeads = () => {
     return true;
   }), [leads, search, filterStatus, filterZone]);
 
-  const { pageData: pageLeads, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: filtered || [], pageSize: 25 });
+  const filteredList = filtered || [];
+  const listTotalPages = Math.max(1, Math.ceil(filteredList.length / pageSize));
+  const listFrom = (page - 1) * pageSize;
+  const pageLeads = filteredList.slice(listFrom, listFrom + pageSize);
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {
@@ -391,7 +397,14 @@ const CRMLeads = () => {
               ))}
             </TableBody>
           </Table>
-          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
+          <TablePagination
+            currentPage={page}
+            totalPages={listTotalPages}
+            totalItems={filteredList.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          />
         </div>
       ) : (
         /* ────── KANBAN VIEW ────── */

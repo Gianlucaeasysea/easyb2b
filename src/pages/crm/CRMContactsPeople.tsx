@@ -8,9 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Users, Phone, Mail, MessageCircle, Linkedin, Globe, Crown, Star, Download } from "lucide-react";
-import { useState } from "react";
-import { usePaginatedData } from "@/hooks/usePaginatedData";
-import { PaginationControls } from "@/components/PaginationControls";
+import { useState, useEffect } from "react";
+import { TablePagination } from "@/components/ui/TablePagination";
 import { useNavigate } from "react-router-dom";
 import { differenceInDays, format, isValid } from "date-fns";
 import { toast } from "sonner";
@@ -117,7 +116,11 @@ const CRMContactsPeople = () => {
     return true;
   }) || [];
 
-  const { pageData, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: filtered, pageSize: 25 });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  useEffect(() => { setPage(1); }, [search, filterType, filterChannel]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageData = filtered.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize);
 
   const exportCsv = () => {
     const rows = filtered.map(c => ({
@@ -264,7 +267,7 @@ const CRMContactsPeople = () => {
               })}
             </TableBody>
           </Table>
-          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
+          <TablePagination currentPage={page} totalPages={totalPages} totalItems={filtered.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} />
         </div>
       )}
 

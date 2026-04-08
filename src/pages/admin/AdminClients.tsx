@@ -8,14 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Search, ArrowRight, Plus, Trash2, Settings2, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { differenceInDays } from "date-fns";
 import { deleteClientsCascade } from "@/lib/crmEntityActions";
-import { usePaginatedData } from "@/hooks/usePaginatedData";
-import { PaginationControls } from "@/components/PaginationControls";
+import { TablePagination } from "@/components/ui/TablePagination";
 
 const AdminClients = () => {
   const navigate = useNavigate();
@@ -29,22 +29,39 @@ const AdminClients = () => {
   const [bulkStatus, setBulkStatus] = useState("active");
   const [bulkDiscount, setBulkDiscount] = useState("standard");
   const [bulkType, setBulkType] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [newClient, setNewClient] = useState({
     company_name: "", contact_name: "", email: "", phone: "",
     country: "", address: "", business_type: "", status: "active",
     discount_class: "standard", website: "", vat_number: "", zone: "", notes: "",
   });
 
-  const { data: clients, isLoading } = useQuery({
-    queryKey: ["admin-clients"],
+  useEffect(() => { setPage(1); }, [search, inactiveDays]);
+
+  const { data: queryResult, isLoading, isFetching } = useQuery({
+    queryKey: ["admin-clients", page, pageSize, search],
     queryFn: async () => {
-      const { data, error } = await supabase.from("clients").select("*").order("company_name");
+      let query = supabase.from("clients").select("*", { count: "exact" }).order("company_name");
+
+      if (search) {
+        query = query.or(`company_name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%,country.ilike.%${search}%,business_type.ilike.%${search}%`);
+      }
+
+      const from = (page - 1) * pageSize;
+      query = query.range(from, from + pageSize - 1);
+
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data;
+      return { clients: data || [], totalCount: count || 0 };
     },
+    placeholderData: (prev) => prev,
   });
 
-  // Fetch last order and total spent per client
+  const clients = queryResult?.clients || [];
+  const totalCount = queryResult?.totalCount || 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
   const { data: clientOrderStats } = useQuery({
     queryKey: ["admin-clients-order-stats"],
     queryFn: async () => {
@@ -70,31 +87,16 @@ const AdminClients = () => {
     },
   });
 
-  const filtered = clients?.filter(c => {
-    const matchSearch =
-      c.company_name.toLowerCase().includes(search.toLowerCase()) ||
-      c.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
-      c.country?.toLowerCase().includes(search.toLowerCase()) ||
-      c.email?.toLowerCase().includes(search.toLowerCase()) ||
-      c.business_type?.toLowerCase().includes(search.toLowerCase());
-
-    if (!matchSearch) return false;
-
-    // Inactive filter
-    if (inactiveDays) {
-      const days = parseInt(inactiveDays);
-      if (!isNaN(days) && days > 0) {
+  // Apply inactive filter client-side since it depends on order stats
+  const filtered = inactiveDays
+    ? clients.filter(c => {
+        const days = parseInt(inactiveDays);
+        if (isNaN(days) || days <= 0) return true;
         const stats = clientOrderStats?.[c.id];
-        if (!stats?.lastOrder) return true; // Never ordered = inactive
-        const daysSince = differenceInDays(new Date(), new Date(stats.lastOrder));
-        return daysSince >= days;
-      }
-    }
-
-    return true;
-  }) || [];
-
-  const { pageData, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: filtered, pageSize: 25 });
+        if (!stats?.lastOrder) return true;
+        return differenceInDays(new Date(), new Date(stats.lastOrder)) >= days;
+      })
+    : clients;
 
   const createClient = useMutation({
     mutationFn: async () => {
@@ -128,12 +130,7 @@ const AdminClients = () => {
     const ids = Array.from(selected);
 
     if (bulkAction === "delete") {
-      try {
-        await deleteClientsCascade(ids);
-      } catch (error: any) {
-        toast.error(error.message);
-        return;
-      }
+      try { await deleteClientsCascade(ids); } catch (error: any) { toast.error(error.message); return; }
       toast.success(`${ids.length} clienti eliminati`);
     } else if (bulkAction === "status") {
       const { error } = await supabase.from("clients").update({ status: bulkStatus }).in("id", ids);
@@ -172,6 +169,18 @@ const AdminClients = () => {
     active: "✅ Attivo", inactive: "❌ Non Attivo", onboarding: "🔄 In Attivazione", lead: "📋 Lead", suspended: "⛔ Sospeso",
   };
 
+  const SkeletonRows = () => (
+    <>
+      {Array.from({ length: 10 }).map((_, i) => (
+        <TableRow key={i}>
+          {Array.from({ length: 9 }).map((_, j) => (
+            <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -188,7 +197,7 @@ const AdminClients = () => {
           <Button size="sm" onClick={() => setShowCreate(true)} className="gap-1">
             <Plus size={14} /> Nuovo Cliente
           </Button>
-          <Badge variant="outline" className="text-xs">{clients?.length || 0} clienti</Badge>
+          <Badge variant="outline" className="text-xs">{totalCount} clienti</Badge>
         </div>
       </div>
 
@@ -213,14 +222,26 @@ const AdminClients = () => {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading...</p>
+        <div className="glass-card-solid overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10"><Checkbox disabled /></TableHead>
+                <TableHead>Azienda</TableHead><TableHead>Tipo</TableHead><TableHead>Paese</TableHead>
+                <TableHead>Sconto</TableHead><TableHead>Ultimo Ordine</TableHead>
+                <TableHead className="text-right">Totale Speso</TableHead><TableHead>Stato</TableHead><TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody><SkeletonRows /></TableBody>
+          </Table>
+        </div>
       ) : !filtered.length ? (
         <div className="text-center py-20 glass-card-solid">
           <Users className="mx-auto text-muted-foreground mb-4" size={48} />
           <p className="text-muted-foreground">{search ? "Nessun risultato." : "Nessun cliente."}</p>
         </div>
       ) : (
-        <div className="glass-card-solid overflow-hidden">
+        <div className={`glass-card-solid overflow-hidden ${isFetching ? "opacity-60" : ""}`}>
           <Table>
             <TableHeader>
               <TableRow>
@@ -238,7 +259,7 @@ const AdminClients = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pageData.map(c => (
+              {filtered.map(c => (
                 <TableRow key={c.id} className="cursor-pointer hover:bg-secondary/50">
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggleSelect(c.id)} />
@@ -293,7 +314,14 @@ const AdminClients = () => {
               ))}
             </TableBody>
           </Table>
-          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
+          <TablePagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalCount}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          />
         </div>
       )}
 
@@ -365,86 +393,58 @@ const AdminClients = () => {
       {/* Bulk Actions Dialog */}
       <Dialog open={showBulk} onOpenChange={setShowBulk}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Azioni in Bulk — {selected.size} clienti selezionati</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Azioni Bulk ({selected.size} selezionati)</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Azione</Label>
-              <Select value={bulkAction || "__none__"} onValueChange={v => setBulkAction(v === "__none__" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Scegli un'azione..." /></SelectTrigger>
+            <Select value={bulkAction} onValueChange={setBulkAction}>
+              <SelectTrigger><SelectValue placeholder="Seleziona azione..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="status">Cambia Stato</SelectItem>
+                <SelectItem value="discount">Cambia Classe Sconto</SelectItem>
+                <SelectItem value="type">Cambia Tipo</SelectItem>
+                <SelectItem value="delete">Elimina</SelectItem>
+              </SelectContent>
+            </Select>
+            {bulkAction === "status" && (
+              <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">— Seleziona —</SelectItem>
-                  <SelectItem value="status">Cambia Stato</SelectItem>
-                  <SelectItem value="discount">Cambia Classe Sconto</SelectItem>
-                  <SelectItem value="type">Cambia Tipo</SelectItem>
-                  <SelectItem value="delete">🗑️ Elimina</SelectItem>
+                  <SelectItem value="active">✅ Attivo</SelectItem>
+                  <SelectItem value="inactive">❌ Non Attivo</SelectItem>
+                  <SelectItem value="onboarding">🔄 In Attivazione</SelectItem>
+                  <SelectItem value="lead">📋 Lead</SelectItem>
+                  <SelectItem value="suspended">⛔ Sospeso</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            {bulkAction === "status" && (
-              <div>
-                <Label>Nuovo Stato</Label>
-                <Select value={bulkStatus} onValueChange={setBulkStatus}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">✅ Attivo</SelectItem>
-                    <SelectItem value="inactive">❌ Non Attivo</SelectItem>
-                    <SelectItem value="onboarding">🔄 In Attivazione</SelectItem>
-                    <SelectItem value="lead">📋 Lead</SelectItem>
-                    <SelectItem value="suspended">⛔ Sospeso</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             )}
-
             {bulkAction === "discount" && (
-              <div>
-                <Label>Nuova Classe Sconto</Label>
-                <Select value={bulkDiscount} onValueChange={setBulkDiscount}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {discountTiers?.map(t => (
-                      <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={bulkDiscount} onValueChange={setBulkDiscount}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {discountTiers?.map(t => (
+                    <SelectItem key={t.name} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
-
             {bulkAction === "type" && (
-              <div>
-                <Label>Nuovo Tipo</Label>
-                <Select value={bulkType || "__none__"} onValueChange={v => setBulkType(v === "__none__" ? "" : v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— Seleziona —</SelectItem>
-                    <SelectItem value="Reseller">Reseller</SelectItem>
-                    <SelectItem value="Distributor">Distributor</SelectItem>
-                    <SelectItem value="Rigger">Rigger</SelectItem>
-                    <SelectItem value="Dropshipper">Dropshipper</SelectItem>
-                    <SelectItem value="Boat Builder">Boat Builder</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={bulkType || "__none__"} onValueChange={v => setBulkType(v === "__none__" ? "" : v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Nessuno —</SelectItem>
+                  <SelectItem value="Reseller">Reseller</SelectItem>
+                  <SelectItem value="Distributor">Distributor</SelectItem>
+                  <SelectItem value="Rigger">Rigger</SelectItem>
+                  <SelectItem value="Dropshipper">Dropshipper</SelectItem>
+                  <SelectItem value="Boat Builder">Boat Builder</SelectItem>
+                </SelectContent>
+              </Select>
             )}
-
             {bulkAction === "delete" && (
-              <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/30">
-                <p className="text-sm text-destructive font-semibold">⚠️ Attenzione</p>
-                <p className="text-xs text-destructive/80 mt-1">Questa azione eliminerà {selected.size} clienti con tutti i loro ordini, contatti e attività. Non è reversibile.</p>
-              </div>
+              <p className="text-sm text-destructive">⚠️ Verranno eliminati {selected.size} clienti con tutti i dati associati (ordini, contatti, comunicazioni).</p>
             )}
-
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowBulk(false)}>Annulla</Button>
-              <Button
-                variant={bulkAction === "delete" ? "destructive" : "default"}
-                onClick={executeBulk}
-                disabled={!bulkAction}
-              >
-                {bulkAction === "delete" ? "Elimina" : "Applica"}
-              </Button>
-            </div>
+            <Button onClick={executeBulk} disabled={!bulkAction} className="w-full" variant={bulkAction === "delete" ? "destructive" : "default"}>
+              {bulkAction === "delete" ? `Elimina ${selected.size} clienti` : "Applica"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

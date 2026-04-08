@@ -8,13 +8,12 @@ import { Phone, Mail, MessageCircle, Search, Building2, ChevronRight, Trash2, Do
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { differenceInDays, format } from "date-fns";
 import * as XLSX from "xlsx";
 import { deleteClientsCascade } from "@/lib/crmEntityActions";
-import { usePaginatedData } from "@/hooks/usePaginatedData";
-import { PaginationControls } from "@/components/PaginationControls";
+import { TablePagination } from "@/components/ui/TablePagination";
 
 const lifecycleStatuses = ["lead", "qualifying", "onboarding", "active", "at_risk", "churned", "disqualified"];
 
@@ -77,6 +76,10 @@ const CRMOrganizations = () => {
   const [filterCountry, setFilterCountry] = useState("all");
   const [filterHasOrders, setFilterHasOrders] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  useEffect(() => { setPage(1); }, [search, filterStatus, filterCountry, filterHasOrders]);
 
   const { data: clients } = useQuery({
     queryKey: ["crm-organizations"],
@@ -173,7 +176,9 @@ const CRMOrganizations = () => {
     return true;
   }) || [];
 
-  const { pageData, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: filtered, pageSize: 25 });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const sliceFrom = (page - 1) * pageSize;
+  const pageData = filtered.slice(sliceFrom, sliceFrom + pageSize);
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {
@@ -389,7 +394,14 @@ const CRMOrganizations = () => {
               })}
             </TableBody>
           </Table>
-          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
+          <TablePagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          />
         </div>
       )}
     </div>
