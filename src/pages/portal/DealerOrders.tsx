@@ -314,6 +314,8 @@ const DealerOrders = () => {
             );
           })}
         </div>
+        <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
+      </>
       )}
     </div>
   );
