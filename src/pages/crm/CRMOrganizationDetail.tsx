@@ -80,43 +80,8 @@ const CRMOrganizationDetail = () => {
   });
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [taskForm, setTaskForm] = useState({ title: "", type: "call", priority: "medium", due_date: "", description: "" });
-  const [creatingCredentials, setCreatingCredentials] = useState(false);
 
-  const generatePassword = () => {
-    const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$";
-    return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  };
 
-  const handleCreateCredentials = async () => {
-    if (!client?.email) {
-      toast.error("Questa organizzazione non ha un'email configurata");
-      return;
-    }
-    setCreatingCredentials(true);
-    try {
-      const password = generatePassword();
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: JSON.stringify({ client_id: id, email: client.email, password }),
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Errore nella creazione");
-      toast.success("Credenziali create e inviate via email al dealer");
-      queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
-    } catch (err: any) {
-      toast.error(err.message || "Errore nella creazione delle credenziali");
-    } finally {
-      setCreatingCredentials(false);
-    }
-  };
-
-  const { data: client, isLoading } = useQuery({
     queryKey: ["crm-org", id],
     queryFn: async () => {
       const { data, error } = await supabase.from("clients").select("*").eq("id", id!).single();
