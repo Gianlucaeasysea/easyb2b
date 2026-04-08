@@ -88,6 +88,19 @@ const CRMAutomations = () => {
     },
   });
 
+  const { data: logs = [], isLoading: logsLoading } = useQuery({
+    queryKey: ["automation-logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("automation_logs")
+        .select("*")
+        .order("executed_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const { data: emailTemplates = [] } = useQuery({
     queryKey: ["email-templates-list"],
     queryFn: async () => {
