@@ -96,18 +96,23 @@ const CRMOrganizationDetail = () => {
     setCreatingCredentials(true);
     try {
       const password = generatePassword();
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: JSON.stringify({ client_id: id, email: client.email, password }),
+      const { data: result, error: invokeError } = await supabase.functions.invoke("create-dealer-account", {
+        body: { client_id: id, email: client.email, password },
       });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Errore nella creazione");
+      if (invokeError) {
+        // Try to extract message from response context
+        const ctx = (invokeError as any).context;
+        if (ctx instanceof Response) {
+          try {
+            const body = await ctx.json();
+            throw new Error(body?.error || body?.message || invokeError.message);
+          } catch (e) {
+            if (e instanceof Error && e.message !== invokeError.message) throw e;
+          }
+        }
+        throw new Error(invokeError.message);
+      }
+      if (result?.error) throw new Error(result.error);
       toast.success("Credenziali create e inviate via email al dealer");
       queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
     } catch (err: any) {
