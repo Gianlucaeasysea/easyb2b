@@ -6,11 +6,7 @@ import { PackagePlus, Eye, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-
-const phaseConfig: Record<string, { label: string; color: string }> = {
-  confirmed: { label: "Nuovo Ordine", color: "bg-warning/20 text-warning" },
-  processing: { label: "Confermato", color: "bg-chart-4/20 text-chart-4" },
-};
+import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 
 const AdminNewOrders = () => {
   const navigate = useNavigate();
