@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Check, X, ArrowRight, Building2 } from "lucide-react";
+import { FileText, Check, X, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
@@ -115,11 +115,8 @@ const CRMRequests = () => {
                     <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                       {r.status === "new" && (
                         <>
-                          <Button size="sm" variant="ghost" className="text-success hover:text-success h-8 gap-1" onClick={() => convertToLead.mutate(r)} title="Convert to Lead + Organization">
-                            <ArrowRight size={14} /> Pipeline
-                          </Button>
-                          <Button size="sm" variant="ghost" className="text-warning hover:text-warning h-8 gap-1" onClick={() => updateStatus.mutate({ id: r.id, status: "approved" })} title="Approve">
-                            <Check size={14} />
+                          <Button size="sm" variant="ghost" className="text-success hover:text-success h-8 gap-1" onClick={() => convertToLead.mutate(r)} title="Approva e apri in Pipeline">
+                            <Check size={14} /> Approva
                           </Button>
                           <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive h-8" onClick={() => updateStatus.mutate({ id: r.id, status: "rejected" })} title="Reject">
                             <X size={14} />
@@ -127,7 +124,6 @@ const CRMRequests = () => {
                         </>
                       )}
                       {r.status === "converted" && <Badge className="bg-success/20 text-success border-0 text-[10px]">In Pipeline</Badge>}
-                      {r.status === "approved" && <Badge className="bg-primary/20 text-primary border-0 text-[10px]">Approvato</Badge>}
                       {r.status === "rejected" && <Badge className="bg-destructive/20 text-destructive border-0 text-[10px]">Rifiutato</Badge>}
                     </div>
                   </TableCell>
@@ -169,13 +165,7 @@ const CRMRequests = () => {
                 {selectedRequest.status === "new" && (
                   <div className="flex gap-2 pt-2 border-t border-border">
                     <Button className="flex-1 gap-1 bg-foreground text-background" onClick={() => convertToLead.mutate(selectedRequest)}>
-                      <ArrowRight size={14} /> Open in Pipeline
-                    </Button>
-                    <Button variant="outline" className="gap-1" onClick={() => {
-                      updateStatus.mutate({ id: selectedRequest.id, status: "approved" });
-                      setSelectedRequest(null);
-                    }}>
-                      <Check size={14} /> Approva
+                      <Check size={14} /> Approva e Apri in Pipeline
                     </Button>
                     <Button variant="outline" className="gap-1 text-destructive" onClick={() => {
                       updateStatus.mutate({ id: selectedRequest.id, status: "rejected" });
@@ -189,9 +179,8 @@ const CRMRequests = () => {
                   <div className="pt-2 border-t border-border">
                     <Badge className={
                       selectedRequest.status === "converted" ? "bg-success/20 text-success border-0" :
-                      selectedRequest.status === "approved" ? "bg-primary/20 text-primary border-0" :
                       "bg-destructive/20 text-destructive border-0"
-                    }>{selectedRequest.status === "converted" ? "In Pipeline" : selectedRequest.status === "approved" ? "Approvato" : "Rifiutato"}</Badge>
+                    }>{selectedRequest.status === "converted" ? "In Pipeline" : "Rifiutato"}</Badge>
                   </div>
                 )}
               </div>
