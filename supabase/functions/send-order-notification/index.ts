@@ -77,7 +77,9 @@ serve(async (req) => {
     const pushClientEmail = (templateName: string, templateData: Record<string, any>, idempotencyKey: string) => {
       if (clientEmail) {
         sends.push({ templateName, recipientEmail: clientEmail, idempotencyKey, templateData });
-        sends.push({ templateName, recipientEmail: BCC_EMAIL, idempotencyKey: `${idempotencyKey}-bcc`, templateData });
+        bccEmails.forEach((bcc, i) => {
+          sends.push({ templateName, recipientEmail: bcc, idempotencyKey: `${idempotencyKey}-bcc-${i}`, templateData });
+        });
       }
     };
 
