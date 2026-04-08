@@ -303,7 +303,7 @@ const DealerOrders = () => {
                         variant="ghost" size="sm"
                         className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
                         disabled={duplicatingId === order.id}
-                        onClick={(e) => { e.stopPropagation(); setConfirmDuplicate(order); }}
+                        onClick={(e) => { e.stopPropagation(); handlePrepareDuplicate(order); }}
                         title="Duplica Ordine"
                       >
                         {duplicatingId === order.id ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
@@ -515,21 +515,72 @@ const DealerOrders = () => {
       </>
       )}
 
-      {/* Confirm Duplicate Dialog */}
-      <Dialog open={!!confirmDuplicate} onOpenChange={() => setConfirmDuplicate(null)}>
-        <DialogContent className="max-w-sm">
+      {/* Price Check Dialog */}
+      <Dialog open={!!priceCheckData} onOpenChange={() => setPriceCheckData(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Duplica Ordine</DialogTitle>
+            <DialogTitle>Verifica prezzi prima di duplicare</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Vuoi duplicare questo ordine? Verrà creata una nuova bozza con gli stessi prodotti e quantità, ai prezzi aggiornati.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDuplicate(null)}>Annulla</Button>
-            <Button onClick={() => handleDuplicate(confirmDuplicate)} disabled={!!duplicatingId}>
-              {duplicatingId ? "Duplicazione..." : "Duplica"}
-            </Button>
-          </DialogFooter>
+          {priceCheckData && (
+            <>
+              <div className="border border-border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Prodotto</TableHead>
+                      <TableHead className="text-xs text-right">Prezzo Orig.</TableHead>
+                      <TableHead className="text-xs text-right">Prezzo Attuale</TableHead>
+                      <TableHead className="text-xs text-right">Variazione</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {priceCheckData.items.map((item) => {
+                      const diff = item.available && item.currentPrice !== null ? item.currentPrice - item.originalPrice : null;
+                      return (
+                        <TableRow key={item.product_id}>
+                          <TableCell>
+                            <p className="text-xs font-medium">{item.name}</p>
+                            <p className="text-[10px] text-muted-foreground font-mono">{item.sku}</p>
+                          </TableCell>
+                          <TableCell className="text-xs text-right font-mono">€{item.originalPrice.toFixed(2)}</TableCell>
+                          <TableCell className="text-xs text-right font-mono">
+                            {!item.available || item.currentPrice === null
+                              ? <span className="text-destructive font-medium">Non disponibile</span>
+                              : `€${item.currentPrice.toFixed(2)}`}
+                          </TableCell>
+                          <TableCell className="text-xs text-right font-medium">
+                            {!item.available || item.currentPrice === null ? (
+                              <span className="text-destructive">Rimosso</span>
+                            ) : diff === 0 ? (
+                              <span className="text-success">Invariato</span>
+                            ) : diff! > 0 ? (
+                              <span className="text-destructive">+€{diff!.toFixed(2)} ↑</span>
+                            ) : (
+                              <span className="text-success">-€{Math.abs(diff!).toFixed(2)} ↓</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="flex justify-between text-sm mt-2 p-3 bg-secondary/50 rounded-lg">
+                <span className="text-muted-foreground">
+                  Totale originale: <span className="font-mono font-semibold text-foreground">€{priceCheckData.originalTotal.toFixed(2)}</span>
+                </span>
+                <span className="text-muted-foreground">
+                  Nuovo totale: <span className="font-mono font-semibold text-primary">€{priceCheckData.newTotal.toFixed(2)}</span>
+                </span>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPriceCheckData(null)}>Annulla</Button>
+                <Button onClick={() => executeDuplicate(priceCheckData.order, priceCheckData.items)} disabled={!!duplicatingId}>
+                  {duplicatingId ? "Duplicazione..." : "Duplica con prezzi attuali"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
