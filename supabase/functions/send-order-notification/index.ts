@@ -19,6 +19,23 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
+    // Load notification email config from app_settings
+    let adminEmails = FALLBACK_ADMIN_EMAILS;
+    let bccEmails = [FALLBACK_BCC_EMAIL];
+    try {
+      const { data: emailConfig } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "notification_emails")
+        .single();
+      if (emailConfig?.value) {
+        adminEmails = (emailConfig.value as any).to || FALLBACK_ADMIN_EMAILS;
+        bccEmails = (emailConfig.value as any).bcc || [FALLBACK_BCC_EMAIL];
+      }
+    } catch (e) {
+      console.warn("Failed to load email config, using fallback:", e);
+    }
+
     const { orderId, orderCode, type } = await req.json();
 
     if (!orderId || !type) {
