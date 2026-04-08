@@ -479,6 +479,64 @@ const CRMOrganizationDetail = () => {
                 </div>
               </div>
 
+              {/* Dealer Portal Credentials */}
+              <div className="glass-card-solid p-5">
+                <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
+                  <KeyRound size={14} /> Credenziali Portale Dealer
+                </h3>
+                {client.user_id ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 p-2 bg-success/10 border border-success/20 rounded-lg">
+                      <Check size={12} className="text-success" />
+                      <span className="text-xs text-success font-medium">Account attivo</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between p-2 bg-secondary/50 rounded">
+                        <span className="text-xs text-muted-foreground">Email</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-mono text-foreground">{client.email}</span>
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { navigator.clipboard.writeText(client.email || ""); toast.success("Email copiata"); }}>
+                            <Copy size={10} />
+                          </Button>
+                        </div>
+                      </div>
+                      {client.portal_password && (
+                        <div className="flex items-center justify-between p-2 bg-secondary/50 rounded">
+                          <span className="text-xs text-muted-foreground">Password</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-mono text-foreground">
+                              {showPassword ? client.portal_password : "••••••••"}
+                            </span>
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setShowPassword(!showPassword)}>
+                              {showPassword ? <EyeOff size={10} /> : <Eye size={10} />}
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { navigator.clipboard.writeText(client.portal_password || ""); toast.success("Password copiata"); }}>
+                              <Copy size={10} />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground">Nessun account dealer collegato. Crea le credenziali per abilitare l'accesso al portale.</p>
+                    {!client.email && (
+                      <p className="text-xs text-destructive">⚠️ Configura prima un'email per questa organizzazione.</p>
+                    )}
+                    <Button
+                      size="sm"
+                      className="w-full gap-1"
+                      disabled={creatingCredentials || !client.email}
+                      onClick={handleCreateCredentials}
+                    >
+                      {creatingCredentials ? <RefreshCw size={12} className="animate-spin" /> : <UserCheck size={12} />}
+                      Crea Credenziali & Invia Email
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               {addresses && addresses.length > 0 && (
                 <div className="glass-card-solid p-5">
                   <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm"><MapPin size={14} /> Indirizzi Spedizione</h3>
