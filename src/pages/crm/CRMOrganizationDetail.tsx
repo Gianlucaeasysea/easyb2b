@@ -98,7 +98,7 @@ const CRMOrganizationDetail = () => {
     setCreatingCredentials(true);
     try {
       const password = generatePassword();
-      const result = await invokeDealerAccountAction({ client_id: id!, email: client.email, password });
+      const result = await invokeDealerAccountAction<{ email_sent?: boolean }>({ client_id: id!, email: client.email, password });
       if (result?.email_sent) {
         toast.success("Credenziali create e inviate via email al dealer");
       } else {
@@ -118,7 +118,7 @@ const CRMOrganizationDetail = () => {
     if (!confirm("Sei sicuro di voler eliminare le credenziali dealer? L'account verrà rimosso definitivamente.")) return;
     setDeletingCredentials(true);
     try {
-      await invokeDealerAccountAction({ client_id: id!, action: "delete" });
+      await invokeDealerAccountAction<{ success: boolean }>({ client_id: id!, action: "delete" });
       toast.success("Credenziali dealer eliminate");
       queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
     } catch (err: any) {
