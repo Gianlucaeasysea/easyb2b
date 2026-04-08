@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import { deleteContactsCascade } from "@/lib/crmEntityActions";
+import { invokeDealerAccountAction } from "@/lib/dealerAccountActions";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
 import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
 import {
@@ -65,7 +66,7 @@ const CRMOrganizationDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeOrderCtx, setComposeOrderCtx] = useState<any>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -89,45 +90,6 @@ const CRMOrganizationDetail = () => {
     return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
   };
 
-  const invokeDealerAccountAction = async (payload: {
-    client_id: string;
-    email?: string;
-    password?: string;
-    action?: "delete";
-  }) => {
-    const accessToken = session?.access_token ?? (await supabase.auth.getSession()).data.session?.access_token;
-
-    if (!accessToken) {
-      throw new Error("Sessione non valida. Effettua di nuovo il login.");
-    }
-
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    let result: any = null;
-    try {
-      result = await response.json();
-    } catch {
-      result = null;
-    }
-
-    if (!response.ok) {
-      throw new Error(result?.error || `Errore nella gestione credenziali dealer (${response.status})`);
-    }
-
-    if (result?.error) {
-      throw new Error(result.error);
-    }
-
-    return result;
-  };
-
   const handleCreateCredentials = async () => {
     if (!client?.email) {
       toast.error("Questa organizzazione non ha un'email configurata");
@@ -136,7 +98,7 @@ const CRMOrganizationDetail = () => {
     setCreatingCredentials(true);
     try {
       const password = generatePassword();
-      const result = await invokeDealerAccountAction({ client_id: id!, email: client.email, password });
+      const result = await invokeDealerAccountAction<{ email_sent?: boolean }>({ client_id: id!, email: client.email, password });
       if (result?.email_sent) {
         toast.success("Credenziali create e inviate via email al dealer");
       } else {
@@ -156,7 +118,7 @@ const CRMOrganizationDetail = () => {
     if (!confirm("Sei sicuro di voler eliminare le credenziali dealer? L'account verrà rimosso definitivamente.")) return;
     setDeletingCredentials(true);
     try {
-      await invokeDealerAccountAction({ client_id: id!, action: "delete" });
+      await invokeDealerAccountAction<{ success: boolean }>({ client_id: id!, action: "delete" });
       toast.success("Credenziali dealer eliminate");
       queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
     } catch (err: any) {
