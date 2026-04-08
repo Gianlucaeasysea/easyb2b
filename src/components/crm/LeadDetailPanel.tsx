@@ -26,14 +26,33 @@ import {
   ArrowRight, Edit2, Save, X, Trash2,
 } from "lucide-react";
 
-const stages = ["new", "contacted", "qualified", "proposal", "won", "lost"];
+const stages = ["new", "contacted", "qualified", "proposal", "onboarding", "won", "lost"];
+const stageLabels: Record<string, string> = {
+  new: "Nuovo",
+  contacted: "Contattato",
+  qualified: "Qualificato",
+  proposal: "Proposta",
+  onboarding: "Onboarding",
+  won: "Vinto",
+  lost: "Perso",
+};
 const statusColors: Record<string, string> = {
-  new: "border-primary text-primary",
-  contacted: "border-warning text-warning",
-  qualified: "border-success text-success",
-  proposal: "border-accent text-accent-foreground",
-  won: "bg-success/20 text-success border-0",
-  lost: "bg-destructive/20 text-destructive border-0",
+  new: "border-blue-500 text-blue-500",
+  contacted: "border-amber-500 text-amber-500",
+  qualified: "border-cyan-500 text-cyan-500",
+  proposal: "border-purple-500 text-purple-500",
+  onboarding: "border-orange-500 text-orange-500",
+  won: "border-emerald-500 text-emerald-500",
+  lost: "border-red-500 text-red-500",
+};
+const stageBarColors: Record<string, string> = {
+  new: "bg-blue-500",
+  contacted: "bg-amber-500",
+  qualified: "bg-cyan-500",
+  proposal: "bg-purple-500",
+  onboarding: "bg-orange-500",
+  won: "bg-emerald-500",
+  lost: "bg-red-500",
 };
 
 const actTypeIcons: Record<string, any> = {
@@ -174,7 +193,7 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
               </DialogHeader>
               <div className="flex items-center gap-2 mt-2">
                 <Badge variant="outline" className={statusColors[lead.status || "new"]}>
-                  {lead.status?.charAt(0).toUpperCase() + lead.status?.slice(1)}
+                  {stageLabels[lead.status || "new"] || lead.status}
                 </Badge>
                 {lead.source && (
                   <Badge variant="secondary" className="text-[10px]">{lead.source}</Badge>
@@ -231,17 +250,17 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
                 onClick={() => updateStatus.mutate(s)}
                 className={`flex-1 h-2 rounded-full transition-all cursor-pointer hover:opacity-80 ${
                   stages.indexOf(lead.status || "new") >= i
-                    ? s === "lost" ? "bg-destructive" : s === "won" ? "bg-success" : "bg-primary"
+                    ? stageBarColors[s] || "bg-primary"
                     : "bg-muted"
                 }`}
-                title={s.charAt(0).toUpperCase() + s.slice(1)}
+                title={stageLabels[s] || s}
               />
             ))}
           </div>
           <div className="flex justify-between mt-1">
             {stages.map(s => (
               <span key={s} className="text-[9px] text-muted-foreground flex-1 text-center">
-                {s.charAt(0).toUpperCase() + s.slice(1)}
+                {stageLabels[s] || s}
               </span>
             ))}
           </div>
@@ -315,7 +334,7 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
                   </SelectTrigger>
                   <SelectContent>
                     {stages.map(s => (
-                      <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+                      <SelectItem key={s} value={s}>{stageLabels[s] || s}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
