@@ -90,9 +90,9 @@ const DealerCart = () => {
 
   const belowMinimum = totalAmount < MIN_ORDER_AMOUNT;
 
-  const createOrder = async (status: "confirmed" | "draft") => {
+  const createOrder = async (status: "submitted" | "draft") => {
     if (!client || items.length === 0) return;
-    if (status === "confirmed" && belowMinimum) return;
+    if (status === "submitted" && belowMinimum) return;
 
     const setLoading = status === "draft" ? setSavingDraft : setSubmitting;
     setLoading(true);
@@ -115,7 +115,7 @@ const DealerCart = () => {
       if (orderError) throw orderError;
       const order = result as any;
 
-      if (status === "confirmed") {
+      if (status === "submitted") {
         try {
           await supabase.functions.invoke('send-order-notification', {
             body: {
@@ -145,15 +145,15 @@ const DealerCart = () => {
     return (
       <div className="max-w-lg mx-auto text-center py-20">
         <CheckCircle className="mx-auto text-success mb-6" size={64} />
-        <h1 className="font-heading text-3xl font-bold text-foreground mb-3">Order Confirmed!</h1>
+        <h1 className="font-heading text-3xl font-bold text-foreground mb-3">Ordine Inviato!</h1>
         <p className="text-muted-foreground mb-2">
-          Your order <span className="font-mono font-semibold text-foreground">{orderConfirmed.code}</span> has been placed.
+          Il tuo ordine <span className="font-mono font-semibold text-foreground">{orderConfirmed.code}</span> è stato inviato con successo.
         </p>
-        <p className="text-sm text-muted-foreground mb-2">A confirmation email has been sent to your registered email address.</p>
-        <p className="text-sm text-muted-foreground mb-8">We'll process it shortly. You can track it in your orders page.</p>
+        <p className="text-sm text-muted-foreground mb-2">Riceverai una conferma dal nostro team.</p>
+        <p className="text-sm text-muted-foreground mb-8">Puoi monitorare lo stato nella sezione Ordini.</p>
         <div className="flex gap-3 justify-center">
-          <Button onClick={() => navigate("/portal/orders")} className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">View My Orders</Button>
-          <Button variant="outline" onClick={() => { setOrderConfirmed(null); navigate("/portal/catalog"); }}>Continue Shopping</Button>
+          <Button onClick={() => navigate("/portal/orders")} className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">I Miei Ordini</Button>
+          <Button variant="outline" onClick={() => { setOrderConfirmed(null); navigate("/portal/catalog"); }}>Continua Shopping</Button>
         </div>
       </div>
     );
@@ -300,11 +300,11 @@ const DealerCart = () => {
           )}
           <div className="space-y-2">
             <Button
-              onClick={() => createOrder("confirmed")}
+              onClick={() => createOrder("submitted")}
               disabled={submitting || belowMinimum}
               className="w-full bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6 text-base disabled:opacity-50"
             >
-              {submitting ? "Placing Order..." : belowMinimum ? `Minimum €${MIN_ORDER_AMOUNT} required` : "Confirm & Place Order"}
+              {submitting ? "Invio in corso..." : belowMinimum ? `Minimo €${MIN_ORDER_AMOUNT} richiesto` : "Invia Ordine"}
             </Button>
             <Button
               variant="outline"

@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Clock, CheckCircle, Truck, Package, Mail } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ArrowLeft, Clock, CheckCircle, Truck, Package, Mail, AlertTriangle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -50,6 +52,9 @@ const AdminOrderDetail = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejecting, setRejecting] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["admin-order", id],
@@ -150,6 +155,62 @@ const AdminOrderDetail = () => {
     }
   };
 
+  const handleConfirmOrder = async () => {
+    if (!id || !order) return;
+    setSaving(true);
+    try {
+      await supabase.from("orders").update({ status: "confirmed" }).eq("id", id);
+      await supabase.from("order_events").insert({
+        order_id: id, event_type: "status_change", title: "Stato aggiornato: Confermato",
+      });
+      await supabase.from("client_notifications").insert({
+        client_id: order.client_id,
+        title: "Ordine confermato",
+        body: `Il tuo ordine #${order.order_code || id.slice(0, 8)} è stato confermato ed è in lavorazione.`,
+        type: "order", order_id: id,
+      });
+      try {
+        await supabase.functions.invoke('send-order-notification', {
+          body: { orderId: id, orderCode: order.order_code, type: 'status_update' },
+        });
+      } catch {}
+      queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      setStatus("confirmed");
+      toast.success("Ordine confermato");
+    } catch (error) {
+      showErrorToast(error, "AdminOrderDetail.confirmOrder");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRejectOrder = async () => {
+    if (!id || !order || !rejectReason.trim()) return;
+    setRejecting(true);
+    try {
+      await supabase.from("orders").update({ status: "cancelled", internal_notes: `Rifiutato: ${rejectReason}` }).eq("id", id);
+      await supabase.from("order_events").insert({
+        order_id: id, event_type: "status_change", title: "Ordine rifiutato", description: rejectReason,
+      });
+      await supabase.from("client_notifications").insert({
+        client_id: order.client_id,
+        title: "Ordine rifiutato",
+        body: `Il tuo ordine #${order.order_code || id.slice(0, 8)} è stato rifiutato. Motivo: ${rejectReason}`,
+        type: "order", order_id: id,
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      setStatus("cancelled");
+      setShowRejectDialog(false);
+      toast.success("Ordine rifiutato");
+    } catch (error) {
+      showErrorToast(error, "AdminOrderDetail.rejectOrder");
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   if (isLoading) return <p className="text-muted-foreground p-6">Loading...</p>;
   if (!order) return <p className="text-muted-foreground p-6">Order not found.</p>;
 
@@ -165,6 +226,25 @@ const AdminOrderDetail = () => {
       <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-4 text-muted-foreground gap-1.5">
         <ArrowLeft size={14} /> Indietro
       </Button>
+
+      {currentStatus === "submitted" && (
+        <Alert className="mb-6 border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
+          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-yellow-800 dark:text-yellow-200 font-medium">
+              Questo ordine è in attesa di conferma
+            </span>
+            <div className="flex gap-2 ml-4">
+              <Button size="sm" onClick={handleConfirmOrder} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1">
+                <CheckCircle size={14} /> Conferma Ordine
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => setShowRejectDialog(true)} className="gap-1">
+                <XCircle size={14} /> Rifiuta Ordine
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="flex items-start justify-between mb-6">
         <div>
@@ -331,6 +411,31 @@ const AdminOrderDetail = () => {
           />
         </div>
       )}
+
+      {/* Reject Order Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rifiuta Ordine</DialogTitle>
+          </DialogHeader>
+          <div>
+            <label className="text-sm text-muted-foreground mb-2 block">Motivo del rifiuto (obbligatorio)</label>
+            <Textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Inserisci il motivo del rifiuto..."
+              rows={3}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>Annulla</Button>
+            <Button variant="destructive" onClick={handleRejectOrder} disabled={rejecting || !rejectReason.trim()}>
+              {rejecting ? "Rifiuto in corso..." : "Conferma Rifiuto"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ShoppingBag, Search, Filter, CalendarIcon, Download, CreditCard, RefreshCw } from "lucide-react";
+import { ShoppingBag, Search, Filter, CalendarIcon, Download, CreditCard, RefreshCw, CheckCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -196,6 +196,7 @@ const AdminOrders = () => {
       <TableHead className="text-xs text-right">Shipping</TableHead>
       <TableHead className="text-xs">Payed Date</TableHead>
       <TableHead className="text-xs">Delivery Date</TableHead>
+      <TableHead className="text-xs w-10"></TableHead>
     </TableRow>
   );
 
@@ -208,6 +209,18 @@ const AdminOrders = () => {
         </div>
         <Button variant="outline" size="sm" onClick={() => exportCSV(false)} className="gap-1">
           <Download size={14} /> Esporta CSV
+        </Button>
+      </div>
+
+      <div className="flex gap-3 mb-4 flex-wrap">
+        <Button
+          variant={statusFilter === "submitted" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter(statusFilter === "submitted" ? "all" : "submitted")}
+          className={`gap-1.5 ${statusFilter === "submitted" ? "bg-blue-600 hover:bg-blue-700 text-white" : ""}`}
+        >
+          <CheckCircle size={14} />
+          Da confermare
         </Button>
       </div>
 
@@ -287,6 +300,38 @@ const AdminOrders = () => {
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.payed_date)}</TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.delivery_date)}</TableCell>
+                  <TableCell onClick={e => e.stopPropagation()}>
+                    {o.status === "submitted" && (
+                      <Button
+                        variant="ghost" size="sm"
+                        className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                        title="Conferma Ordine"
+                        onClick={async () => {
+                          try {
+                            await supabase.from("orders").update({ status: "confirmed" }).eq("id", o.id);
+                            await supabase.from("client_notifications").insert({
+                              client_id: o.client_id,
+                              title: "Ordine confermato",
+                              body: `Il tuo ordine #${o.order_code || o.id.slice(0, 8)} è stato confermato ed è in lavorazione.`,
+                              type: "order",
+                              order_id: o.id,
+                            });
+                            await supabase.from("order_events").insert({
+                              order_id: o.id,
+                              event_type: "status_change",
+                              title: "Stato aggiornato: Confermato",
+                            });
+                            qc.invalidateQueries({ queryKey: ["admin-orders"] });
+                            toast.success("Ordine confermato");
+                          } catch (error) {
+                            showErrorToast(error, "AdminOrders.quickConfirm");
+                          }
+                        }}
+                      >
+                        <CheckCircle size={16} />
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

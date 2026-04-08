@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ShoppingBag, ExternalLink, Clock, CheckCircle, Truck, Package,
-  ChevronDown, ChevronUp, FileText, Download, Bell, Loader2,
+  ChevronDown, ChevronUp, FileText, Download, Bell, Loader2, Send,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -21,15 +21,17 @@ import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
 
 const ORDER_PHASES = [
-  { key: "confirmed", label: "Ordine Ricevuto", icon: CheckCircle },
-  { key: "processing", label: "Confermato", icon: Package },
+  { key: "submitted", label: "Inviato", icon: Send },
+  { key: "confirmed", label: "Confermato", icon: CheckCircle },
+  { key: "processing", label: "In Lavorazione", icon: Package },
   { key: "ready_to_ship", label: "In Preparazione", icon: Clock },
   { key: "shipped", label: "Spedito", icon: Truck },
   { key: "delivered", label: "Consegnato", icon: Package },
 ];
 
 const STATUS_MESSAGES: Record<string, string> = {
-  confirmed: "Il tuo ordine è stato ricevuto ed è in fase di revisione. Riceverai una conferma con la fattura a breve.",
+  submitted: "Il tuo ordine è stato inviato ed è in attesa di conferma dal nostro team.",
+  confirmed: "Il tuo ordine è stato confermato ed è in fase di revisione. Riceverai una conferma con la fattura a breve.",
   processing: "Il tuo ordine è stato confermato e la fattura è disponibile nei documenti. Stiamo preparando la spedizione.",
   ready_to_ship: "Il tuo ordine è pronto e sarà spedito a breve. Riceverai il tracking non appena disponibile.",
   shipped: "Il tuo ordine è stato spedito! Usa il link di tracking per seguire la consegna.",
@@ -52,6 +54,8 @@ const DealerOrders = () => {
   const [pageSize, setPageSize] = useState(20);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [confirmDuplicate, setConfirmDuplicate] = useState<any>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<any>(null);
   const { data: client } = useQuery({
     queryKey: ["my-client"],
     queryFn: async () => {
@@ -149,6 +153,22 @@ const DealerOrders = () => {
     }
   };
 
+  // Cancel submitted order
+  const handleCancelOrder = async (order: any) => {
+    setCancellingId(order.id);
+    try {
+      const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", order.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+      toast.success("Ordine annullato con successo");
+    } catch (error) {
+      showErrorToast(error, "DealerOrders.cancel");
+    } finally {
+      setCancellingId(null);
+      setConfirmCancel(null);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -184,6 +204,7 @@ const DealerOrders = () => {
             const isPaid = (order as any).payment_status === "paid";
             const isCancelled = status === "cancelled";
             const isDraft = status === "draft";
+            const isSubmitted = status === "submitted";
 
             return (
               <div key={order.id} className="glass-card-solid overflow-hidden">
@@ -211,11 +232,22 @@ const DealerOrders = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    {isDraft && <Badge className="border-0 text-xs bg-muted text-muted-foreground">Bozza</Badge>}
-                    <Badge className={`border-0 text-xs ${statusColor}`}>{statusLabel}</Badge>
+                     {isDraft && <Badge className="border-0 text-xs bg-muted text-muted-foreground">Bozza</Badge>}
+                    {isSubmitted && <Badge className="border-0 text-xs bg-blue-100 text-blue-700">Inviato - In attesa di conferma</Badge>}
+                    {!isDraft && !isSubmitted && <Badge className={`border-0 text-xs ${statusColor}`}>{statusLabel}</Badge>}
                     <span className="font-heading font-bold text-foreground text-lg">
                       €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
                     </span>
+                    {isSubmitted && (
+                      <Button
+                        variant="ghost" size="sm"
+                        className="h-7 text-destructive hover:text-destructive/80 text-xs"
+                        onClick={(e) => { e.stopPropagation(); setConfirmCancel(order); }}
+                        title="Annulla Ordine"
+                      >
+                        <XCircle size={14} className="mr-1" /> Annulla
+                      </Button>
+                    )}
                     {!isCancelled && (
                       <Button
                         variant="ghost" size="sm"
@@ -446,6 +478,24 @@ const DealerOrders = () => {
             <Button variant="outline" onClick={() => setConfirmDuplicate(null)}>Annulla</Button>
             <Button onClick={() => handleDuplicate(confirmDuplicate)} disabled={!!duplicatingId}>
               {duplicatingId ? "Duplicazione..." : "Duplica"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Cancel Dialog */}
+      <Dialog open={!!confirmCancel} onOpenChange={() => setConfirmCancel(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Annulla Ordine</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Sei sicuro di voler annullare questo ordine? Questa azione non può essere annullata.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmCancel(null)}>Indietro</Button>
+            <Button variant="destructive" onClick={() => handleCancelOrder(confirmCancel)} disabled={!!cancellingId}>
+              {cancellingId ? "Annullamento..." : "Annulla Ordine"}
             </Button>
           </DialogFooter>
         </DialogContent>
