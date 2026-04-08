@@ -855,7 +855,7 @@ const CRMOrganizationDetail = () => {
             assignedPriceLists={assignedPriceLists || []}
             assignPriceList={assignPriceList}
             removePriceList={removePriceList}
-            
+            priceListItemCounts={priceListItemCounts || {}}
             queryClient={queryClient}
           />
         </TabsContent>
