@@ -89,13 +89,43 @@ const CRMOrganizationDetail = () => {
     return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
   };
 
-  const invokeCreateDealer = async (payload: { client_id: string; email: string; password: string }) => {
-    const { data, error } = await supabase.functions.invoke("create-dealer-account", {
-      body: payload,
+  const invokeDealerAccountAction = async (payload: {
+    client_id: string;
+    email?: string;
+    password?: string;
+    action?: "delete";
+  }) => {
+    const accessToken = session?.access_token ?? (await supabase.auth.getSession()).data.session?.access_token;
+
+    if (!accessToken) {
+      throw new Error("Sessione non valida. Effettua di nuovo il login.");
+    }
+
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(payload),
     });
-    if (error) throw new Error(error.message || "Errore nella creazione delle credenziali");
-    if (data?.error) throw new Error(data.error);
-    return data;
+
+    let result: any = null;
+    try {
+      result = await response.json();
+    } catch {
+      result = null;
+    }
+
+    if (!response.ok) {
+      throw new Error(result?.error || `Errore nella gestione credenziali dealer (${response.status})`);
+    }
+
+    if (result?.error) {
+      throw new Error(result.error);
+    }
+
+    return result;
   };
 
   const handleCreateCredentials = async () => {
@@ -106,7 +136,7 @@ const CRMOrganizationDetail = () => {
     setCreatingCredentials(true);
     try {
       const password = generatePassword();
-      const result = await invokeCreateDealer({ client_id: id!, email: client.email, password });
+      const result = await invokeDealerAccountAction({ client_id: id!, email: client.email, password });
       if (result?.email_sent) {
         toast.success("Credenziali create e inviate via email al dealer");
       } else {
@@ -126,11 +156,7 @@ const CRMOrganizationDetail = () => {
     if (!confirm("Sei sicuro di voler eliminare le credenziali dealer? L'account verrà rimosso definitivamente.")) return;
     setDeletingCredentials(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-dealer-account", {
-        body: { client_id: id!, action: "delete" },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
+      await invokeDealerAccountAction({ client_id: id!, action: "delete" });
       toast.success("Credenziali dealer eliminate");
       queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
     } catch (err: any) {
