@@ -636,7 +636,9 @@ export type Database = {
           lead_id: string | null
           lost_reason: string | null
           notes: string | null
+          order_id: string | null
           probability: number | null
+          source: string | null
           stage: string
           title: string
           updated_at: string | null
@@ -654,7 +656,9 @@ export type Database = {
           lead_id?: string | null
           lost_reason?: string | null
           notes?: string | null
+          order_id?: string | null
           probability?: number | null
+          source?: string | null
           stage?: string
           title: string
           updated_at?: string | null
@@ -672,7 +676,9 @@ export type Database = {
           lead_id?: string | null
           lost_reason?: string | null
           notes?: string | null
+          order_id?: string | null
           probability?: number | null
+          source?: string | null
           stage?: string
           title?: string
           updated_at?: string | null
@@ -698,6 +704,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
