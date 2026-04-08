@@ -1,8 +1,8 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation, Link } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DealerSidebar } from "@/components/portal/DealerSidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, Eye, EyeOff, Bell } from "lucide-react";
+import { LogOut, Eye, EyeOff, Bell, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -77,6 +77,59 @@ const PortalHeader = () => {
   );
 };
 
+const portalRouteNames: Record<string, string> = {
+  "catalog": "Catalogo",
+  "orders": "Ordini",
+  "cart": "Carrello",
+  "invoices": "Fatture",
+  "profile": "Profilo",
+  "notifications": "Notifiche",
+  "support": "Supporto",
+  "marketing": "Materiali",
+  "goals": "Obiettivi",
+  "promos": "Promozioni",
+};
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function PortalBreadcrumbs() {
+  const location = useLocation();
+  const pathParts = location.pathname.replace("/portal", "").split("/").filter(Boolean);
+
+  if (pathParts.length === 0) return null;
+
+  const crumbs: { label: string; path: string }[] = [];
+  let currentPath = "/portal";
+
+  for (const part of pathParts) {
+    currentPath += `/${part}`;
+    const label = portalRouteNames[part];
+    if (label) {
+      crumbs.push({ label, path: currentPath });
+    } else if (UUID_RE.test(part) || /^\d+$/.test(part)) {
+      crumbs.push({ label: `Dettaglio #${part.substring(0, 8)}…`, path: currentPath });
+    } else {
+      crumbs.push({ label: part, path: currentPath });
+    }
+  }
+
+  return (
+    <nav className="flex items-center gap-1 text-xs text-muted-foreground mb-4">
+      <Link to="/portal" className="hover:text-foreground transition-colors">Portale</Link>
+      {crumbs.map((crumb, i) => (
+        <span key={crumb.path} className="flex items-center gap-1">
+          <ChevronRight className="h-3 w-3" />
+          {i === crumbs.length - 1 ? (
+            <span className="text-foreground font-medium">{crumb.label}</span>
+          ) : (
+            <Link to={crumb.path} className="hover:text-foreground transition-colors">{crumb.label}</Link>
+          )}
+        </span>
+      ))}
+    </nav>
+  );
+}
+
 const PortalLayout = () => {
   return (
     <ClientModeProvider>
@@ -87,6 +140,7 @@ const PortalLayout = () => {
             <div className="flex-1 flex flex-col">
               <PortalHeader />
               <main className="flex-1 p-6 overflow-auto">
+                <PortalBreadcrumbs />
                 <Outlet />
               </main>
             </div>
