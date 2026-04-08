@@ -1,0 +1,2 @@
+UPDATE public.clients SET portal_password = NULL WHERE portal_password IS NOT NULL;
+COMMENT ON COLUMN public.clients.portal_password IS 'DEPRECATED - do not use. Passwords are managed by Supabase Auth.';
