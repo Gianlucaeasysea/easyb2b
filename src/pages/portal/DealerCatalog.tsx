@@ -2,11 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClientMode } from "@/contexts/ClientModeContext";
-import { Package, Search, ShoppingCart, Minus, Plus } from "lucide-react";
+import { Package, Search, ShoppingCart, Minus, Plus, AlertTriangle } from "lucide-react";
 import OptimizedImage from "@/components/ui/OptimizedImage";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
@@ -113,9 +114,20 @@ const DealerCatalog = () => {
   });
 
   const hasPriceList = priceListProductMap.size > 0;
+
+  // Fetch ALL active B2B products when dealer has no price list (to show them disabled)
+  const { data: allProducts } = useQuery({
+    queryKey: ["all-b2b-products"],
+    queryFn: async () => {
+      const { data } = await supabase.from("products").select("*").eq("active_b2b", true);
+      return data || [];
+    },
+    enabled: !hasPriceList && !!client?.id,
+  });
+
   const catalogProducts = hasPriceList
     ? Array.from(priceListProductMap.entries()).map(([id, { product }]) => product).filter(Boolean)
-    : [];
+    : (allProducts || []);
 
   const MACRO_CATEGORIES = [
     { label: "Boat Hook", keywords: ["boat hook", "jake"] },
@@ -146,7 +158,8 @@ const DealerCatalog = () => {
   const selectedDetail = selectedProduct ? getDetailForProduct(selectedProduct) : null;
   const selectedPlEntry = selectedProduct ? priceListProductMap.get(selectedProduct.id) : null;
   const selectedRetailPrice = selectedProduct ? Number(selectedProduct.compare_at_price || selectedProduct.price) : 0;
-  const selectedB2bPrice = selectedPlEntry?.customPrice ?? Number(selectedProduct?.price || 0);
+  const selectedHasPrice = !!selectedPlEntry;
+  const selectedB2bPrice = selectedPlEntry?.customPrice ?? 0;
   const selectedDiscountPct = selectedRetailPrice > 0 ? Math.round((1 - selectedB2bPrice / Number(selectedProduct?.price || 1)) * 100) : 0;
 
   return (
@@ -179,11 +192,19 @@ const DealerCatalog = () => {
         </div>
       </div>
 
-      {!hasPriceList ? (
+      {!hasPriceList && (
+        <Alert className="mb-6 border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
+          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+            Il tuo listino prezzi non è ancora stato assegnato. Contatta il tuo referente commerciale per attivare i prezzi personalizzati.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {catalogProducts.length === 0 ? (
         <div className="text-center py-20">
           <Package className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">No price list has been assigned to your account yet.</p>
-          <p className="text-xs text-muted-foreground mt-1">Please contact your sales representative.</p>
+          <p className="text-muted-foreground">Nessun prodotto disponibile.</p>
         </div>
       ) : (
         <>
@@ -225,10 +246,13 @@ const DealerCatalog = () => {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.map((p, i) => {
                 const plEntry = priceListProductMap.get(p.id);
-                const retailPrice = Number(p.compare_at_price || p.price);
-                const b2bPrice = plEntry?.customPrice ?? Number(p.price);
-                const discountPct = retailPrice > 0 ? Math.round((1 - b2bPrice / Number(p.price)) * 100) : 0;
+                const productHasPrice = !!plEntry;
+                const b2bPrice = plEntry?.customPrice ?? 0;
+                const discountPct = productHasPrice && Number(p.price) > 0
+                  ? Math.round((1 - b2bPrice / Number(p.price)) * 100)
+                  : 0;
                 const inStock = (p.stock_quantity ?? 0) > 0;
+                const canAddToCart = productHasPrice && inStock;
                 const detail = getDetailForProduct(p);
                 const leadTime = (detail as any)?.lead_time;
 
@@ -261,7 +285,7 @@ const DealerCatalog = () => {
                       {isClientMode ? (
                         <div className="flex items-end justify-between">
                           <div>
-                            <p className="font-heading text-lg font-bold text-foreground">€{retailPrice.toFixed(2)}</p>
+                            <p className="font-heading text-lg font-bold text-foreground">€{Number(p.compare_at_price || p.price).toFixed(2)}</p>
                             <p className="text-xs text-muted-foreground">Retail price</p>
                           </div>
                           <div className="text-right">
@@ -277,11 +301,21 @@ const DealerCatalog = () => {
                         <>
                           <div className="flex items-end justify-between">
                             <div>
-                              <p className="text-xs text-muted-foreground line-through">€{Number(p.price).toFixed(2)}</p>
-                              <p className="font-heading text-lg font-bold text-foreground">€{b2bPrice.toFixed(2)}</p>
+                              {productHasPrice ? (
+                                <>
+                                  {p.compare_at_price && (
+                                    <p className="text-xs text-muted-foreground line-through">€{Number(p.compare_at_price).toFixed(2)}</p>
+                                  )}
+                                  <p className="font-heading text-lg font-bold text-foreground">€{b2bPrice.toFixed(2)}</p>
+                                </>
+                              ) : !hasPriceList ? (
+                                <p className="text-sm font-medium text-muted-foreground italic">Prezzo su richiesta</p>
+                              ) : (
+                                <p className="text-sm font-medium text-muted-foreground italic">Non incluso nel tuo listino</p>
+                              )}
                             </div>
                             <div className="text-right">
-                              {discountPct > 0 && (
+                              {productHasPrice && discountPct > 0 && (
                                 <Badge variant="outline" className="text-[10px] bg-success/20 text-success border-0 mb-1">-{discountPct}%</Badge>
                               )}
                               <span className={`block text-xs font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
@@ -297,7 +331,7 @@ const DealerCatalog = () => {
                               variant="outline"
                               size="icon"
                               className="h-8 w-8 shrink-0"
-                              disabled={!inStock}
+                              disabled={!canAddToCart}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const curr = quantities[p.id] || 1;
@@ -318,12 +352,13 @@ const DealerCatalog = () => {
                               }}
                               onClick={(e) => e.stopPropagation()}
                               className="w-14 text-center h-8 text-sm"
+                              disabled={!canAddToCart}
                             />
                             <Button
                               variant="outline"
                               size="icon"
                               className="h-8 w-8 shrink-0"
-                              disabled={!inStock || (quantities[p.id] || 1) >= (p.stock_quantity ?? 999)}
+                              disabled={!canAddToCart || (quantities[p.id] || 1) >= (p.stock_quantity ?? 999)}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const curr = quantities[p.id] || 1;
@@ -333,7 +368,7 @@ const DealerCatalog = () => {
                               <Plus size={12} />
                             </Button>
                             <Button
-                              disabled={!inStock}
+                              disabled={!canAddToCart}
                               size="sm"
                               className="flex-1 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs h-8"
                               onClick={(e) => {
@@ -379,9 +414,14 @@ const DealerCatalog = () => {
           retailPrice={selectedRetailPrice}
           discountPct={selectedDiscountPct}
           isClientMode={isClientMode}
+          canAddToCart={selectedHasPrice && (selectedProduct?.stock_quantity ?? 0) > 0}
           onAddToCart={() => {
+            if (!selectedHasPrice) {
+              toast.error("Impossibile aggiungere: prezzo non disponibile");
+              return;
+            }
             const plEntry = priceListProductMap.get(selectedProduct.id);
-            const b2bPrice = plEntry?.customPrice ?? Number(selectedProduct.price);
+            const b2bPrice = plEntry!.customPrice;
             const discountPct = Number(selectedProduct.price) > 0 ? Math.round((1 - b2bPrice / Number(selectedProduct.price)) * 100) : 0;
             addItem({
               productId: selectedProduct.id,
@@ -394,7 +434,7 @@ const DealerCatalog = () => {
               image: selectedProduct.images?.[0] || null,
             });
             toast.success(`${selectedProduct.name} added to cart`);
-          }}
+          }
         />
       )}
     </div>
