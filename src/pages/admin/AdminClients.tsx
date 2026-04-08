@@ -77,14 +77,6 @@ const AdminClients = () => {
     },
   });
 
-  const { data: discountTiers } = useQuery({
-    queryKey: ["discount-tiers"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("discount_tiers").select("*").order("sort_order");
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Sales users for assignment
   const { data: salesUsers } = useQuery({

@@ -252,14 +252,7 @@ const CRMOrganizationDetail = () => {
     else { toast.success("Listino rimosso"); refetchAssignedLists(); }
   };
 
-  const updateDiscountClass = async (newClass: string) => {
-    const { error } = await supabase.from("clients").update({ discount_class: newClass }).eq("id", id!);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Classe sconto aggiornata");
-      queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
-    }
-  };
+  // discount_class deprecated - use price lists instead
 
   const totalSpent = orders?.filter(o => o.status !== "draft").reduce((sum, o) => sum + Number(o.total_amount || 0), 0) || 0;
   const totalOrders = orders?.length || 0;
