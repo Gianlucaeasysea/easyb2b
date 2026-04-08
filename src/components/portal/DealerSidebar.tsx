@@ -24,22 +24,6 @@ const allItems = [
 export function DealerSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
-  const { user } = useAuth();
-
-  const { data: client } = useQuery({
-    queryKey: ["my-client-visibility"],
-    queryFn: async () => {
-      const { data } = await supabase.from("clients").select("show_discount_tiers, show_goals").eq("user_id", user!.id).maybeSingle();
-      return data;
-    },
-    enabled: !!user,
-  });
-
-  const items = allItems.filter(item => {
-    if (item.key === "goals" && client && !(client as any).show_goals) return false;
-    return true;
-  });
 
   return (
     <Sidebar collapsible="icon">

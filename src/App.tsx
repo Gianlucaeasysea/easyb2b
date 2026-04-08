@@ -107,9 +107,11 @@ const App = () => (
               <Route path="catalog" element={<DealerCatalog />} />
               <Route path="orders" element={<DealerOrders />} />
               <Route path="cart" element={<DealerCart />} />
-              <Route path="promos" element={<DealerPromos />} />
-              <Route path="goals" element={<DealerGoals />} />
-              <Route path="marketing" element={<DealerMarketing />} />
+              <Route path="invoices" element={<DealerInvoices />} />
+              {/* TODO: Re-enable when page is implemented */}
+              {/* <Route path="promos" element={<DealerPromos />} /> */}
+              {/* <Route path="goals" element={<DealerGoals />} /> */}
+              {/* <Route path="marketing" element={<DealerMarketing />} /> */}
               <Route path="notifications" element={<DealerNotifications />} />
               <Route path="profile" element={<DealerProfile />} />
               <Route path="support" element={<DealerSupport />} />
