@@ -227,6 +227,25 @@ const AdminOrderDetail = () => {
         <ArrowLeft size={14} /> Indietro
       </Button>
 
+      {currentStatus === "submitted" && (
+        <Alert className="mb-6 border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
+          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-yellow-800 dark:text-yellow-200 font-medium">
+              Questo ordine è in attesa di conferma
+            </span>
+            <div className="flex gap-2 ml-4">
+              <Button size="sm" onClick={handleConfirmOrder} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1">
+                <CheckCircle size={14} /> Conferma Ordine
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => setShowRejectDialog(true)} className="gap-1">
+                <XCircle size={14} /> Rifiuta Ordine
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">
