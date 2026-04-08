@@ -337,7 +337,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
         </div>
       ) : (
         <div className="space-y-2">
-          {groupedByThread.map((item: any) => {
+          {groupedByThread.map((item) => {
             if (item.type === "single") {
               return renderEmailCard(item.msg);
             }
