@@ -9,14 +9,31 @@ const allowedOrigins = [
   "http://localhost:3000",
 ];
 
+const isTrustedOrigin = (origin: string) => {
+  if (!origin) return false;
+
+  if (allowedOrigins.includes(origin)) return true;
+
+  try {
+    const { hostname, protocol } = new URL(origin);
+    if (!["https:", "http:"].includes(protocol)) return false;
+
+    return hostname.endsWith(".lovable.app") || hostname.endsWith(".lovableproject.com") || hostname === "localhost";
+  } catch {
+    return false;
+  }
+};
+
 export function getCorsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") || "";
-  const isAllowed = allowedOrigins.some((allowed) => allowed && origin === allowed);
+  const allowOrigin = isTrustedOrigin(origin) ? origin : configuredOrigin;
 
   return {
-    "Access-Control-Allow-Origin": isAllowed ? origin : configuredOrigin,
+    "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type, x-requested-with, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Allow-Credentials": "true",
+    Vary: "Origin",
   };
 }
