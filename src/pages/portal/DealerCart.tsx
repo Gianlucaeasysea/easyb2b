@@ -98,31 +98,22 @@ const DealerCart = () => {
     setLoading(true);
 
     try {
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          client_id: client.id,
-          total_amount: totalAmount,
-          status,
-          notes: notes || null,
-          payment_terms: (client as any).payment_terms || null,
-        } as any)
-        .select()
-        .maybeSingle();
+      const { data: result, error: orderError } = await supabase.rpc("create_order_with_items", {
+        p_client_id: client.id,
+        p_status: status,
+        p_notes: notes || null,
+        p_payment_terms: (client as any).payment_terms || null,
+        p_items: items.map(item => ({
+          product_id: item.productId,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          discount_pct: item.discountPct || 0,
+          subtotal: item.b2bPrice * item.quantity,
+        })),
+      });
 
       if (orderError) throw orderError;
-
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.productId,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        discount_pct: item.discountPct,
-        subtotal: item.b2bPrice * item.quantity,
-      }));
-
-      const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
-      if (itemsError) throw itemsError;
+      const order = result as any;
 
       if (status === "confirmed") {
         try {

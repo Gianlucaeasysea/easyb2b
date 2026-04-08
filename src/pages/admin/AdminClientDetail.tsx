@@ -263,25 +263,20 @@ const AdminClientDetail = () => {
     if (!id || orderItems.length === 0) return;
     setCreatingOrder(true);
     try {
-      const totalAmount = orderItems.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
-      const { data: order, error: orderErr } = await supabase.from("orders").insert({
-        client_id: id,
-        status: "confirmed",
-        order_type: "MANUAL B2B",
-        total_amount: totalAmount,
-        notes: newOrderNotes || null,
-      }).select().maybeSingle();
+      const { data: order, error: orderErr } = await supabase.rpc("create_order_with_items", {
+        p_client_id: id,
+        p_status: "confirmed",
+        p_notes: newOrderNotes || null,
+        p_order_type: "MANUAL B2B",
+        p_items: orderItems.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount_pct: 0,
+          subtotal: item.unit_price * item.quantity,
+        })),
+      });
       if (orderErr) throw orderErr;
-
-      const items = orderItems.map(item => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        subtotal: item.unit_price * item.quantity,
-      }));
-      const { error: itemsErr } = await supabase.from("order_items").insert(items);
-      if (itemsErr) throw itemsErr;
 
       await supabase.from("order_events").insert({
         order_id: order.id,

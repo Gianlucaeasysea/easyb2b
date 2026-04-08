@@ -126,19 +126,14 @@ const DealerOrders = () => {
 
       if (!validItems.length) { toast.error("Nessun prodotto disponibile per la duplicazione"); return; }
 
-      const totalAmount = validItems.reduce((sum, i) => sum + i.subtotal, 0);
-      const { data: newOrder, error: orderErr } = await supabase.from("orders").insert({
-        client_id: client.id,
-        status: "draft",
-        total_amount: totalAmount,
-        notes: `Duplicato da ordine ${(order as any).order_code || order.id.slice(0, 8)}`,
-        payment_terms: (client as any).payment_terms || null,
-      }).select().maybeSingle();
+      const { data: newOrder, error: orderErr } = await supabase.rpc("create_order_with_items", {
+        p_client_id: client.id,
+        p_status: "draft",
+        p_notes: `Duplicato da ordine ${(order as any).order_code || order.id.slice(0, 8)}`,
+        p_payment_terms: (client as any).payment_terms || null,
+        p_items: validItems,
+      });
       if (orderErr) throw orderErr;
-
-      const orderItemsToInsert = validItems.map(i => ({ order_id: newOrder.id, ...i }));
-      const { error: itemsErr } = await supabase.from("order_items").insert(orderItemsToInsert);
-      if (itemsErr) throw itemsErr;
 
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
       if (excludedCount > 0) {
