@@ -332,6 +332,7 @@ const AdminOrders = () => {
                       </Button>
                     )}
                   </TableCell>
+                </TableRow>
               ))}
             </TableBody>
           </Table>
