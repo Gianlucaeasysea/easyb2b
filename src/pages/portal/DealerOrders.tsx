@@ -97,8 +97,9 @@ const DealerOrders = () => {
         <div className="space-y-4">
           {orders.map(order => {
             const status = order.status || "draft";
-            const cfg = statusConfig[status] || statusConfig.draft;
-            const Icon = cfg?.icon || Clock;
+            const statusLabel = getOrderStatusLabel(status);
+            const statusColor = getOrderStatusColor(status);
+            const statusMessage = STATUS_MESSAGES[status] || null;
             const isExpanded = expandedOrder === order.id;
             const docs = (order as any).order_documents || [];
             const items = (order.order_items || []) as any[];
