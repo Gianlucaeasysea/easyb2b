@@ -218,7 +218,17 @@ const DealerOrders = () => {
                   <div className="flex items-center gap-4">
                      {isDraft && <Badge className="border-0 text-xs bg-muted text-muted-foreground">Bozza</Badge>}
                     {isSubmitted && <Badge className="border-0 text-xs bg-blue-100 text-blue-700">Inviato - In attesa di conferma</Badge>}
-                    <span className="font-heading font-bold text-foreground text-lg">
+                    {!isDraft && !isSubmitted && <Badge className={`border-0 text-xs ${statusColor}`}>{statusLabel}</Badge>}
+                    {isSubmitted && (
+                      <Button
+                        variant="ghost" size="sm"
+                        className="h-7 text-destructive hover:text-destructive/80 text-xs"
+                        onClick={(e) => { e.stopPropagation(); setConfirmCancel(order); }}
+                        title="Annulla Ordine"
+                      >
+                        <XCircle size={14} className="mr-1" /> Annulla
+                      </Button>
+                    )}
                       €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
                     </span>
                     {!isCancelled && (
