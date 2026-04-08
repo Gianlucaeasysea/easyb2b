@@ -17,14 +17,30 @@ export const invokeDealerAccountAction = async <T>(payload: DealerAccountPayload
   try {
     const { data, error } = await supabase.functions.invoke("create-dealer-account", {
       body: payload,
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "X-Requested-With": "XMLHttpRequest",
+      },
     });
 
     if (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isTransportError = /failed to fetch|fetch failed|network|relay|status 0/i.test(message);
+      if (!isTransportError) {
+        throw error;
+      }
+    }
+
+    if (data) {
+      return data as T;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const isTransportError = /failed to fetch|fetch failed|network|relay|status 0/i.test(message);
+    if (!isTransportError) {
       throw error;
     }
 
-    return data as T;
-  } catch {
     // Fallback for preview/runtime environments where the SDK transport can fail intermittently.
   }
 
