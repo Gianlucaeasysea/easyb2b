@@ -165,13 +165,7 @@ const CRMRequests = () => {
                 {selectedRequest.status === "new" && (
                   <div className="flex gap-2 pt-2 border-t border-border">
                     <Button className="flex-1 gap-1 bg-foreground text-background" onClick={() => convertToLead.mutate(selectedRequest)}>
-                      <ArrowRight size={14} /> Open in Pipeline
-                    </Button>
-                    <Button variant="outline" className="gap-1" onClick={() => {
-                      updateStatus.mutate({ id: selectedRequest.id, status: "approved" });
-                      setSelectedRequest(null);
-                    }}>
-                      <Check size={14} /> Approva
+                      <Check size={14} /> Approva e Apri in Pipeline
                     </Button>
                     <Button variant="outline" className="gap-1 text-destructive" onClick={() => {
                       updateStatus.mutate({ id: selectedRequest.id, status: "rejected" });
@@ -185,9 +179,8 @@ const CRMRequests = () => {
                   <div className="pt-2 border-t border-border">
                     <Badge className={
                       selectedRequest.status === "converted" ? "bg-success/20 text-success border-0" :
-                      selectedRequest.status === "approved" ? "bg-primary/20 text-primary border-0" :
                       "bg-destructive/20 text-destructive border-0"
-                    }>{selectedRequest.status === "converted" ? "In Pipeline" : selectedRequest.status === "approved" ? "Approvato" : "Rifiutato"}</Badge>
+                    }>{selectedRequest.status === "converted" ? "In Pipeline" : "Rifiutato"}</Badge>
                   </div>
                 )}
               </div>
