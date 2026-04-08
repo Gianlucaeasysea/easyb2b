@@ -111,20 +111,7 @@ const ClientNotificationPreferences = ({ clientId }: { clientId: string }) => {
   );
 };
 
-const statusColors: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  confirmed: "bg-chart-4/20 text-chart-4",
-  shipped: "bg-primary/20 text-primary",
-  delivered: "bg-success/20 text-success",
-  Delivered: "bg-success/20 text-success",
-  "To be prepared": "bg-warning/20 text-warning",
-  Ready: "bg-chart-4/20 text-chart-4",
-  "On the road": "bg-primary/20 text-primary",
-  Payed: "bg-success/20 text-success",
-  cancelled: "bg-destructive/20 text-destructive",
-  Returned: "bg-destructive/20 text-destructive",
-  lost: "bg-destructive/20 text-destructive",
-};
+import { getOrderStatusLabel, getOrderStatusColor, getPaymentStatusLabel, getPaymentStatusColor } from "@/lib/constants";
 
 const AdminClientDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -892,10 +879,10 @@ const AdminClientDetail = () => {
                         <TableRow key={o.id} className="cursor-pointer hover:bg-secondary/50" onClick={() => setSelectedOrder(o)}>
                           <TableCell className="font-mono text-xs font-semibold">{(o as any).order_code || `#${o.id.slice(0, 8)}`}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">{fmtDate(o.created_at)}</TableCell>
-                          <TableCell><Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"] || "bg-muted text-muted-foreground"}`}>{o.status || "draft"}</Badge></TableCell>
+                          <TableCell><Badge className={`border-0 text-[10px] ${getOrderStatusColor(o.status || "draft")}`}>{getOrderStatusLabel(o.status || "draft")}</Badge></TableCell>
                           <TableCell>
                             {(o as any).payment_status ? (
-                              <Badge className={`border-0 text-[10px] ${(o as any).payment_status === 'Payed' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>{(o as any).payment_status}</Badge>
+                              <Badge className={`border-0 text-[10px] ${getPaymentStatusColor((o as any).payment_status)}`}>{getPaymentStatusLabel((o as any).payment_status)}</Badge>
                             ) : <span className="text-xs text-muted-foreground">—</span>}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">{(o.order_items as any[])?.length || 0}</TableCell>
@@ -1090,7 +1077,7 @@ const AdminClientDetail = () => {
               <DialogHeader>
                 <DialogTitle className="font-heading text-lg">Order {(selectedOrder as any).order_code || `#${selectedOrder.id.slice(0, 8)}`}</DialogTitle>
                 <p className="text-sm text-muted-foreground">
-                  {fmtDate(selectedOrder.created_at)} · <Badge className={`border-0 text-[10px] ${statusColors[selectedOrder.status || "draft"] || "bg-muted text-muted-foreground"}`}>{selectedOrder.status || "draft"}</Badge>
+                  {fmtDate(selectedOrder.created_at)} · <Badge className={`border-0 text-[10px] ${getOrderStatusColor(selectedOrder.status || "draft")}`}>{getOrderStatusLabel(selectedOrder.status || "draft")}</Badge>
                 </p>
               </DialogHeader>
               <div className="grid grid-cols-2 gap-4 text-sm my-4">

@@ -26,32 +26,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
 import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
-
-const statusColors: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  confirmed: "bg-chart-4/20 text-chart-4",
-  processing: "bg-primary/20 text-primary",
-  shipped: "bg-primary/20 text-primary",
-  delivered: "bg-success/20 text-success",
-  Delivered: "bg-success/20 text-success",
-  "To be prepared": "bg-warning/20 text-warning",
-  Ready: "bg-chart-4/20 text-chart-4",
-  "On the road": "bg-primary/20 text-primary",
-  Payed: "bg-success/20 text-success",
-  cancelled: "bg-destructive/20 text-destructive",
-  lead: "bg-primary/20 text-primary",
-  qualifying: "bg-warning/20 text-warning",
-  onboarding: "bg-chart-4/20 text-chart-4",
-  active: "bg-success/20 text-success",
-  at_risk: "bg-destructive/20 text-destructive",
-  churned: "bg-muted text-muted-foreground",
-  disqualified: "bg-muted text-muted-foreground",
-};
-
-const statusLabel: Record<string, string> = {
-  lead: "Lead", qualifying: "Qualifying", onboarding: "Onboarding",
-  active: "Active", at_risk: "At Risk", churned: "Churned", disqualified: "Disqualified",
-};
+import {
+  getOrderStatusLabel, getOrderStatusColor,
+  getPaymentStatusLabel, getPaymentStatusColor,
+  getClientStatusColor, getClientStatusLabel,
+} from "@/lib/constants";
 
 const contactTypeColors: Record<string, string> = {
   decision_maker: "bg-destructive/20 text-destructive",
@@ -365,8 +344,8 @@ const CRMOrganizationDetail = () => {
             {client.country || ""} {client.zone ? `· ${client.zone}` : ""}
           </p>
         </div>
-        <Badge className={`border-0 ${statusColors[client.status || "lead"]}`}>
-          {statusLabel[client.status || "lead"] || client.status || "lead"}
+        <Badge className={`border-0 ${getClientStatusColor(client.status || "lead")}`}>
+          {getClientStatusLabel(client.status || "lead")}
         </Badge>
         {client.email && (
           <Button size="sm" onClick={() => setComposeOpen(true)} className="gap-1">
@@ -592,7 +571,7 @@ const CRMOrganizationDetail = () => {
             {!orders?.length ? (
               <div className="p-8 text-center text-muted-foreground text-sm">
                 <ShoppingBag size={32} className="mx-auto mb-2 opacity-30" />
-                <p>Nessun ordine — il cliente è in {statusLabel[client.status || "lead"] || "onboarding"}</p>
+                <p>Nessun ordine — il cliente è in {getClientStatusLabel(client.status || "lead")}</p>
               </div>
             ) : (
               <Table>
@@ -611,10 +590,10 @@ const CRMOrganizationDetail = () => {
                     <TableRow key={o.id} className="hover:bg-secondary/50 cursor-pointer" onClick={() => setSelectedOrderId(o.id)}>
                       <TableCell className="font-mono text-xs font-semibold text-primary">{(o as any).order_code || `#${o.id.slice(0, 8)}`}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{fmtDate(o.created_at)}</TableCell>
-                      <TableCell><Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"]}`}>{o.status || "draft"}</Badge></TableCell>
+                      <TableCell><Badge className={`border-0 text-[10px] ${getOrderStatusColor(o.status || "draft")}`}>{getOrderStatusLabel(o.status || "draft")}</Badge></TableCell>
                       <TableCell>
                         {(o as any).payment_status ? (
-                          <Badge className={`border-0 text-[10px] ${(o as any).payment_status === 'Payed' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>{(o as any).payment_status}</Badge>
+                          <Badge className={`border-0 text-[10px] ${getPaymentStatusColor((o as any).payment_status)}`}>{getPaymentStatusLabel((o as any).payment_status)}</Badge>
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm font-semibold">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
@@ -1111,7 +1090,6 @@ export default CRMOrganizationDetail;
 
 // Deals sub-tab component
 const stageColors: Record<string, string> = {
-  ...statusColors,
   qualification: "bg-primary/20 text-primary",
   proposal: "bg-warning/20 text-warning",
   negotiation: "bg-chart-4/20 text-chart-4",

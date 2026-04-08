@@ -6,6 +6,7 @@ import {
   AlertTriangle, RefreshCw, UserCheck, Building2, Handshake, CheckSquare, ListTodo, Video, MailOpen
 } from "lucide-react";
 import OrderDetailsTable from "@/components/crm/OrderDetailsTable";
+import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { format, isToday, isPast, differenceInDays, isValid } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,24 +35,6 @@ const StatCard = ({ icon: Icon, label, value, color, sub }: { icon: any; label: 
   </div>
 );
 
-const statusColors: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  confirmed: "bg-chart-4/20 text-chart-4",
-  processing: "bg-primary/20 text-primary",
-  shipped: "bg-primary/20 text-primary",
-  delivered: "bg-success/20 text-success",
-  Delivered: "bg-success/20 text-success",
-  "To be prepared": "bg-warning/20 text-warning",
-  Ready: "bg-chart-4/20 text-chart-4",
-  "On the road": "bg-primary/20 text-primary",
-  Payed: "bg-success/20 text-success",
-  cancelled: "bg-destructive/20 text-destructive",
-};
-
-const phaseConfig: Record<string, { label: string; color: string }> = {
-  confirmed: { label: "Nuovo Ordine", color: "bg-warning/20 text-warning" },
-  processing: { label: "Confermato", color: "bg-chart-4/20 text-chart-4" },
-};
 
 const typeIcons: Record<string, any> = {
   call: Phone, email: Mail, whatsapp: MessageCircle, meeting: Calendar, note: Activity,
@@ -430,7 +413,8 @@ const CRMDashboard = () => {
             {newOrders.map(o => {
               const docs = (o as any).order_documents || [];
               const hasDocs = hasInvoiceOrConfirmation(docs);
-              const phase = phaseConfig[o.status || "confirmed"] || phaseConfig.confirmed;
+              const phaseLabel = getOrderStatusLabel(o.status || "confirmed");
+              const phaseColor = getOrderStatusColor(o.status || "confirmed");
               return (
                 <div key={o.id} className="p-4 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 transition-colors">
                   <div className="flex items-start justify-between mb-2">
@@ -439,7 +423,7 @@ const CRMDashboard = () => {
                         <span className="font-heading font-bold text-foreground">
                           {(o as any).order_code || `#${o.id.slice(0, 8)}`}
                         </span>
-                        <Badge className={`border-0 text-[10px] ${phase.color}`}>{phase.label}</Badge>
+                        <Badge className={`border-0 text-[10px] ${phaseColor}`}>{phaseLabel}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {(o as any).clients?.company_name || "—"}
