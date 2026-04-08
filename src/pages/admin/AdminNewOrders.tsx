@@ -110,7 +110,8 @@ const AdminNewOrders = () => {
           {orders.map(o => {
             const docs = (o as any).order_documents || [];
             const hasDocs = hasInvoiceOrConfirmation(docs);
-            const phase = phaseConfig[o.status || "confirmed"] || phaseConfig.confirmed;
+            const phaseLabel = getOrderStatusLabel(o.status || "confirmed");
+            const phaseColor = getOrderStatusColor(o.status || "confirmed");
 
             return (
               <div key={o.id} className="glass-card-solid p-5">
@@ -120,7 +121,7 @@ const AdminNewOrders = () => {
                       <h3 className="font-heading text-lg font-bold text-foreground">
                         {(o as any).order_code || `#${o.id.slice(0, 8)}`}
                       </h3>
-                      <Badge className={`border-0 text-[10px] ${phase.color}`}>{phase.label}</Badge>
+                      <Badge className={`border-0 text-[10px] ${phaseColor}`}>{phaseLabel}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {(o as any).clients?.company_name || "—"}
