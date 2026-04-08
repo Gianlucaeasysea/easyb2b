@@ -1,6 +1,7 @@
 // ── Order Status ──────────────────────────────────────────────
 export const ORDER_STATUSES = {
   draft: "Bozza",
+  submitted: "Inviato",
   confirmed: "Confermato",
   processing: "In lavorazione",
   ready_to_ship: "Pronto per spedizione",
@@ -15,7 +16,8 @@ export const ORDER_STATUS_MAP = ORDER_STATUSES as Record<string, string>;
 
 export const ORDER_STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
-  confirmed: "bg-blue-100 text-blue-700",
+  submitted: "bg-blue-100 text-blue-700",
+  confirmed: "bg-emerald-100 text-emerald-700",
   processing: "bg-yellow-100 text-yellow-700",
   ready_to_ship: "bg-orange-100 text-orange-700",
   shipped: "bg-purple-100 text-purple-700",
@@ -43,7 +45,8 @@ export const PAYMENT_STATUS_COLORS: Record<string, string> = {
 // ── Chart Colors (hex for recharts) ──────────────────────────
 export const ORDER_STATUS_CHART_COLORS: Record<string, string> = {
   draft: "#9ca3af",
-  confirmed: "#3b82f6",
+  submitted: "#3b82f6",
+  confirmed: "#10b981",
   processing: "#f59e0b",
   ready_to_ship: "#f97316",
   shipped: "#8b5cf6",
