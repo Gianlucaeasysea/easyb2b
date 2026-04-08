@@ -14,36 +14,6 @@ export const invokeDealerAccountAction = async <T>(payload: DealerAccountPayload
     throw new Error("Sessione non valida. Effettua di nuovo il login.");
   }
 
-  try {
-    const { data, error } = await supabase.functions.invoke("create-dealer-account", {
-      body: payload,
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        "X-Requested-With": "XMLHttpRequest",
-      },
-    });
-
-    if (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const isTransportError = /failed to fetch|fetch failed|network|relay|status 0/i.test(message);
-      if (!isTransportError) {
-        throw error;
-      }
-    }
-
-    if (data) {
-      return data as T;
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const isTransportError = /failed to fetch|fetch failed|network|relay|status 0/i.test(message);
-    if (!isTransportError) {
-      throw error;
-    }
-
-    // Fallback for preview/runtime environments where the SDK transport can fail intermittently.
-  }
-
   let response: Response;
 
   try {
@@ -52,12 +22,23 @@ export const invokeDealerAccountAction = async <T>(payload: DealerAccountPayload
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
       body: JSON.stringify(payload),
     });
-  } catch {
-    throw new Error("Impossibile raggiungere il backend. Riprova tra qualche secondo.");
+  } catch (fetchError) {
+    try {
+      const { data, error } = await supabase.functions.invoke("create-dealer-account", {
+        body: payload,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      return data as T;
+    } catch {
+      throw new Error("Impossibile raggiungere il backend. Riprova tra qualche secondo.");
+    }
   }
 
   let result: any = null;
