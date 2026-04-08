@@ -53,7 +53,6 @@ const DealerOrders = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
-  const [confirmDuplicate, setConfirmDuplicate] = useState<any>(null);
   const [priceCheckData, setPriceCheckData] = useState<{
     order: any;
     items: { product_id: string; name: string; sku: string; quantity: number; originalPrice: number; currentPrice: number | null; available: boolean }[];
