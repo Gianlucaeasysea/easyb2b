@@ -18,10 +18,3 @@ export function getCorsHeaders(request: Request): Record<string, string> {
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
   };
 }
-
-// Legacy export for backward compatibility during migration
-export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
