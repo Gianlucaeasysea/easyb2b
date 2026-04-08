@@ -5,7 +5,7 @@ import { checkAndRunAutomations } from "@/hooks/useAutomations";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Plus, Phone, Mail, MessageCircle, Search, Trash2, ArrowRight, LayoutList, Columns3, UserCheck, RefreshCw, FileText, Trophy, XCircle, UserPlus, CheckCircle } from "lucide-react";
+import { Users, Plus, Phone, Mail, MessageCircle, Search, Trash2, ArrowRight, LayoutList, Columns3, UserCheck, RefreshCw, FileText, Trophy, XCircle, UserPlus, CheckCircle, KeyRound } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,21 +25,23 @@ import BulkActionBar, { runBulkOperation, bulkResultToast } from "@/components/a
 import { toast as sonnerToast } from "sonner";
 
 const LEAD_STAGES = [
-  { value: "new", label: "Nuovo", color: "border-primary text-primary", bg: "bg-primary/10", icon: UserPlus },
-  { value: "contacted", label: "Contattato", color: "border-warning text-warning", bg: "bg-warning/10", icon: Phone },
-  { value: "qualified", label: "Qualificato", color: "border-chart-4 text-chart-4", bg: "bg-chart-4/10", icon: CheckCircle },
-  { value: "proposal", label: "Proposta", color: "border-purple-500 text-purple-600", bg: "bg-purple-500/10", icon: FileText },
-  { value: "won", label: "Vinto", color: "bg-success/20 text-success border-0", bg2: "bg-success/10", icon: Trophy },
-  { value: "lost", label: "Perso", color: "bg-destructive/20 text-destructive border-0", bg2: "bg-destructive/10", icon: XCircle },
+  { value: "new", label: "Nuovo", color: "border-blue-500 text-blue-500", bg: "bg-blue-500/10", icon: UserPlus, columnColor: "border-t-blue-500" },
+  { value: "contacted", label: "Contattato", color: "border-amber-500 text-amber-500", bg: "bg-amber-500/10", icon: Phone, columnColor: "border-t-amber-500" },
+  { value: "qualified", label: "Qualificato", color: "border-cyan-500 text-cyan-500", bg: "bg-cyan-500/10", icon: CheckCircle, columnColor: "border-t-cyan-500" },
+  { value: "proposal", label: "Proposta", color: "border-purple-500 text-purple-500", bg: "bg-purple-500/10", icon: FileText, columnColor: "border-t-purple-500" },
+  { value: "onboarding", label: "Onboarding", color: "border-orange-500 text-orange-500", bg: "bg-orange-500/10", icon: KeyRound, columnColor: "border-t-orange-500" },
+  { value: "won", label: "Vinto", color: "border-emerald-500 text-emerald-500", bg: "bg-emerald-500/10", icon: Trophy, columnColor: "border-t-emerald-500" },
+  { value: "lost", label: "Perso", color: "border-red-500 text-red-500", bg: "bg-red-500/10", icon: XCircle, columnColor: "border-t-red-500" },
 ];
 
 const ALL_STATUS_COLORS: Record<string, string> = {
-  new: "border-primary text-primary",
-  contacted: "border-warning text-warning",
-  qualified: "border-chart-4 text-chart-4",
-  proposal: "border-purple-500 text-purple-600",
-  won: "bg-success/20 text-success border-0",
-  lost: "bg-destructive/20 text-destructive border-0",
+  new: "border-blue-500 text-blue-500",
+  contacted: "border-amber-500 text-amber-500",
+  qualified: "border-cyan-500 text-cyan-500",
+  proposal: "border-purple-500 text-purple-500",
+  onboarding: "border-orange-500 text-orange-500",
+  won: "border-emerald-500 text-emerald-500",
+  lost: "border-red-500 text-red-500",
 };
 
 const CRMLeads = () => {
@@ -465,9 +467,10 @@ const CRMLeads = () => {
                     ref={provided.innerRef}
                     {...provided.droppableProps}
                     className={`min-w-[260px] w-[260px] flex-shrink-0 rounded-xl border border-border p-3 transition-colors ${snapshot.isDraggingOver ? "bg-primary/5 border-primary/30" : "bg-secondary/30"}`}
+                    style={{ borderTopWidth: "3px" }}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xs font-heading font-bold uppercase tracking-wider text-muted-foreground">{stage.label}</h3>
+                    <div className={`flex items-center justify-between mb-3 ${stage.columnColor}`}>
+                      <h3 className={`text-xs font-heading font-bold uppercase tracking-wider ${stage.color.split(" ").find(c => c.startsWith("text-")) || "text-muted-foreground"}`}>{stage.label}</h3>
                       <Badge variant="outline" className="text-[10px] h-5 px-1.5">{kanbanLeads[stage.value]?.length || 0}</Badge>
                     </div>
                     <ScrollArea className="h-[calc(60vh-60px)]">
