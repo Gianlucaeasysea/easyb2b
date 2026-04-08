@@ -1,18 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 const ADMIN_EMAILS = ["business@easysea.org", "gianluca@easysea.org"];
 const BCC_EMAIL = "g.scotto@easysea.org";
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -29,7 +27,6 @@ serve(async (req) => {
       });
     }
 
-    // Fetch order with client info
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select("*, clients(company_name, contact_name, email)")
@@ -43,7 +40,6 @@ serve(async (req) => {
       });
     }
 
-    // Fetch order items for the items table
     const { data: orderItems } = await supabase
       .from("order_items")
       .select("*, products(name, sku)")
@@ -56,17 +52,13 @@ serve(async (req) => {
     const companyName = client?.company_name || "—";
     const totalAmount = Number(order.total_amount || 0).toFixed(2);
 
-    // Build items table HTML for email
     const itemsHtml = buildItemsTableHtml(orderItems || []);
 
-    // Collect all email sends to dispatch
     const sends: { templateName: string; recipientEmail: string; idempotencyKey: string; templateData: Record<string, any> }[] = [];
 
-    // Helper: push a client email + BCC copy to g.scotto
     const pushClientEmail = (templateName: string, templateData: Record<string, any>, idempotencyKey: string) => {
       if (clientEmail) {
         sends.push({ templateName, recipientEmail: clientEmail, idempotencyKey, templateData });
-        // BCC copy
         sends.push({ templateName, recipientEmail: BCC_EMAIL, idempotencyKey: `${idempotencyKey}-bcc`, templateData });
       }
     };
@@ -89,8 +81,6 @@ serve(async (req) => {
       pushClientEmail("order-documents-ready", { clientName, orderCode: code }, `order-docs-${orderId}-${Date.now()}`);
     }
 
-    // Send all emails via the transactional email system using direct fetch
-    // (supabase.functions.invoke doesn't forward auth correctly for edge-to-edge calls)
     const results = [];
     for (const send of sends) {
       try {

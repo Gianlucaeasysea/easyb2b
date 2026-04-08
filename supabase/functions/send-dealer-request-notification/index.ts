@@ -1,7 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -20,7 +22,6 @@ Deno.serve(async (req) => {
 
     const fromEmail = "business@easysea.org";
 
-    // 1. Confirmation email to the applicant
     const clientSubject = "EasySea — Application Received";
     const clientBody = `Dear ${contactName},
 
@@ -36,7 +37,6 @@ business@easysea.org`;
 
     await sendEmail(fromEmail, GMAIL_APP_PASSWORD, email, clientSubject, clientBody);
 
-    // 2. Internal notification to sales team
     const salesSubject = `🆕 New Dealer Application: ${companyName}`;
     const salesBody = `NEW DEALER APPLICATION
 
@@ -56,7 +56,6 @@ ${message || "(no message)"}
 ---
 Review in the CRM: Dealer Requests section`;
 
-    // Send to sales with CC to Giuseppe
     await sendEmail(fromEmail, GMAIL_APP_PASSWORD, "business@easysea.org", salesSubject, salesBody, "g.scotto@easysea.org");
 
     return new Response(JSON.stringify({ success: true }), {
@@ -84,7 +83,6 @@ async function sendEmail(from: string, password: string, to: string, subject: st
   const raw = Object.entries(headers).map(([k, v]) => `${k}: ${v}`).join("\r\n") + "\r\n\r\n" + body;
   const encoded = btoa(unescape(encodeURIComponent(raw))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
-  // Use Gmail SMTP via API
   const smtpPayload = {
     from,
     to: cc ? [to, cc] : [to],
@@ -92,7 +90,6 @@ async function sendEmail(from: string, password: string, to: string, subject: st
     text: body,
   };
 
-  // Simple SMTP send using fetch to Gmail API
   const credentials = btoa(`${from}:${password}`);
 
   const response = await fetch("https://smtp-relay.gmail.com:587", {
@@ -101,20 +98,14 @@ async function sendEmail(from: string, password: string, to: string, subject: st
     body: JSON.stringify(smtpPayload),
   }).catch(() => null);
 
-  // Fallback: use nodemailer-compatible approach via raw SMTP
-  // Since Deno edge functions can't do raw SMTP, use the Gmail REST API approach
-  // that's already configured in the project via gmail tokens
-
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  // Check for gmail tokens
   const { data: tokenData } = await supabaseAdmin.from("gmail_tokens").select("*").limit(1).single();
 
   if (tokenData) {
-    // Refresh token if needed
     let accessToken = tokenData.access_token;
     if (new Date(tokenData.expires_at) < new Date()) {
       const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -137,7 +128,6 @@ async function sendEmail(from: string, password: string, to: string, subject: st
       }
     }
 
-    // Build raw email
     let rawHeaders = `From: EasySea <${from}>\r\nTo: ${to}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8`;
     if (cc) rawHeaders += `\r\nCc: ${cc}`;
     const rawMessage = rawHeaders + "\r\n\r\n" + body;

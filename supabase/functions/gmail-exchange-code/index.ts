@@ -1,21 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getGmailOAuthConfig } from '../_shared/gmail-oauth-config.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  })
-}
+import { getCorsHeaders } from '../_shared/cors.ts'
 
 function toOrigin(value: string | null) {
   if (!value) return null
-
   try {
     return new URL(value).origin
   } catch {
@@ -26,6 +14,15 @@ function toOrigin(value: string | null) {
 const DEFAULT_APP_URL = 'https://easyb2b.lovable.app'
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
+  function jsonResponse(body: unknown, status = 200) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -137,7 +134,7 @@ Deno.serve(async (req) => {
   if (!refreshToken) {
     return jsonResponse({
       error: 'Missing refresh token',
-      details: 'Google non ha restituito un refresh token. Revoca l’accesso all’app nelle autorizzazioni Google e riprova.',
+      details: 'Google non ha restituito un refresh token. Revoca l\'accesso all\'app nelle autorizzazioni Google e riprova.',
     }, 400)
   }
 
