@@ -8,6 +8,14 @@ export const ORDER_STATUS_MAP: Record<string, string> = {
   shipped: "Spedito",
   delivered: "Consegnato",
   cancelled: "Annullato",
+  // Legacy values from Google Sheet import
+  "To be prepared": "Da preparare",
+  "Ready": "Pronto",
+  "On the road": "In transito",
+  "Delivered": "Consegnato",
+  "Payed": "Pagato",
+  "Returned": "Reso",
+  "lost": "Perso",
 };
 
 export const ORDER_STATUS_COLORS: Record<string, string> = {
