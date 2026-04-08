@@ -1279,9 +1279,10 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
                 <SelectContent>
                   {unassignedLists.map(pl => {
                     const tier = discountTiers.find(t => t.id === pl.discount_tier_id);
+                    const itemCount = priceListItemCounts[pl.id] || 0;
                     return (
                       <SelectItem key={pl.id} value={pl.id}>
-                        {pl.name} {tier ? `(-${tier.discount_pct}%)` : ""}
+                        {pl.name} {tier ? `(-${tier.discount_pct}%)` : ""} · {itemCount} prodotti
                       </SelectItem>
                     );
                   })}
