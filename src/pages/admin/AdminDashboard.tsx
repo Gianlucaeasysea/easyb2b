@@ -182,9 +182,15 @@ const AdminDashboard = () => {
     const map: Record<string, number> = {};
     (orders || []).forEach(o => {
       const st = o.status || "draft";
-      map[st] = (map[st] || 0) + 1;
+      const label = getOrderStatusLabel(st);
+      map[label] = (map[label] || 0) + 1;
     });
-    return Object.entries(map).map(([name, value]) => ({ name, value, fill: ORDER_STATUS_CHART_COLORS[name] || "#9ca3af" }));
+    // For fill colors, we need to reverse-lookup or use the original status key
+    const colorByLabel: Record<string, string> = {};
+    Object.entries(ORDER_STATUS_CHART_COLORS).forEach(([key, color]) => {
+      colorByLabel[getOrderStatusLabel(key)] = color;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value, fill: colorByLabel[name] || "#9ca3af" }));
   })();
 
   // Late payments (payment_status pending/to be paid, created > 30 days ago)
