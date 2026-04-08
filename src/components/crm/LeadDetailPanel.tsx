@@ -76,11 +76,8 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
   const [newActTitle, setNewActTitle] = useState("");
   const [localStatus, setLocalStatus] = useState<string | null>(null);
 
-  // Sync local status when lead prop changes
+  // Reset local status when lead changes
   const currentStatus = localStatus ?? lead?.status ?? "new";
-  if (lead && localStatus !== null && lead.status === localStatus) {
-    // lead prop caught up, clear local override
-  }
 
   // Fetch activities for this lead
   const { data: activities } = useQuery({
