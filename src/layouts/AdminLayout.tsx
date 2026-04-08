@@ -6,7 +6,6 @@ import { LogOut, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import logo from "@/assets/easysea-logo.png";
-import logo from "@/assets/easysea-logo.png";
 
 const adminRouteNames: Record<string, string> = {
   "orders": "Ordini",
