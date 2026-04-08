@@ -25,28 +25,21 @@ import BulkActionBar, { runBulkOperation, bulkResultToast } from "@/components/a
 import { toast as sonnerToast } from "sonner";
 
 const LEAD_STAGES = [
-  { value: "request", label: "Request", color: "border-muted-foreground text-muted-foreground", bg: "bg-muted/50" },
-  { value: "contact", label: "Contact", color: "border-primary text-primary", bg: "bg-primary/10" },
-  { value: "qualification", label: "Qualification", color: "border-warning text-warning", bg: "bg-warning/10" },
-  { value: "onboarding", label: "Onboarding", color: "border-chart-4 text-chart-4", bg: "bg-chart-4/10" },
-  { value: "first_order", label: "First Order", color: "bg-success/20 text-success border-0", bg2: "bg-success/10" },
-  { value: "lost", label: "Lost", color: "bg-destructive/20 text-destructive border-0", bg2: "bg-destructive/10" },
-  { value: "nurturing", label: "Nurturing", color: "border-primary/60 text-primary/80", bg2: "bg-primary/5" },
+  { value: "new", label: "Nuovo", color: "border-primary text-primary", bg: "bg-primary/10", icon: UserPlus },
+  { value: "contacted", label: "Contattato", color: "border-warning text-warning", bg: "bg-warning/10", icon: Phone },
+  { value: "qualified", label: "Qualificato", color: "border-chart-4 text-chart-4", bg: "bg-chart-4/10", icon: CheckCircle },
+  { value: "proposal", label: "Proposta", color: "border-purple-500 text-purple-600", bg: "bg-purple-500/10", icon: FileText },
+  { value: "won", label: "Vinto", color: "bg-success/20 text-success border-0", bg2: "bg-success/10", icon: Trophy },
+  { value: "lost", label: "Perso", color: "bg-destructive/20 text-destructive border-0", bg2: "bg-destructive/10", icon: XCircle },
 ];
 
 const ALL_STATUS_COLORS: Record<string, string> = {
-  request: "border-muted-foreground text-muted-foreground",
-  contact: "border-primary text-primary",
-  qualification: "border-warning text-warning",
-  onboarding: "border-chart-4 text-chart-4",
-  first_order: "bg-success/20 text-success border-0",
-  lost: "bg-destructive/20 text-destructive border-0",
-  nurturing: "border-primary/60 text-primary/80",
   new: "border-primary text-primary",
   contacted: "border-warning text-warning",
-  qualified: "border-success text-success",
-  proposal: "border-chart-4 text-chart-4",
+  qualified: "border-chart-4 text-chart-4",
+  proposal: "border-purple-500 text-purple-600",
   won: "bg-success/20 text-success border-0",
+  lost: "bg-destructive/20 text-destructive border-0",
 };
 
 const CRMLeads = () => {
@@ -68,7 +61,7 @@ const CRMLeads = () => {
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showSalesDialog, setShowSalesDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [bulkStatus, setBulkStatus] = useState("contact");
+  const [bulkStatus, setBulkStatus] = useState("contacted");
   const [bulkSalesId, setBulkSalesId] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
 
@@ -166,7 +159,7 @@ const CRMLeads = () => {
       }
 
       await supabase.from("activities").update({ client_id: newClient.id }).eq("lead_id", lead.id);
-      await supabase.from("leads").update({ status: "first_order" }).eq("id", lead.id);
+      await supabase.from("leads").update({ status: "won" }).eq("id", lead.id);
       return newClient;
     },
     onSuccess: (newClient) => {
@@ -280,15 +273,9 @@ const CRMLeads = () => {
     const grouped: Record<string, any[]> = {};
     LEAD_STAGES.forEach(s => { grouped[s.value] = []; });
     filtered?.forEach(l => {
-      const status = l.status || "request";
+      const status = l.status || "new";
       if (grouped[status]) grouped[status].push(l);
-      else {
-        if (status === "new") grouped["request"]?.push(l);
-        else if (status === "contacted") grouped["contact"]?.push(l);
-        else if (status === "qualified" || status === "proposal") grouped["qualification"]?.push(l);
-        else if (status === "won") grouped["first_order"]?.push(l);
-        else grouped["request"]?.push(l);
-      }
+      else grouped["new"]?.push(l);
     });
     return grouped;
   }, [filtered]);
@@ -418,11 +405,11 @@ const CRMLeads = () => {
                   <TableCell onClick={() => setDetailLead(l)} className="text-muted-foreground">{l.zone}</TableCell>
                   <TableCell onClick={() => setDetailLead(l)} className="text-muted-foreground">{l.source}</TableCell>
                   <TableCell onClick={() => setDetailLead(l)}>
-                    <Badge variant="outline" className={ALL_STATUS_COLORS[l.status || "request"] || ""}>{LEAD_STAGES.find(s => s.value === l.status)?.label || l.status}</Badge>
+                    <Badge variant="outline" className={ALL_STATUS_COLORS[l.status || "new"] || ""}>{LEAD_STAGES.find(s => s.value === l.status)?.label || l.status}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
-                      {l.status !== "first_order" && l.status !== "lost" && l.status !== "won" && (
+                      {l.status !== "won" && l.status !== "lost" && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-success" onClick={() => {
                           if (confirm(`Convertire "${l.company_name}" in organizzazione?`)) convertToOrg.mutate(l);
                         }} title="Convert to Organization">
