@@ -26,6 +26,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
+import { deleteContactsCascade } from "@/lib/crmEntityActions";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
 import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
 import {
