@@ -81,7 +81,7 @@ Il Team EasySea`;
       const rawMessage = `From: EasySea <business@easysea.org>\r\nTo: ${email}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
       const encoded = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
-      await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+      const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -89,6 +89,12 @@ Il Team EasySea`;
         },
         body: JSON.stringify({ raw: encoded }),
       });
+
+      if (!gmailRes.ok) {
+        const gmailError = await gmailRes.text();
+        console.error("Gmail API error sending recovery email:", gmailError);
+        throw new Error(`Gmail API error: ${gmailRes.status}`);
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {
