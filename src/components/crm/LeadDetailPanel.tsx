@@ -338,7 +338,7 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
               {/* Change status */}
               <div className="pt-2 border-t border-border">
                 <Label className="text-[10px] uppercase text-muted-foreground">Change Status</Label>
-                <Select value={lead.status || "new"} onValueChange={v => updateStatus.mutate(v)}>
+                <Select value={currentStatus} onValueChange={v => updateStatus.mutate(v)}>
                   <SelectTrigger className="mt-1 bg-secondary border-border h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
