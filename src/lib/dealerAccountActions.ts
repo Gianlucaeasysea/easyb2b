@@ -14,20 +14,6 @@ export const invokeDealerAccountAction = async <T>(payload: DealerAccountPayload
     throw new Error("Sessione non valida. Effettua di nuovo il login.");
   }
 
-  try {
-    const { data, error } = await supabase.functions.invoke("create-dealer-account", {
-      body: payload,
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    return data as T;
-  } catch {
-    // Fallback for preview/runtime environments where the SDK transport can fail intermittently.
-  }
-
   let response: Response;
 
   try {
@@ -36,12 +22,23 @@ export const invokeDealerAccountAction = async <T>(payload: DealerAccountPayload
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
       body: JSON.stringify(payload),
     });
-  } catch {
-    throw new Error("Impossibile raggiungere il backend. Riprova tra qualche secondo.");
+  } catch (fetchError) {
+    try {
+      const { data, error } = await supabase.functions.invoke("create-dealer-account", {
+        body: payload,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      return data as T;
+    } catch {
+      throw new Error("Impossibile raggiungere il backend. Riprova tra qualche secondo.");
+    }
   }
 
   let result: any = null;
