@@ -16,7 +16,7 @@ import {
   ArrowLeft, Building2, Mail, Phone, Globe, MapPin, ShoppingBag,
   MessageCircle, Send, Clock, TrendingUp, Users, FileText, CalendarDays, BarChart3,
   Plus, Crown, Star, Pencil, Trash2, Check, X, StickyNote, Upload, Handshake, CheckSquare, Tag, Eye,
-  UserCheck, RefreshCw
+  UserCheck, RefreshCw, KeyRound, Copy, EyeOff
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { isPast } from "date-fns";
