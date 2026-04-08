@@ -8,7 +8,7 @@ import { Phone, Mail, MessageCircle, Search, Building2, ChevronRight, Trash2, Do
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { differenceInDays, format } from "date-fns";
 import * as XLSX from "xlsx";
