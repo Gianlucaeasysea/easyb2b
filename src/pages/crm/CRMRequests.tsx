@@ -50,7 +50,10 @@ const CRMRequests = () => {
       toast({ title: "Lead + Organization created from request!" });
       setSelectedRequest(null);
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: unknown) => {
+      const message = e instanceof Error ? e.message : "Errore sconosciuto";
+      toast({ title: "Errore", description: message, variant: "destructive" });
+    },
   });
 
   const newRequests = requests?.filter(r => r.status === "new") || [];
