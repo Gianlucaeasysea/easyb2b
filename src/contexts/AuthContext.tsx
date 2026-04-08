@@ -179,6 +179,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRole(null);
     setRoleError(false);
     clearCachedRole(userId);
+    // Clear cart storage for this user
+    try {
+      if (userId) localStorage.removeItem(`easysea_cart_${userId}`);
+    } catch {}
   };
 
   return (
