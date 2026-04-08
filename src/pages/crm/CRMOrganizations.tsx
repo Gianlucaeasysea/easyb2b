@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { differenceInDays, format } from "date-fns";
 import * as XLSX from "xlsx";
 import { deleteClientsCascade } from "@/lib/crmEntityActions";
+import { usePaginatedData } from "@/hooks/usePaginatedData";
+import { PaginationControls } from "@/components/PaginationControls";
 
 const lifecycleStatuses = ["lead", "qualifying", "onboarding", "active", "at_risk", "churned", "disqualified"];
 
@@ -171,6 +173,8 @@ const CRMOrganizations = () => {
     return true;
   }) || [];
 
+  const { pageData, page, totalPages, from, to, totalCount, nextPage, prevPage, goToPage } = usePaginatedData({ data: filtered, pageSize: 25 });
+
   const toggleSelect = (id: string) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -305,7 +309,7 @@ const CRMOrganizations = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(c => {
+              {filtered.length > 0 && pageData.map(c => {
                 const primary = primaryContacts?.[c.id];
                 const cCount = contactCounts?.[c.id] || 0;
                 const actCount = activityCounts?.[c.id] || 0;
@@ -385,6 +389,7 @@ const CRMOrganizations = () => {
               })}
             </TableBody>
           </Table>
+          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
         </div>
       )}
     </div>
