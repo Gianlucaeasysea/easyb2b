@@ -90,37 +90,67 @@ const CRMOrganizationDetail = () => {
 
   const invokeCreateDealer = async (payload: { client_id: string; email: string; password: string }) => {
     const accessToken = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
-    if (!accessToken) {
-      throw new Error("Sessione non valida. Effettua di nuovo il login.");
-    }
+    if (!accessToken) throw new Error("Sessione non valida. Effettua di nuovo il login.");
 
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain",
-        },
-        body: JSON.stringify({ ...payload, access_token: accessToken }),
-      });
+    return new Promise<any>((resolve, reject) => {
+      const requestId = `dealer-create-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const iframe = document.createElement("iframe");
+      iframe.name = requestId;
+      iframe.style.display = "none";
 
-      const body = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(body?.error || body?.message || "Errore durante la chiamata al backend.");
-      }
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`;
+      form.target = requestId;
+      form.style.display = "none";
 
-      return body;
-    } catch (directError: any) {
-      const { data, error } = await supabase.functions.invoke("create-dealer-account", { body: payload });
-      if (error) {
-        const ctx = (error as any).context;
-        if (ctx instanceof Response) {
-          const body = await ctx.json().catch(() => null);
-          throw new Error(body?.error || body?.message || error.message || directError?.message);
+      const appendField = (name: string, value: string) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      };
+
+      appendField("client_id", payload.client_id);
+      appendField("email", payload.email);
+      appendField("password", payload.password);
+      appendField("access_token", accessToken);
+      appendField("request_id", requestId);
+      appendField("transport", "form_post");
+
+      const cleanup = () => {
+        window.removeEventListener("message", handleMessage);
+        window.clearTimeout(timeoutId);
+        iframe.remove();
+        form.remove();
+      };
+
+      const handleMessage = (event: MessageEvent) => {
+        const expectedOrigin = new URL(import.meta.env.VITE_SUPABASE_URL).origin;
+        if (event.origin !== expectedOrigin) return;
+
+        const data = event.data;
+        if (data?.type !== "create-dealer-account-result" || data?.requestId !== requestId) return;
+
+        cleanup();
+        if (data.success) {
+          resolve(data.payload);
+        } else {
+          reject(new Error(data.error || "Errore nella creazione delle credenziali"));
         }
-        throw new Error(error.message || directError?.message || "Errore nella creazione delle credenziali");
-      }
-      return data;
-    }
+      };
+
+      const timeoutId = window.setTimeout(() => {
+        cleanup();
+        reject(new Error("La richiesta di creazione credenziali non ha ricevuto risposta. Riprova."));
+      }, 20000);
+
+      window.addEventListener("message", handleMessage);
+      document.body.appendChild(iframe);
+      document.body.appendChild(form);
+      form.submit();
+    });
   };
 
   const handleCreateCredentials = async () => {

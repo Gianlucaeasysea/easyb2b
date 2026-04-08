@@ -9,17 +9,69 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  let requestBody: Record<string, unknown> = {};
+  let transport = "json";
+  let requestId: string | null = null;
+
+  const respond = (payload: Record<string, unknown>, status = 200) => {
+    if (transport === "form_post") {
+      const targetOrigin = corsHeaders["Access-Control-Allow-Origin"] || "*";
+      const message = {
+        type: "create-dealer-account-result",
+        requestId,
+        success: status >= 200 && status < 300,
+        payload: status >= 200 && status < 300 ? payload : null,
+        error: status >= 200 && status < 300 ? null : payload.error || payload.message || "Unknown error",
+      };
+
+      return new Response(
+        `<!doctype html><html><body><script>
+          const message = ${JSON.stringify(message)};
+          const targetOrigin = ${JSON.stringify(targetOrigin)};
+          if (window.parent) window.parent.postMessage(message, targetOrigin);
+          if (window.opener) window.opener.postMessage(message, targetOrigin);
+        </script></body></html>`,
+        {
+          status,
+          headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
+        }
+      );
+    }
+
+    return new Response(JSON.stringify(payload), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  };
+
   try {
+    const contentType = req.headers.get("content-type") || "";
+
+    if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      requestBody = Object.fromEntries(
+        Array.from(formData.entries()).map(([key, value]) => [key, typeof value === "string" ? value : value.name])
+      );
+    } else if (contentType.includes("application/json") || contentType.includes("text/plain")) {
+      const raw = await req.text();
+      requestBody = raw ? JSON.parse(raw) : {};
+    }
+
+    transport = String(requestBody.transport || "json");
+    requestId = requestBody.request_id ? String(requestBody.request_id) : null;
+
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const requestBody = await req.json();
-    const { client_id, email, password, access_token } = requestBody ?? {};
+    const client_id = String(requestBody.client_id || "");
+    const email = String(requestBody.email || "");
+    const password = String(requestBody.password || "");
+    const access_token = requestBody.access_token ? String(requestBody.access_token) : null;
+
     if (!client_id || !email || !password) throw new Error("Missing fields");
 
-    // Verify caller is admin or sales
     const authHeader = req.headers.get("Authorization");
     const bearerToken = authHeader || (access_token ? `Bearer ${access_token}` : null);
     if (!bearerToken) throw new Error("Not authenticated");
@@ -44,7 +96,6 @@ Deno.serve(async (req) => {
 
     await cleanupOrphanedDealerAccountByEmail(supabaseAdmin, email, client_id);
 
-    // Create auth user
     const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -54,27 +105,23 @@ Deno.serve(async (req) => {
 
     const userId = newUser.user.id;
 
-    // Assign dealer role
     const { error: roleErr } = await supabaseAdmin.from("user_roles").insert({
       user_id: userId,
       role: "dealer",
     });
     if (roleErr) throw roleErr;
 
-    // Link client to user (password is only stored in Supabase Auth)
     const { error: linkErr } = await supabaseAdmin.from("clients").update({
       user_id: userId,
     }).eq("id", client_id);
     if (linkErr) throw linkErr;
 
-    // Create profile
     const { error: profErr } = await supabaseAdmin.from("profiles").upsert({
       user_id: userId,
       email,
     }, { onConflict: "user_id" });
     if (profErr) console.warn("Profile creation warning:", profErr.message);
 
-    // Send credentials email to the dealer
     try {
       const portalUrl = "https://easyb2b.lovable.app/login";
       await sendCredentialsEmail(supabaseAdmin, email, password, portalUrl);
@@ -82,14 +129,9 @@ Deno.serve(async (req) => {
       console.error("Failed to send credentials email:", emailErr);
     }
 
-    return new Response(JSON.stringify({ success: true, user_id: userId }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return respond({ success: true, user_id: userId });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return respond({ error: e.message }, 400);
   }
 });
 
