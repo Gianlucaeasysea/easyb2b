@@ -5,7 +5,7 @@ import { checkAndRunAutomations } from "@/hooks/useAutomations";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Plus, Phone, Mail, MessageCircle, Search, Trash2, ArrowRight, LayoutList, Columns3, UserCheck, RefreshCw } from "lucide-react";
+import { Users, Plus, Phone, Mail, MessageCircle, Search, Trash2, ArrowRight, LayoutList, Columns3, UserCheck, RefreshCw, FileText, Trophy, XCircle, UserPlus, CheckCircle } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
