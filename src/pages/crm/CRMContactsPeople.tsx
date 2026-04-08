@@ -104,7 +104,7 @@ const CRMContactsPeople = () => {
     enabled: !!selectedContact?.id,
   });
 
-  const organizations = [...new Set(contacts?.map(c => (c as any).clients?.company_name).filter(Boolean) || [])].sort();
+  const organizations = [...new Set(contacts?.map(c => c.clients?.company_name).filter(Boolean) || [])].sort();
 
   const filtered = contacts?.filter(c => {
     if (search) {
@@ -112,13 +112,13 @@ const CRMContactsPeople = () => {
       if (
         !c.contact_name?.toLowerCase().includes(s) &&
         !c.email?.toLowerCase().includes(s) &&
-        !(c as any).clients?.company_name?.toLowerCase().includes(s) &&
-        !(c as any).job_title?.toLowerCase().includes(s)
+        !c.clients?.company_name?.toLowerCase().includes(s) &&
+        !c.job_title?.toLowerCase().includes(s)
       ) return false;
     }
-    if (filterOrg !== "all" && (c as any).clients?.company_name !== filterOrg) return false;
-    if (filterType !== "all" && (c as any).contact_type !== filterType) return false;
-    if (filterChannel !== "all" && (c as any).preferred_channel !== filterChannel) return false;
+    if (filterOrg !== "all" && c.clients?.company_name !== filterOrg) return false;
+    if (filterType !== "all" && c.contact_type !== filterType) return false;
+    if (filterChannel !== "all" && c.preferred_channel !== filterChannel) return false;
     return true;
   }) || [];
 
@@ -131,13 +131,13 @@ const CRMContactsPeople = () => {
   const exportCsv = () => {
     const rows = filtered.map(c => ({
       "Nome": c.contact_name,
-      "Organizzazione": (c as any).clients?.company_name || "",
-      "Ruolo": contactTypeLabels[(c as any).contact_type || "general"] || "",
-      "Job Title": (c as any).job_title || "",
+      "Organizzazione": c.clients?.company_name || "",
+      "Ruolo": contactTypeLabels[c.contact_type || "general"] || "",
+      "Job Title": c.job_title || "",
       "Email": c.email || "",
       "Telefono": c.phone || "",
-      "Canale Preferito": (c as any).preferred_channel || "",
-      "Ultimo Contatto": (c as any).last_contacted_at || "",
+      "Canale Preferito": c.preferred_channel || "",
+      "Ultimo Contatto": c.last_contacted_at || "",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -225,36 +225,36 @@ const CRMContactsPeople = () => {
             </TableHeader>
             <TableBody>
               {pageData.map(c => {
-                const ChannelIcon = channelIcons[(c as any).preferred_channel || "email"] || Mail;
-                const lastContactedAt = (c as any).last_contacted_at;
+                const ChannelIcon = channelIcons[c.preferred_channel || "email"] || Mail;
+                const lastContactedAt = c.last_contacted_at;
                 const daysAgo = lastContactedAt ? differenceInDays(new Date(), new Date(lastContactedAt)) : null;
                 return (
                   <TableRow key={c.id} className="cursor-pointer hover:bg-secondary/50" onClick={() => setSelectedContact(c)}>
                     <TableCell className="font-heading font-semibold">
                       <div className="flex items-center gap-1.5">
                         {c.contact_name}
-                        {(c as any).is_decision_maker && <span title="Decision Maker"><Crown size={12} className="text-destructive" /></span>}
-                        {(c as any).is_primary && <span title="Primary"><Star size={12} className="text-warning" /></span>}
+                        {c.is_decision_maker && <span title="Decision Maker"><Crown size={12} className="text-destructive" /></span>}
+                        {c.is_primary && <span title="Primary"><Star size={12} className="text-warning" /></span>}
                       </div>
                     </TableCell>
                     <TableCell>
                       <button
                         className="text-sm text-primary hover:underline"
-                        onClick={(e) => { e.stopPropagation(); navigate(`/crm/organizations/${(c as any).clients?.id}`); }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/crm/organizations/${c.clients?.id}`); }}
                       >
-                        {(c as any).clients?.company_name || "—"}
+                        {c.clients?.company_name || "—"}
                       </button>
                     </TableCell>
                     <TableCell>
-                      <Badge className={`border-0 text-[10px] ${contactTypeColors[(c as any).contact_type || "general"]}`}>
-                        {contactTypeLabels[(c as any).contact_type || "general"]}
+                      <Badge className={`border-0 text-[10px] ${contactTypeColors[c.contact_type || "general"]}`}>
+                        {contactTypeLabels[c.contact_type || "general"]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{(c as any).job_title || "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{c.job_title || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{c.email || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{c.phone || "—"}</TableCell>
                     <TableCell>
-                      <span title={(c as any).preferred_channel || "email"}><ChannelIcon size={14} className="text-muted-foreground" /></span>
+                      <span title={c.preferred_channel || "email"}><ChannelIcon size={14} className="text-muted-foreground" /></span>
                     </TableCell>
                     <TableCell>
                       {lastContactedAt ? (
