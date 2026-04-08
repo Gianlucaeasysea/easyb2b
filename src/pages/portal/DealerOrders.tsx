@@ -119,7 +119,7 @@ const DealerOrders = () => {
                       status === "confirmed" || status === "processing" ? "bg-primary/10" :
                       "bg-muted"
                     }`}>
-                      <Icon size={18} className={cfg?.color?.split(" ")[0]} />
+                      <Package size={18} className="text-muted-foreground" />
                     </div>
                     <div>
                       <p className="font-heading font-bold text-foreground">
@@ -132,7 +132,7 @@ const DealerOrders = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Badge variant="outline" className={`text-xs ${cfg?.color}`}>{cfg?.label}</Badge>
+                    <Badge className={`border-0 text-xs ${statusColor}`}>{statusLabel}</Badge>
                     <span className="font-heading font-bold text-foreground text-lg">
                       €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
                     </span>
@@ -143,10 +143,10 @@ const DealerOrders = () => {
                 {isExpanded && (
                   <div className="border-t border-border">
                     {/* Status message */}
-                    {cfg.message && (
+                    {statusMessage && (
                       <div className="px-5 py-3 bg-primary/5 border-b border-border flex items-start gap-3">
                         <Bell size={14} className="text-primary mt-0.5 shrink-0" />
-                        <p className="text-sm text-foreground">{cfg.message}</p>
+                        <p className="text-sm text-foreground">{statusMessage}</p>
                       </div>
                     )}
 
