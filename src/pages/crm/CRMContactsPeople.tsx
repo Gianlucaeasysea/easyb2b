@@ -215,7 +215,7 @@ const CRMContactsPeople = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(c => {
+              {pageData.map(c => {
                 const ChannelIcon = channelIcons[(c as any).preferred_channel || "email"] || Mail;
                 const lastContactedAt = (c as any).last_contacted_at;
                 const daysAgo = lastContactedAt ? differenceInDays(new Date(), new Date(lastContactedAt)) : null;
@@ -264,6 +264,7 @@ const CRMContactsPeople = () => {
               })}
             </TableBody>
           </Table>
+          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
         </div>
       )}
 
