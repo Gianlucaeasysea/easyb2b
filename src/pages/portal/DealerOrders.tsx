@@ -98,7 +98,8 @@ const DealerOrders = () => {
           <p className="text-muted-foreground">Nessun ordine ancora. Sfoglia il catalogo per effettuare il primo ordine.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <>
+          <div className="space-y-4">
           {pageData.map(order => {
             const status = order.status || "draft";
             const statusLabel = getOrderStatusLabel(status);
