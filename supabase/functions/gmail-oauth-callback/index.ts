@@ -34,7 +34,10 @@ Deno.serve(async (req) => {
 
   if (!code) {
     console.log('Starting Gmail OAuth flow...')
-    const scope = 'https://www.googleapis.com/auth/gmail.readonly'
+    const scope = [
+      'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/gmail.send',
+    ].join(' ')
     
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
     authUrl.searchParams.set('client_id', oauthConfig.clientId)
