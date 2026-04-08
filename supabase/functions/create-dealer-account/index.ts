@@ -1,8 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 import { cleanupOrphanedDealerAccountByEmail } from "../_shared/dealer-account-cleanup.ts";
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -85,7 +87,6 @@ Deno.serve(async (req) => {
 });
 
 async function sendCredentialsEmail(supabaseAdmin: any, email: string, password: string, portalUrl: string) {
-  // Try to use Gmail API via stored tokens
   const { data: tokenData } = await supabaseAdmin.from("gmail_tokens").select("*").limit(1).single();
   if (!tokenData) {
     console.warn("No Gmail tokens found, credentials email not sent");

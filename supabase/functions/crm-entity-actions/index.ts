@@ -1,13 +1,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 import { cleanupOrphanedDealerAccountByEmail, deleteDealerAuthArtifacts } from "../_shared/dealer-account-cleanup.ts";
 
 type AppRole = "admin" | "sales" | "dealer" | "operations";
 
-const json = (body: unknown, status = 200) =>
+const json = (body: unknown, headers: Record<string, string>, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...headers, "Content-Type": "application/json" },
   });
 
 const ensure = async (
@@ -15,7 +15,6 @@ const ensure = async (
   message: string,
 ) => {
   const { error } = await operation;
-
   if (error) {
     throw new Error(`${message}: ${error.message}`);
   }
@@ -61,7 +60,6 @@ const getExistingClient = async (adminClient: any, request: Record<string, unkno
       .eq("email", email)
       .limit(1)
       .maybeSingle();
-
     if (data) return data;
   }
 
@@ -72,7 +70,6 @@ const getExistingClient = async (adminClient: any, request: Record<string, unkno
       .eq("company_name", companyName)
       .limit(1)
       .maybeSingle();
-
     if (data) return data;
   }
 
@@ -91,7 +88,6 @@ const getExistingLead = async (adminClient: any, request: Record<string, unknown
       .eq("source", "Dealer Application")
       .limit(1)
       .maybeSingle();
-
     if (data) return data;
   }
 
@@ -103,7 +99,6 @@ const getExistingLead = async (adminClient: any, request: Record<string, unknown
       .eq("source", "Dealer Application")
       .limit(1)
       .maybeSingle();
-
     if (data) return data;
   }
 
@@ -151,7 +146,6 @@ const convertRequestToPipeline = async (adminClient: any, requestId: string, use
 
   if (existingClient) {
     clientId = existingClient.id;
-
     if (role === "sales" && !existingClient.assigned_sales_id) {
       await ensure(
         adminClient.from("clients").update({ assigned_sales_id: userId }).eq("id", clientId),
@@ -181,7 +175,6 @@ const convertRequestToPipeline = async (adminClient: any, requestId: string, use
     if (clientError || !newClient) {
       throw new Error(`Failed to create organization: ${clientError?.message || "Unknown error"}`);
     }
-
     clientId = newClient.id;
   }
 
@@ -212,7 +205,6 @@ const convertRequestToPipeline = async (adminClient: any, requestId: string, use
     if (leadError || !newLead) {
       throw new Error(`Failed to create lead: ${leadError?.message || "Unknown error"}`);
     }
-
     leadId = newLead.id;
   }
 
@@ -225,7 +217,6 @@ const convertRequestToPipeline = async (adminClient: any, requestId: string, use
 };
 
 const deleteClientGraph = async (adminClient: any, clientId: string) => {
-  // 1. Look up the auth user_id linked to this client BEFORE deleting
   const { data: clientRow } = await adminClient
     .from("clients")
     .select("user_id")
@@ -264,7 +255,6 @@ const deleteClientGraph = async (adminClient: any, clientId: string) => {
   await ensure(adminClient.from("orders").delete().eq("client_id", clientId), "Failed to delete orders");
   await ensure(adminClient.from("clients").delete().eq("id", clientId), "Failed to delete organization");
 
-  // Clean up auth user, roles, and profile if a dealer account was linked
   if (linkedUserId) {
     await deleteDealerAuthArtifacts(adminClient, linkedUserId);
   }
@@ -278,6 +268,8 @@ const deleteLeadGraph = async (adminClient: any, leadId: string) => {
 };
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -288,20 +280,19 @@ Deno.serve(async (req) => {
     const action = body?.action as string | undefined;
 
     if (action === "convert_request_to_pipeline") {
-      if (!body?.requestId) return json({ error: "Missing requestId" }, 400);
-      return json(await convertRequestToPipeline(adminClient, body.requestId, user.id, role));
+      if (!body?.requestId) return json({ error: "Missing requestId" }, corsHeaders, 400);
+      return json(await convertRequestToPipeline(adminClient, body.requestId, user.id, role), corsHeaders);
     }
 
     if (action === "cleanup_orphaned_dealer_account") {
       const email = typeof body?.email === "string" ? body.email : "";
-      if (!email.trim()) return json({ error: "Missing email" }, 400);
-
-      return json(await cleanupOrphanedDealerAccountByEmail(adminClient, email));
+      if (!email.trim()) return json({ error: "Missing email" }, corsHeaders, 400);
+      return json(await cleanupOrphanedDealerAccountByEmail(adminClient, email), corsHeaders);
     }
 
     if (action === "delete_clients") {
       const ids = Array.isArray(body?.ids) ? body.ids.filter((id: unknown) => typeof id === "string") : [];
-      if (!ids.length) return json({ error: "Missing organization ids" }, 400);
+      if (!ids.length) return json({ error: "Missing organization ids" }, corsHeaders, 400);
 
       if (role === "sales") {
         const { data: allowedClients, error } = await adminClient
@@ -314,7 +305,7 @@ Deno.serve(async (req) => {
 
         const allowedIds = new Set((allowedClients || []).map((client: { id: string }) => client.id));
         if (ids.some((id: string) => !allowedIds.has(id))) {
-          return json({ error: "Some organizations cannot be deleted by this sales user." }, 403);
+          return json({ error: "Some organizations cannot be deleted by this sales user." }, corsHeaders, 403);
         }
       }
 
@@ -322,24 +313,24 @@ Deno.serve(async (req) => {
         await deleteClientGraph(adminClient, id);
       }
 
-      return json({ success: true, deletedIds: ids });
+      return json({ success: true, deletedIds: ids }, corsHeaders);
     }
 
     if (action === "delete_leads") {
       const ids = Array.isArray(body?.ids) ? body.ids.filter((id: unknown) => typeof id === "string") : [];
-      if (!ids.length) return json({ error: "Missing lead ids" }, 400);
+      if (!ids.length) return json({ error: "Missing lead ids" }, corsHeaders, 400);
 
       for (const id of ids) {
         await deleteLeadGraph(adminClient, id);
       }
 
-      return json({ success: true, deletedIds: ids });
+      return json({ success: true, deletedIds: ids }, corsHeaders);
     }
 
-    return json({ error: "Unsupported action" }, 400);
+    return json({ error: "Unsupported action" }, corsHeaders, 400);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     const status = message === "Unauthorized" ? 401 : message === "Forbidden" ? 403 : 500;
-    return json({ error: message }, status);
+    return json({ error: message }, corsHeaders, status);
   }
 });

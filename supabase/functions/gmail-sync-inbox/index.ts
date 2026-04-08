@@ -1,10 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getGmailOAuthConfig } from '../_shared/gmail-oauth-config.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders } from '../_shared/cors.ts'
 
 async function refreshTokenIfNeeded(supabase: any, tokenRow: any): Promise<string> {
   if (new Date(tokenRow.expires_at) > new Date(Date.now() + 60000)) {
@@ -61,6 +57,8 @@ function extractTextFromParts(parts: any[]): { text: string; html: string } {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -70,7 +68,6 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
 
-  // Auth check
   const authHeader = req.headers.get('Authorization') || ''
   const token = authHeader.replace('Bearer ', '')
   const anonClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
@@ -90,7 +87,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Get Gmail token
   const { data: tokenRow } = await supabase
     .from('gmail_tokens')
     .select('*')
@@ -112,7 +108,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Build email→client map from BOTH clients.email AND client_contacts.email
   const { data: clients } = await supabase
     .from('clients')
     .select('id, email, company_name')
@@ -123,7 +118,6 @@ Deno.serve(async (req) => {
     .select('client_id, email, contact_name')
     .not('email', 'is', null)
 
-  // Build a map: email -> { clientId, clientName }
   const emailToClient = new Map<string, { id: string; name: string }>()
 
   for (const c of (clients || [])) {
@@ -147,14 +141,11 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Collect unique emails to search for
   const allEmails = Array.from(emailToClient.keys())
   let synced = 0
   const processedMessageIds = new Set<string>()
 
-  // Search Gmail for each client email (batch emails into groups to reduce API calls)
-  // Gmail query: from:email OR to:email
-  const BATCH_SIZE = 5 // search 5 emails at a time
+  const BATCH_SIZE = 5
   for (let i = 0; i < allEmails.length; i += BATCH_SIZE) {
     const batch = allEmails.slice(i, i + BATCH_SIZE)
     const queryParts = batch.map(e => `from:${e} OR to:${e}`).join(' OR ')
@@ -172,7 +163,6 @@ Deno.serve(async (req) => {
       if (processedMessageIds.has(msg.id)) continue
       processedMessageIds.add(msg.id)
 
-      // Check if already imported
       const { data: existing } = await supabase
         .from('client_communications')
         .select('id')
@@ -181,7 +171,6 @@ Deno.serve(async (req) => {
 
       if (existing) continue
 
-      // Fetch full message
       const msgRes = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -198,7 +187,6 @@ Deno.serve(async (req) => {
       const senderEmail = extractEmail(from)
       const recipientEmail = extractEmail(to)
 
-      // Determine direction and match client
       let client = emailToClient.get(senderEmail)
       let direction = 'inbound'
       let contactEmail = senderEmail
@@ -211,7 +199,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Also check CC for client match
       if (!client && cc) {
         const ccParts = cc.split(',').map((e: string) => extractEmail(e.trim()))
         for (const ccEmail of ccParts) {
@@ -226,7 +213,6 @@ Deno.serve(async (req) => {
 
       if (!client) continue
 
-      // Extract body
       let bodyContent = ''
       if (msgData.payload?.parts) {
         const { html, text } = extractTextFromParts(msgData.payload.parts)
@@ -235,7 +221,6 @@ Deno.serve(async (req) => {
         bodyContent = decodeBody(msgData.payload?.body) || ''
       }
 
-      // Store from/to/cc in metadata for display
       const emailMetadata: Record<string, any> = { from, to }
       if (cc) emailMetadata.cc = cc
 

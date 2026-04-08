@@ -1,12 +1,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getGmailOAuthConfig } from '../_shared/gmail-oauth-config.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -26,7 +24,6 @@ Deno.serve(async (req) => {
   const code = url.searchParams.get('code')
   const error = url.searchParams.get('error')
 
-  // Determine the app URL for redirects
   const appUrl = Deno.env.get('APP_URL') || 'https://easyb2b.lovable.app'
 
   if (error) {
@@ -36,7 +33,6 @@ Deno.serve(async (req) => {
   }
 
   if (!code) {
-    // Start OAuth flow
     console.log('Starting Gmail OAuth flow...')
     const scope = 'https://www.googleapis.com/auth/gmail.readonly'
     
@@ -55,7 +51,6 @@ Deno.serve(async (req) => {
 
   console.log('Received authorization code, exchanging for tokens...')
 
-  // Exchange code for tokens
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -85,7 +80,6 @@ Deno.serve(async (req) => {
 
   const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
 
-  // Upsert tokens (one row for the account)
   const { error: dbError } = await supabase
     .from('gmail_tokens')
     .upsert({
@@ -93,7 +87,7 @@ Deno.serve(async (req) => {
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token,
       expires_at: expiresAt,
-      user_id: '00000000-0000-0000-0000-000000000000', // system-level
+      user_id: '00000000-0000-0000-0000-000000000000',
       updated_at: new Date().toISOString(),
     }, { onConflict: 'email' })
 
@@ -105,7 +99,6 @@ Deno.serve(async (req) => {
 
   console.log('Gmail tokens saved successfully!')
 
-  // Redirect back to CRM with success
   const redirectUrl = `${appUrl}/crm/contacts?gmail_status=success`
   return Response.redirect(redirectUrl, 302)
 })

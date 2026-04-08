@@ -1,9 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders } from '../_shared/cors.ts'
 
 const AI_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions'
 
@@ -22,23 +18,13 @@ async function callLovableAi({
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${lovableApiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      messages,
-    }),
+    body: JSON.stringify({ model, messages }),
   })
 
   if (!response.ok) {
     const errorText = await response.text()
-
-    if (response.status === 429) {
-      throw new Error('Rate limits exceeded, please try again in a moment.')
-    }
-
-    if (response.status === 402) {
-      throw new Error('Lovable AI credits required. Please top up workspace usage to continue.')
-    }
-
+    if (response.status === 429) throw new Error('Rate limits exceeded, please try again in a moment.')
+    if (response.status === 402) throw new Error('Lovable AI credits required. Please top up workspace usage to continue.')
     throw new Error(`AI gateway error [${response.status}]: ${errorText}`)
   }
 
@@ -47,6 +33,8 @@ async function callLovableAi({
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -61,7 +49,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Auth
   const authHeader = req.headers.get('Authorization') || ''
   const token = authHeader.replace('Bearer ', '')
   const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
@@ -86,7 +73,6 @@ Deno.serve(async (req) => {
   }
 
   const { template_type, context } = body
-  // context: { client_name, order_code, order_status, order_total, custom_prompt, ... }
 
   const systemPrompt = `Sei un assistente commerciale di EasySea, azienda che produce e distribuisce prodotti nautici B2B.
 Scrivi email professionali, cordiali e concise in italiano.
@@ -105,20 +91,17 @@ Stato attuale: ${context.order_status || ''}
 ${context.tracking_number ? `Tracking: ${context.tracking_number}` : ''}
 ${context.additional_info || ''}`
       break
-
     case 'payment_reminder':
       userPrompt = `Scrivi un sollecito di pagamento cortese ma fermo per il cliente ${context.client_name || ''}.
 Ordine: ${context.order_code || ''}
 Importo: €${context.order_total || '0'}
 ${context.additional_info || ''}`
       break
-
     case 'custom':
       userPrompt = `Scrivi un'email per il cliente ${context.client_name || ''}.
 Contesto: ${context.custom_prompt || 'messaggio generico di follow-up'}
 ${context.additional_info || ''}`
       break
-
     default:
       userPrompt = `Scrivi un'email professionale per il cliente ${context.client_name || ''}.
 ${context.custom_prompt || 'Follow-up commerciale generico.'}`
