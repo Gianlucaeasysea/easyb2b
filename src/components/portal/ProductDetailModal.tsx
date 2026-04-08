@@ -252,7 +252,7 @@ const ProductDetailModal = ({
             {/* Add to Cart */}
             {!isClientMode && (
               <Button
-                disabled={!inStock}
+                disabled={!canAddToCart}
                 className="w-full mt-4 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-2 font-heading font-semibold"
                 onClick={() => {
                   onAddToCart();
