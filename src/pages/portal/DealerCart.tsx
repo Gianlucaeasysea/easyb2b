@@ -64,7 +64,7 @@ const DealerCart = () => {
   const { data: client } = useQuery({
     queryKey: ["my-client"],
     queryFn: async () => {
-      const { data } = await supabase.from("clients").select("*").eq("user_id", user!.id).single();
+      const { data } = await supabase.from("clients").select("*").eq("user_id", user!.id).maybeSingle();
       return data;
     },
     enabled: !!user,
@@ -108,7 +108,7 @@ const DealerCart = () => {
           payment_terms: (client as any).payment_terms || null,
         } as any)
         .select()
-        .single();
+        .maybeSingle();
 
       if (orderError) throw orderError;
 

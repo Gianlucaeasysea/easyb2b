@@ -142,7 +142,7 @@ const AdminClientDetail = () => {
   const { data: client, isLoading } = useQuery({
     queryKey: ["admin-client", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("clients").select("*").eq("id", id!).single();
+      const { data, error } = await supabase.from("clients").select("*").eq("id", id!).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -270,7 +270,7 @@ const AdminClientDetail = () => {
         order_type: "MANUAL B2B",
         total_amount: totalAmount,
         notes: newOrderNotes || null,
-      }).select().single();
+      }).select().maybeSingle();
       if (orderErr) throw orderErr;
 
       const items = orderItems.map(item => ({

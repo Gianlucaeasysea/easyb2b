@@ -58,7 +58,7 @@ const AdminOrderDetail = () => {
         .from("orders")
         .select("*, clients(company_name, country, contact_name, email), order_items(*, products(name, sku))")
         .eq("id", id!)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data as unknown as OrderWithRelations;
     },
