@@ -6,14 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileText, Check, X, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { format } from "date-fns";
 import { convertRequestToPipeline } from "@/lib/crmEntityActions";
 
 const CRMRequests = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
@@ -31,9 +29,12 @@ const CRMRequests = () => {
       const { error } = await supabase.from("distributor_requests").update({ status }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      if (selectedRequest?.id === variables.id) {
+        setSelectedRequest((prev: any) => prev ? { ...prev, status: variables.status } : prev);
+      }
       queryClient.invalidateQueries({ queryKey: ["crm-dealer-requests"] });
-      toast({ title: "Request updated" });
+      toast({ title: variables.status === "approved" ? "Request approved" : "Request updated" });
     },
   });
 
@@ -53,6 +54,7 @@ const CRMRequests = () => {
   });
 
   const newRequests = requests?.filter(r => r.status === "new") || [];
+  const approvedRequests = requests?.filter(r => r.status === "approved") || [];
 
   return (
     <div>
@@ -64,6 +66,9 @@ const CRMRequests = () => {
         <div className="flex items-center gap-2">
           {newRequests.length > 0 && (
             <Badge className="bg-warning/20 text-warning border-0">{newRequests.length} new</Badge>
+          )}
+          {approvedRequests.length > 0 && (
+            <Badge className="bg-success/20 text-success border-0">{approvedRequests.length} approved</Badge>
           )}
           <Badge variant="outline" className="text-xs">{requests?.length || 0} total</Badge>
         </div>
@@ -115,13 +120,18 @@ const CRMRequests = () => {
                     <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                       {r.status === "new" && (
                         <>
-                          <Button size="sm" variant="ghost" className="text-success hover:text-success h-8 gap-1" onClick={() => convertToLead.mutate(r)} title="Approva e apri in Pipeline">
+                          <Button size="sm" variant="ghost" className="text-success hover:text-success h-8 gap-1" onClick={() => updateStatus.mutate({ id: r.id, status: "approved" })} title="Approva richiesta">
                             <Check size={14} /> Approva
                           </Button>
                           <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive h-8" onClick={() => updateStatus.mutate({ id: r.id, status: "rejected" })} title="Reject">
                             <X size={14} />
                           </Button>
                         </>
+                      )}
+                      {r.status === "approved" && (
+                        <Button size="sm" variant="ghost" className="text-success hover:text-success h-8 gap-1" onClick={() => convertToLead.mutate(r)} title="Inserisci in pipeline">
+                          <Building2 size={14} /> Pipeline
+                        </Button>
                       )}
                       {r.status === "converted" && <Badge className="bg-success/20 text-success border-0 text-[10px]">In Pipeline</Badge>}
                       {r.status === "rejected" && <Badge className="bg-destructive/20 text-destructive border-0 text-[10px]">Rifiutato</Badge>}
@@ -164,8 +174,8 @@ const CRMRequests = () => {
                 </div>
                 {selectedRequest.status === "new" && (
                   <div className="flex gap-2 pt-2 border-t border-border">
-                    <Button className="flex-1 gap-1 bg-foreground text-background" onClick={() => convertToLead.mutate(selectedRequest)}>
-                      <Check size={14} /> Approva e Apri in Pipeline
+                    <Button className="flex-1 gap-1 bg-foreground text-background" onClick={() => updateStatus.mutate({ id: selectedRequest.id, status: "approved" })}>
+                      <Check size={14} /> Approva
                     </Button>
                     <Button variant="outline" className="gap-1 text-destructive" onClick={() => {
                       updateStatus.mutate({ id: selectedRequest.id, status: "rejected" });
@@ -175,7 +185,14 @@ const CRMRequests = () => {
                     </Button>
                   </div>
                 )}
-                {selectedRequest.status !== "new" && (
+                {selectedRequest.status === "approved" && (
+                  <div className="flex gap-2 pt-2 border-t border-border">
+                    <Button className="flex-1 gap-1 bg-foreground text-background" onClick={() => convertToLead.mutate(selectedRequest)}>
+                      <Building2 size={14} /> Inserisci in Pipeline
+                    </Button>
+                  </div>
+                )}
+                {selectedRequest.status !== "new" && selectedRequest.status !== "approved" && (
                   <div className="pt-2 border-t border-border">
                     <Badge className={
                       selectedRequest.status === "converted" ? "bg-success/20 text-success border-0" :
