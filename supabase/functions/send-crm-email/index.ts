@@ -113,9 +113,15 @@ Deno.serve(async (req) => {
   const MAX_RETRIES = 3
   let lastError: string | null = null
 
+  const RETRY_DELAYS = [0, 2000, 5000] // immediate, 2s, 5s
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`Send attempt ${attempt}/${MAX_RETRIES} for comm ${commId}`)
+      console.log(`Send attempt ${attempt}/${MAX_RETRIES} for comm ${commId} to=${to} subject="${subject}"`)
+
+      if (attempt > 1) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt - 1]))
+      }
 
       const client = new SMTPClient({
         connection: {
@@ -144,23 +150,19 @@ Deno.serve(async (req) => {
         .update({ status: 'sent', attempts: attempt, error_details: null })
         .eq('id', commId)
 
-      console.log(`Email sent successfully on attempt ${attempt}`)
+      console.log(`Email sent successfully on attempt ${attempt} to=${to}`)
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     } catch (err: any) {
       lastError = err.message || String(err)
-      console.error(`Attempt ${attempt}/${MAX_RETRIES} failed:`, lastError)
+      console.error(`Attempt ${attempt}/${MAX_RETRIES} failed for comm ${commId} to=${to}: ${lastError}`)
 
       // Update attempts count
       await adminClient
         .from('client_communications')
         .update({ attempts: attempt })
         .eq('id', commId)
-
-      if (attempt < MAX_RETRIES) {
-        await new Promise((r) => setTimeout(r, 1000 * attempt))
-      }
     }
   }
 
