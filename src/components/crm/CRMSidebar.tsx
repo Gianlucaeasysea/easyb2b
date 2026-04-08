@@ -81,10 +81,21 @@ export function CRMSidebar() {
     refetchInterval: 60000,
   });
 
+  const { data: submittedOrdersCount } = useQuery({
+    queryKey: ["crm-submitted-orders-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase.from("orders").select("*", { count: "exact", head: true }).eq("status", "submitted");
+      if (error) throw error;
+      return count || 0;
+    },
+    refetchInterval: 60000,
+  });
+
   const badgeCounts: Record<string, { count: number; color: string }> = {
     requests: { count: newRequestCount || 0, color: "bg-blue-500/20 text-blue-600" },
     overdue_tasks: { count: overdueTaskCount || 0, color: "bg-destructive/20 text-destructive" },
     expiring_deals: { count: expiringDealsCount || 0, color: "bg-orange-500/20 text-orange-600" },
+    submitted_orders: { count: submittedOrdersCount || 0, color: "bg-blue-500/20 text-blue-600" },
   };
 
   const visibleItems = items.filter(item => !item.adminOnly || role === "admin");
