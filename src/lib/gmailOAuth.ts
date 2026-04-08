@@ -59,7 +59,7 @@ const GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.send",
 ].join(" ");
-export const GMAIL_POPUP_BRIDGE_URL = "https://easyb2b.lovable.app/oauth/gmail-popup";
+export const GMAIL_POPUP_BRIDGE_URL = "https://b2b.easysea.org/oauth/gmail-popup";
 
 let googleIdentityScriptPromise: Promise<void> | null = null;
 
