@@ -94,6 +94,23 @@ const CRMOrganizations = () => {
     },
   });
 
+  // Fetch assigned price list names per client
+  const { data: clientPriceLists } = useQuery({
+    queryKey: ["crm-org-price-list-names"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("price_list_clients")
+        .select("client_id, price_lists(name)");
+      if (error) throw error;
+      const map: Record<string, string[]> = {};
+      data?.forEach((plc: any) => {
+        if (!map[plc.client_id]) map[plc.client_id] = [];
+        if (plc.price_lists?.name) map[plc.client_id].push(plc.price_lists.name);
+      });
+      return map;
+    },
+  });
+
   // Fetch primary contacts
   const { data: primaryContacts } = useQuery({
     queryKey: ["crm-org-primary-contacts"],
@@ -311,6 +328,7 @@ const CRMOrganizations = () => {
                 <TableHead>Score</TableHead>
                 <TableHead>Ultimo Ordine</TableHead>
                 <TableHead>Next Reorder</TableHead>
+                <TableHead>Listino</TableHead>
                 <TableHead className="text-right">Azioni</TableHead>
               </TableRow>
             </TableHeader>
@@ -363,6 +381,13 @@ const CRMOrganizations = () => {
                         </span>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell onClick={() => navigate(`/crm/organizations/${c.id}`)}>
+                      {clientPriceLists?.[c.id]?.length ? (
+                        <span className="text-xs text-foreground">{clientPriceLists[c.id].join(", ")}</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Non assegnato</span>
                       )}
                     </TableCell>
                     <TableCell>

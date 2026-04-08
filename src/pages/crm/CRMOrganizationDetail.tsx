@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Tables } from "@/integrations/supabase/types";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -724,101 +725,17 @@ const CRMOrganizationDetail = () => {
 
         {/* PRICING */}
         <TabsContent value="pricing">
-          <div className="space-y-6">
-            {/* Discount Class */}
-            <div className="glass-card-solid p-5">
-              <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
-                <Crown size={14} /> Classe di Sconto
-              </h3>
-              <div className="flex items-center gap-3">
-                <Select value={client.discount_class || "D"} onValueChange={updateDiscountClass}>
-                  <SelectTrigger className="w-48 bg-secondary border-border"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {discountTiers?.map(t => (
-                      <SelectItem key={t.id} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
-                    ))}
-                    <SelectItem value="D">Standard (D)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span className="text-xs text-muted-foreground">Attuale: {client.discount_class || "D"}</span>
-              </div>
-            </div>
-
-            {/* Dealer Portal Visibility */}
-            <div className="glass-card-solid p-5">
-              <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
-                <Eye size={14} /> Visibilità Portale Dealer
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Classi di Sconto</p>
-                    <p className="text-xs text-muted-foreground">Mostra le classi di sconto al dealer</p>
-                  </div>
-                  <Switch
-                    checked={client.show_discount_tiers ?? true}
-                    onCheckedChange={async (checked) => {
-                      const { error } = await supabase.from("clients").update({ show_discount_tiers: checked } as any).eq("id", id!);
-                      if (error) toast.error(error.message);
-                      else { toast.success("Aggiornato"); queryClient.invalidateQueries({ queryKey: ["crm-org", id] }); }
-                    }}
-                  />
-                </div>
-                <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Goals & Rewards</p>
-                    <p className="text-xs text-muted-foreground">Mostra la pagina Goals & Rewards al dealer</p>
-                  </div>
-                  <Switch
-                    checked={client.show_goals ?? true}
-                    onCheckedChange={async (checked) => {
-                      const { error } = await supabase.from("clients").update({ show_goals: checked } as any).eq("id", id!);
-                      if (error) toast.error(error.message);
-                      else { toast.success("Aggiornato"); queryClient.invalidateQueries({ queryKey: ["crm-org", id] }); }
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Assigned Price Lists */}
-            <div className="glass-card-solid p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-heading font-bold text-foreground flex items-center gap-2 text-sm">
-                  <Tag size={14} /> Listini Assegnati
-                </h3>
-              </div>
-              {assignedPriceLists && assignedPriceLists.length > 0 ? (
-                <div className="space-y-2 mb-4">
-                  {assignedPriceLists.map((plc: any) => (
-                    <div key={plc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{plc.price_lists?.name}</p>
-                        {plc.price_lists?.description && <p className="text-xs text-muted-foreground">{plc.price_lists.description}</p>}
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/20" onClick={() => removePriceList(plc.id)}>
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground mb-4">Nessun listino assegnato</p>
-              )}
-              
-              {/* Add price list */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">Aggiungi listino:</p>
-                <div className="flex flex-wrap gap-2">
-                  {allPriceLists?.filter(pl => !assignedPriceLists?.some((a: any) => a.price_list_id === pl.id)).map(pl => (
-                    <Button key={pl.id} variant="outline" size="sm" className="text-xs gap-1" onClick={() => assignPriceList(pl.id)}>
-                      <Plus size={12} /> {pl.name}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <PricingTab
+            clientId={id!}
+            client={client}
+            discountTiers={discountTiers || []}
+            allPriceLists={allPriceLists || []}
+            assignedPriceLists={assignedPriceLists || []}
+            assignPriceList={assignPriceList}
+            removePriceList={removePriceList}
+            updateDiscountClass={updateDiscountClass}
+            queryClient={queryClient}
+          />
         </TabsContent>
 
         {/* NOTES */}
@@ -1088,7 +1005,286 @@ const CRMOrganizationDetail = () => {
 
 export default CRMOrganizationDetail;
 
-// Deals sub-tab component
+// Pricing Tab component
+function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPriceLists, assignPriceList, removePriceList, updateDiscountClass, queryClient }: {
+  clientId: string;
+  client: Tables<"clients">;
+  discountTiers: Tables<"discount_tiers">[];
+  allPriceLists: Tables<"price_lists">[];
+  assignedPriceLists: Array<{ id: string; price_list_id: string; price_lists: { id: string; name: string; description: string | null; discount_tier_id: string | null } | null }>;
+  assignPriceList: (id: string) => Promise<void>;
+  removePriceList: (id: string) => Promise<void>;
+  updateDiscountClass: (cls: string) => Promise<void>;
+  queryClient: ReturnType<typeof useQueryClient>;
+}) {
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedListId, setSelectedListId] = useState<string>("");
+  const [customPricesOpen, setCustomPricesOpen] = useState(false);
+  const [editingListId, setEditingListId] = useState<string | null>(null);
+
+  // Preview: fetch items for selected price list
+  const { data: previewItems } = useQuery({
+    queryKey: ["price-list-preview", selectedListId],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_list_items").select("*, products(name, sku, category, price)").eq("price_list_id", selectedListId);
+      return data || [];
+    },
+    enabled: !!selectedListId,
+  });
+
+  // Fetch items for custom price editing
+  const { data: editItems, refetch: refetchEditItems } = useQuery({
+    queryKey: ["price-list-edit-items", editingListId],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_list_items").select("*, products(name, sku, category, price)").eq("price_list_id", editingListId!);
+      return data || [];
+    },
+    enabled: !!editingListId,
+  });
+
+  const handleAssign = async () => {
+    if (!selectedListId) return;
+    await assignPriceList(selectedListId);
+    setAssignDialogOpen(false);
+    setSelectedListId("");
+  };
+
+  const updateItemPrice = async (itemId: string, newPrice: number) => {
+    const { error } = await supabase.from("price_list_items").update({ custom_price: newPrice }).eq("id", itemId);
+    if (error) toast.error(error.message);
+    else { toast.success("Prezzo aggiornato"); refetchEditItems(); }
+  };
+
+  const unassignedLists = allPriceLists.filter(pl => !assignedPriceLists.some(a => a.price_list_id === pl.id));
+
+  return (
+    <div className="space-y-6">
+      {/* Discount Class */}
+      <div className="glass-card-solid p-5">
+        <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
+          <Crown size={14} /> Classe di Sconto
+        </h3>
+        <div className="flex items-center gap-3">
+          <Select value={client.discount_class || "D"} onValueChange={updateDiscountClass}>
+            <SelectTrigger className="w-48 bg-secondary border-border"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {discountTiers.map(t => (
+                <SelectItem key={t.id} value={t.name}>{t.label} (-{t.discount_pct}%)</SelectItem>
+              ))}
+              <SelectItem value="D">Standard (D)</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-xs text-muted-foreground">Attuale: {client.discount_class || "D"}</span>
+        </div>
+      </div>
+
+      {/* Dealer Portal Visibility */}
+      <div className="glass-card-solid p-5">
+        <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
+          <Eye size={14} /> Visibilità Portale Dealer
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Classi di Sconto</p>
+              <p className="text-xs text-muted-foreground">Mostra le classi di sconto al dealer</p>
+            </div>
+            <Switch
+              checked={client.show_discount_tiers ?? true}
+              onCheckedChange={async (checked) => {
+                const { error } = await supabase.from("clients").update({ show_discount_tiers: checked } as any).eq("id", clientId);
+                if (error) toast.error(error.message);
+                else { toast.success("Aggiornato"); queryClient.invalidateQueries({ queryKey: ["crm-org", clientId] }); }
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Goals & Rewards</p>
+              <p className="text-xs text-muted-foreground">Mostra la pagina Goals & Rewards al dealer</p>
+            </div>
+            <Switch
+              checked={client.show_goals ?? true}
+              onCheckedChange={async (checked) => {
+                const { error } = await supabase.from("clients").update({ show_goals: checked } as any).eq("id", clientId);
+                if (error) toast.error(error.message);
+                else { toast.success("Aggiornato"); queryClient.invalidateQueries({ queryKey: ["crm-org", clientId] }); }
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Assigned Price Lists */}
+      <div className="glass-card-solid p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-heading font-bold text-foreground flex items-center gap-2 text-sm">
+            <Tag size={14} /> Listini Assegnati
+          </h3>
+          <Button size="sm" className="gap-1" onClick={() => setAssignDialogOpen(true)}>
+            <Plus size={14} /> Assegna Listino
+          </Button>
+        </div>
+
+        {!client.user_id && (
+          <div className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-warning/10 border border-warning/20">
+            <span className="text-warning text-xs">⚠️ Questa organizzazione non ha ancora un account cliente collegato</span>
+          </div>
+        )}
+
+        {assignedPriceLists.length > 0 ? (
+          <div className="space-y-2 mb-4">
+            {assignedPriceLists.map((plc) => {
+              const tier = discountTiers.find(t => t.id === plc.price_lists?.discount_tier_id);
+              return (
+                <div key={plc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-foreground">{plc.price_lists?.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {plc.price_lists?.description && <p className="text-xs text-muted-foreground">{plc.price_lists.description}</p>}
+                      {tier && <Badge variant="outline" className="text-[10px]">-{tier.discount_pct}%</Badge>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => { setEditingListId(plc.price_list_id); setCustomPricesOpen(true); }}>
+                      <Pencil size={12} /> Modifica Sconti
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/20" onClick={() => removePriceList(plc.id)}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground mb-4">Nessun listino assegnato</p>
+        )}
+      </div>
+
+      {/* Assign Price List Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-lg">
+          <DialogHeader><DialogTitle className="font-heading">Assegna Listino a {client.company_name}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label className="text-[10px] uppercase text-muted-foreground">Seleziona Listino</Label>
+              <Select value={selectedListId} onValueChange={setSelectedListId}>
+                <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Scegli un listino..." /></SelectTrigger>
+                <SelectContent>
+                  {unassignedLists.map(pl => {
+                    const tier = discountTiers.find(t => t.id === pl.discount_tier_id);
+                    return (
+                      <SelectItem key={pl.id} value={pl.id}>
+                        {pl.name} {tier ? `(-${tier.discount_pct}%)` : ""}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Preview */}
+            {selectedListId && (
+              <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Prodotto</TableHead>
+                      <TableHead className="text-xs">Categoria</TableHead>
+                      <TableHead className="text-xs text-right">Prezzo Base</TableHead>
+                      <TableHead className="text-xs text-right">Prezzo Listino</TableHead>
+                      <TableHead className="text-xs text-right">Sconto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewItems?.map((item: any) => {
+                      const basePrice = item.products?.price || 0;
+                      const discount = basePrice > 0 ? Math.round((1 - item.custom_price / basePrice) * 100) : 0;
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell className="text-xs font-medium">{item.products?.name || "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{item.products?.category || "—"}</TableCell>
+                          <TableCell className="text-xs text-right text-muted-foreground">€{Number(basePrice).toFixed(2)}</TableCell>
+                          <TableCell className="text-xs text-right font-semibold">€{Number(item.custom_price).toFixed(2)}</TableCell>
+                          <TableCell className="text-xs text-right">
+                            <Badge variant="outline" className="text-[10px]">-{discount}%</Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {previewItems?.length === 0 && (
+                      <TableRow><TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-4">Nessun prodotto nel listino</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            <Button onClick={handleAssign} disabled={!selectedListId} className="w-full">
+              <Check size={14} className="mr-1" /> Conferma
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Prices Dialog */}
+      <Dialog open={customPricesOpen} onOpenChange={(open) => { setCustomPricesOpen(open); if (!open) setEditingListId(null); }}>
+        <DialogContent className="bg-card border-border max-w-2xl">
+          <DialogHeader><DialogTitle className="font-heading">Modifica Sconti Personalizzati</DialogTitle></DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Prodotto</TableHead>
+                  <TableHead className="text-xs">Categoria</TableHead>
+                  <TableHead className="text-xs text-right">Prezzo Base</TableHead>
+                  <TableHead className="text-xs text-right">Sconto %</TableHead>
+                  <TableHead className="text-xs text-right">Prezzo Personalizzato (€)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {editItems?.map((item: any) => {
+                  const basePrice = item.products?.price || 0;
+                  const currentDiscount = basePrice > 0 ? Math.round((1 - item.custom_price / basePrice) * 100) : 0;
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="text-xs font-medium">{item.products?.name || "—"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{item.products?.category || "—"}</TableCell>
+                      <TableCell className="text-xs text-right text-muted-foreground">€{Number(basePrice).toFixed(2)}</TableCell>
+                      <TableCell className="text-xs text-right">
+                        <Badge variant="outline" className="text-[10px]">-{currentDiscount}%</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-7 w-24 text-xs text-right bg-secondary border-border ml-auto"
+                          defaultValue={item.custom_price}
+                          onBlur={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val) && val !== item.custom_price) {
+                              updateItemPrice(item.id, val);
+                            }
+                          }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {editItems?.length === 0 && (
+                  <TableRow><TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-4">Nessun prodotto nel listino</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+
 const stageColors: Record<string, string> = {
   qualification: "bg-primary/20 text-primary",
   proposal: "bg-warning/20 text-warning",
