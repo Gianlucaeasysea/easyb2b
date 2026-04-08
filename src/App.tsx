@@ -27,13 +27,15 @@ import CRMLayout from "./layouts/CRMLayout";
 import DealerDashboard from "./pages/portal/DealerDashboard";
 import DealerCatalog from "./pages/portal/DealerCatalog";
 import DealerOrders from "./pages/portal/DealerOrders";
-import DealerPromos from "./pages/portal/DealerPromos";
-import DealerGoals from "./pages/portal/DealerGoals";
-import DealerMarketing from "./pages/portal/DealerMarketing";
+// TODO: Re-enable when page is implemented
+// import DealerPromos from "./pages/portal/DealerPromos";
+// import DealerGoals from "./pages/portal/DealerGoals";
+// import DealerMarketing from "./pages/portal/DealerMarketing";
 import DealerSupport from "./pages/portal/DealerSupport";
 import DealerCart from "./pages/portal/DealerCart";
 import DealerProfile from "./pages/portal/DealerProfile";
 import DealerNotifications from "./pages/portal/DealerNotifications";
+import DealerInvoices from "./pages/portal/DealerInvoices";
 
 // Admin Panel
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -105,9 +107,11 @@ const App = () => (
               <Route path="catalog" element={<DealerCatalog />} />
               <Route path="orders" element={<DealerOrders />} />
               <Route path="cart" element={<DealerCart />} />
-              <Route path="promos" element={<DealerPromos />} />
-              <Route path="goals" element={<DealerGoals />} />
-              <Route path="marketing" element={<DealerMarketing />} />
+              <Route path="invoices" element={<DealerInvoices />} />
+              {/* TODO: Re-enable when page is implemented */}
+              {/* <Route path="promos" element={<DealerPromos />} /> */}
+              {/* <Route path="goals" element={<DealerGoals />} /> */}
+              {/* <Route path="marketing" element={<DealerMarketing />} /> */}
               <Route path="notifications" element={<DealerNotifications />} />
               <Route path="profile" element={<DealerProfile />} />
               <Route path="support" element={<DealerSupport />} />

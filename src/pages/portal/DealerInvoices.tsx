@@ -1,0 +1,161 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Receipt, Download, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { format, addDays } from "date-fns";
+import { toast } from "sonner";
+
+const paymentTermsDays: Record<string, number> = {
+  prepaid: 0,
+  "30_days": 30,
+  "60_days": 60,
+  "90_days": 90,
+  end_of_month: 30,
+};
+
+const paymentStatusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  paid: { label: "Pagato", variant: "default" },
+  unpaid: { label: "Non pagato", variant: "destructive" },
+  partial: { label: "Parziale", variant: "secondary" },
+};
+
+const DealerInvoices = () => {
+  const { user } = useAuth();
+
+  const { data: client } = useQuery({
+    queryKey: ["my-client-invoices"],
+    queryFn: async () => {
+      const { data } = await supabase.from("clients").select("id").eq("user_id", user!.id).maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ["dealer-invoices", client?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("orders")
+        .select("id, order_code, created_at, total_amount, payment_status, payment_terms, payed_date, status, shipping_cost_client")
+        .eq("client_id", client!.id)
+        .neq("status", "draft")
+        .neq("status", "cancelled")
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+    enabled: !!client?.id,
+  });
+
+  const { data: invoiceDocs = [] } = useQuery({
+    queryKey: ["dealer-invoice-docs", client?.id],
+    queryFn: async () => {
+      if (!orders.length) return [];
+      const orderIds = orders.map(o => o.id);
+      const { data } = await supabase
+        .from("order_documents")
+        .select("id, order_id, file_name, file_path, doc_type, created_at")
+        .in("order_id", orderIds)
+        .eq("doc_type", "invoice");
+      return data || [];
+    },
+    enabled: orders.length > 0,
+  });
+
+  const handleDownload = async (filePath: string, fileName: string) => {
+    const { data, error } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 300);
+    if (error || !data?.signedUrl) {
+      toast.error("Errore nel download del documento");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  };
+
+  const getDueDate = (order: any) => {
+    const days = paymentTermsDays[order.payment_terms] ?? 30;
+    return addDays(new Date(order.created_at), days);
+  };
+
+  const getInvoiceForOrder = (orderId: string) => invoiceDocs.filter(d => d.order_id === orderId);
+
+  return (
+    <div>
+      <div className="mb-8">
+        <h1 className="font-heading text-2xl font-bold text-foreground">Fatture & Pagamenti</h1>
+        <p className="text-sm text-muted-foreground">Visualizza lo stato dei pagamenti e scarica le fatture</p>
+      </div>
+
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Caricamento...</p>
+      ) : !orders.length ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <Receipt size={40} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm">Nessun ordine con fattura disponibile.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {orders.map(order => {
+            const ps = paymentStatusLabels[order.payment_status || "unpaid"] || paymentStatusLabels.unpaid;
+            const dueDate = getDueDate(order);
+            const isOverdue = order.payment_status !== "paid" && dueDate < new Date();
+            const docs = getInvoiceForOrder(order.id);
+
+            return (
+              <div key={order.id} className="glass-card-solid p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="font-heading font-bold text-sm text-foreground">
+                        {order.order_code || order.id.slice(0, 8)}
+                      </span>
+                      <Badge variant={ps.variant} className="text-[10px]">
+                        {order.payment_status === "paid" && <CheckCircle size={10} className="mr-1" />}
+                        {isOverdue && <AlertCircle size={10} className="mr-1" />}
+                        {ps.label}
+                      </Badge>
+                      {isOverdue && (
+                        <Badge variant="destructive" className="text-[10px]">Scaduto</Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                      <span>Data: {format(new Date(order.created_at), "dd/MM/yyyy")}</span>
+                      <span>Totale: €{Number(order.total_amount || 0).toFixed(2)}</span>
+                      <span>Scadenza: {format(dueDate, "dd/MM/yyyy")}</span>
+                      {order.payed_date && (
+                        <span className="text-success">Pagato il: {format(new Date(order.payed_date), "dd/MM/yyyy")}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {docs.length > 0 ? (
+                      docs.map(doc => (
+                        <Button
+                          key={doc.id}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs gap-1"
+                          onClick={() => handleDownload(doc.file_path, doc.file_name)}
+                        >
+                          <Download size={12} /> Fattura
+                        </Button>
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic flex items-center gap-1">
+                        <Clock size={12} /> In attesa
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DealerInvoices;
