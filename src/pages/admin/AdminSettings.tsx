@@ -25,6 +25,8 @@ const AdminSettings = () => {
   const [confirmRole, setConfirmRole] = useState<{ userId: string; email: string; oldRole: string; newRole: string } | null>(null);
   const [newSuppressEmail, setNewSuppressEmail] = useState("");
   const [showAddSuppress, setShowAddSuppress] = useState(false);
+  const [newToEmail, setNewToEmail] = useState("");
+  const [newBccEmail, setNewBccEmail] = useState("");
 
   // User roles with profiles
   const { data: userRoles } = useQuery({
