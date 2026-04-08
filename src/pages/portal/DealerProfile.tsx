@@ -1,5 +1,5 @@
 import { useState } from "react";
-import DOMPurify from "dompurify";
+import { SafeHtml } from "@/components/ui/SafeHtml";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -349,7 +349,7 @@ const DealerProfile = () => {
                         {comm.body.length > 300 ? (
                           <p className="whitespace-pre-wrap">{comm.body.slice(0, 300)}...</p>
                         ) : (
-                          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(comm.body.replace(/\n/g, "<br/>")) }} />
+                          <SafeHtml html={comm.body.replace(/\n/g, "<br/>")} />
                         )}
                       </div>
                       {comm.order_id && (
