@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Package, Search, RefreshCw, ChevronRight, FileText } from "lucide-react";
+import OptimizedImage from "@/components/ui/OptimizedImage";
 import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
 import { useState } from "react";
@@ -186,7 +187,7 @@ const AdminProducts = () => {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {familyEntries.map(([key, { detail, variants, totalStock, image }]) => {
+            {familyEntries.map(([key, { detail, variants, totalStock, image }], i) => {
               const hasSpecs = Object.keys((detail.specifications as Record<string, string>) || {}).length > 0;
               const hasDesc = !!detail.description;
               const hasTechSheet = !!detail.technical_sheet_url;
@@ -198,11 +199,13 @@ const AdminProducts = () => {
                   onClick={() => navigate(`/admin/products/${key}`)}
                 >
                   <div className="aspect-[4/3] bg-secondary flex items-center justify-center relative">
-                    {image ? (
-                      <img src={image} alt={detail.display_name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Package className="text-muted-foreground" size={40} />
-                    )}
+                    <OptimizedImage
+                      src={image}
+                      alt={detail.display_name}
+                      loading={i < 6 ? "eager" : "lazy"}
+                      className="w-full h-full object-cover"
+                      containerClassName="w-full h-full"
+                    />
                     <div className="absolute top-2 right-2 flex gap-1">
                       {hasTechSheet && (
                         <Badge className="bg-primary/90 text-primary-foreground border-0 text-[9px]">

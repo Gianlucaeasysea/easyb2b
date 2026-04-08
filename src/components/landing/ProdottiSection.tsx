@@ -1,6 +1,7 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import { useRef } from "react";
+import OptimizedImage from "@/components/ui/OptimizedImage";
 
 const products = [
   { name: "Jake™ Boat Hook", img: "https://easysea.org/cdn/shop/files/pi.png?v=1767816422&width=800", badge: "NEW" },
@@ -61,14 +62,19 @@ const ProductsSection = () => {
               className="group cursor-pointer rounded-2xl overflow-hidden bg-card border border-border hover:border-primary/25 transition-colors duration-300"
             >
               <div className="relative aspect-square bg-secondary overflow-hidden">
-                <motion.img
-                  src={p.img}
-                  alt={p.name}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
+                <motion.div
                   whileHover={{ scale: 1.08 }}
                   transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                />
+                  className="w-full h-full"
+                >
+                  <OptimizedImage
+                    src={p.img}
+                    alt={p.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                    containerClassName="w-full h-full"
+                  />
+                </motion.div>
                 {p.badge && (
                   <span className="absolute top-3 left-3 text-[9px] font-heading font-black uppercase tracking-[0.15em] bg-primary text-primary-foreground px-2.5 py-1 rounded-full">
                     {p.badge}
