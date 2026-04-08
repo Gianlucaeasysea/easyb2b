@@ -10,6 +10,7 @@ import { Building2, ArrowLeft, Calendar, ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
 
 const stages = ["qualification", "proposal", "negotiation", "closed_won", "closed_lost"];
 
@@ -80,6 +81,7 @@ const CRMDealsPipeline = () => {
   const navigate = useNavigate();
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
+  const [orderModalId, setOrderModalId] = useState<string | null>(null);
 
   const { data: deals } = useQuery({
     queryKey: ["crm-deals-pipeline"],
