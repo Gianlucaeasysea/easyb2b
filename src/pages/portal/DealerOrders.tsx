@@ -153,7 +153,7 @@ const DealerOrders = () => {
       showErrorToast(error, "DealerOrders.prepareDuplicate");
     } finally {
       setDuplicatingId(null);
-      setConfirmDuplicate(null);
+      
     }
   };
 
