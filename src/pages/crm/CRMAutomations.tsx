@@ -420,6 +420,13 @@ const CRMAutomations = () => {
         </Button>
       </div>
 
+      <Tabs defaultValue="rules" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="rules">Regole</TabsTrigger>
+          <TabsTrigger value="logs" className="gap-1.5"><History size={14} /> Log Esecuzioni</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="rules">
       {/* Rules list */}
       {isLoading ? (
         <p className="text-muted-foreground">Caricamento...</p>
@@ -456,6 +463,63 @@ const CRMAutomations = () => {
           ))}
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="logs">
+          {logsLoading ? (
+            <p className="text-muted-foreground">Caricamento...</p>
+          ) : logs.length === 0 ? (
+            <Card><CardContent className="py-12 text-center text-muted-foreground">
+              <History className="mx-auto mb-4 h-12 w-12" />
+              <p>Nessuna esecuzione registrata. Le automazioni verranno loggate qui.</p>
+            </CardContent></Card>
+          ) : (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data/Ora</TableHead>
+                    <TableHead>Regola</TableHead>
+                    <TableHead>Evento</TableHead>
+                    <TableHead>Azione</TableHead>
+                    <TableHead>Dettagli</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logs.map((log: any) => (
+                    <Collapsible key={log.id} asChild>
+                      <>
+                        <TableRow>
+                          <TableCell className="text-xs whitespace-nowrap">{format(new Date(log.executed_at), "dd/MM/yyyy HH:mm")}</TableCell>
+                          <TableCell className="text-sm font-medium">{log.rule_name || "—"}</TableCell>
+                          <TableCell><Badge variant="outline" className="text-[10px]">{log.trigger_event}</Badge></TableCell>
+                          <TableCell><Badge variant="secondary" className="text-[10px]">{actionTypes[log.action_taken] || log.action_taken}</Badge></TableCell>
+                          <TableCell>
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1">
+                                Espandi <ChevronDown size={12} />
+                              </Button>
+                            </CollapsibleTrigger>
+                          </TableCell>
+                        </TableRow>
+                        <CollapsibleContent asChild>
+                          <tr>
+                            <td colSpan={5} className="px-4 py-2 bg-muted/30">
+                              <pre className="text-xs text-muted-foreground whitespace-pre-wrap max-h-40 overflow-auto">
+                                {JSON.stringify(log.details, null, 2)}
+                              </pre>
+                            </td>
+                          </tr>
+                        </CollapsibleContent>
+                      </>
+                    </Collapsible>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Wizard Dialog */}
       <Dialog open={wizardOpen} onOpenChange={v => { if (!v) closeWizard(); }}>
