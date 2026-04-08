@@ -230,6 +230,16 @@ const CRMOrganizationDetail = () => {
     enabled: !!id,
   });
 
+  const { data: priceListItemCounts } = useQuery({
+    queryKey: ["price-list-item-counts"],
+    queryFn: async () => {
+      const { data } = await supabase.from("price_list_items").select("price_list_id");
+      const counts: Record<string, number> = {};
+      data?.forEach((i: any) => { counts[i.price_list_id] = (counts[i.price_list_id] || 0) + 1; });
+      return counts;
+    },
+  });
+
   const { data: allPriceLists } = useQuery({
     queryKey: ["all-price-lists"],
     queryFn: async () => {
@@ -252,8 +262,19 @@ const CRMOrganizationDetail = () => {
       if (error.code === "23505") toast.info("Listino già assegnato");
       else toast.error(error.message);
     } else {
-      toast.success("Listino assegnato");
+      const plName = allPriceLists?.find(pl => pl.id === priceListId)?.name || "Listino";
+      toast.success(`Listino "${plName}" assegnato a ${client?.company_name}`);
       refetchAssignedLists();
+      // Notify dealer
+      if (client?.id) {
+        await supabase.from("client_notifications").insert({
+          client_id: client.id,
+          title: "Listino prezzi aggiornato",
+          body: "Il tuo listino prezzi è stato aggiornato. Visita il catalogo per vedere i nuovi prezzi.",
+          type: "info",
+          target_role: "dealer",
+        } as any);
+      }
     }
   };
 
@@ -834,7 +855,7 @@ const CRMOrganizationDetail = () => {
             assignedPriceLists={assignedPriceLists || []}
             assignPriceList={assignPriceList}
             removePriceList={removePriceList}
-            
+            priceListItemCounts={priceListItemCounts || {}}
             queryClient={queryClient}
           />
         </TabsContent>
@@ -1107,14 +1128,15 @@ const CRMOrganizationDetail = () => {
 export default CRMOrganizationDetail;
 
 // Pricing Tab component
-function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPriceLists, assignPriceList, removePriceList, queryClient }: {
+function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPriceLists, assignPriceList, removePriceList, priceListItemCounts, queryClient }: {
   clientId: string;
   client: Tables<"clients">;
   discountTiers: Tables<"discount_tiers">[];
   allPriceLists: Tables<"price_lists">[];
-  assignedPriceLists: Array<{ id: string; price_list_id: string; price_lists: { id: string; name: string; description: string | null; discount_tier_id: string | null } | null }>;
+  assignedPriceLists: Array<{ id: string; price_list_id: string; created_at: string; price_lists: { id: string; name: string; description: string | null; discount_tier_id: string | null } | null }>;
   assignPriceList: (id: string) => Promise<void>;
   removePriceList: (id: string) => Promise<void>;
+  priceListItemCounts: Record<string, number>;
   queryClient: ReturnType<typeof useQueryClient>;
 }) {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -1213,6 +1235,7 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
           <div className="space-y-2 mb-4">
             {assignedPriceLists.map((plc) => {
               const tier = discountTiers.find(t => t.id === plc.price_lists?.discount_tier_id);
+              const itemCount = priceListItemCounts[plc.price_list_id] || 0;
               return (
                 <div key={plc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
                   <div className="flex-1">
@@ -1220,6 +1243,8 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
                     <div className="flex items-center gap-2 mt-0.5">
                       {plc.price_lists?.description && <p className="text-xs text-muted-foreground">{plc.price_lists.description}</p>}
                       {tier && <Badge variant="outline" className="text-[10px]">-{tier.discount_pct}%</Badge>}
+                      <span className="text-[10px] text-muted-foreground">{itemCount} prodotti</span>
+                      <span className="text-[10px] text-muted-foreground">· Assegnato il: {fmtDate(plc.created_at)}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
@@ -1235,7 +1260,10 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
             })}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground mb-4">Nessun listino assegnato</p>
+          <div className="p-4 bg-warning/10 border border-warning/30 rounded-lg mb-4">
+            <p className="text-sm font-semibold text-warning">⚠️ Nessun listino prezzi assegnato</p>
+            <p className="text-xs text-muted-foreground mt-1">Il cliente non può visualizzare i prezzi nel portale. Assegna un listino per abilitare gli ordini.</p>
+          </div>
         )}
       </div>
 
@@ -1251,15 +1279,37 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
                 <SelectContent>
                   {unassignedLists.map(pl => {
                     const tier = discountTiers.find(t => t.id === pl.discount_tier_id);
+                    const itemCount = priceListItemCounts[pl.id] || 0;
                     return (
                       <SelectItem key={pl.id} value={pl.id}>
-                        {pl.name} {tier ? `(-${tier.discount_pct}%)` : ""}
+                        {pl.name} {tier ? `(-${tier.discount_pct}%)` : ""} · {itemCount} prodotti
                       </SelectItem>
                     );
                   })}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Current assignment note */}
+            {assignedPriceLists.length > 0 && (
+              <p className="text-xs text-muted-foreground bg-secondary/50 p-2 rounded">
+                Listino attuale: <strong>{assignedPriceLists.map(a => a.price_lists?.name).join(", ")}</strong>. Il nuovo listino verrà aggiunto.
+              </p>
+            )}
+
+            {/* Selected list description */}
+            {selectedListId && (() => {
+              const sel = allPriceLists.find(pl => pl.id === selectedListId);
+              const tier = discountTiers.find(t => t.id === sel?.discount_tier_id);
+              const count = priceListItemCounts[selectedListId] || 0;
+              return sel ? (
+                <div className="p-3 bg-secondary/50 rounded-lg text-xs space-y-1">
+                  <p className="font-semibold text-foreground">{sel.name}</p>
+                  {sel.description && <p className="text-muted-foreground">{sel.description}</p>}
+                  <p className="text-muted-foreground">{count} prodotti inclusi {tier ? `· Sconto base: -${tier.discount_pct}%` : ""}</p>
+                </div>
+              ) : null;
+            })()}
 
             {/* Preview */}
             {selectedListId && (
