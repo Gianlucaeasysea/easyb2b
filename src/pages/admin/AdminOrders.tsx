@@ -209,14 +209,14 @@ const AdminOrders = () => {
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.created_at)}</TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)}>
-                    <Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"] || "bg-muted text-muted-foreground"}`}>
-                      {o.status || "—"}
+                    <Badge className={`border-0 text-[10px] ${getOrderStatusColor(o.status || "draft")}`}>
+                      {getOrderStatusLabel(o.status || "draft")}
                     </Badge>
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)}>
                     {o.payment_status ? (
-                      <Badge className={`border-0 text-[10px] ${paymentColors[o.payment_status] || "bg-muted text-muted-foreground"}`}>
-                        {o.payment_status}
+                      <Badge className={`border-0 text-[10px] ${getPaymentStatusColor(o.payment_status)}`}>
+                        {getPaymentStatusLabel(o.payment_status)}
                       </Badge>
                     ) : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>

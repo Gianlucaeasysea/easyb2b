@@ -9,6 +9,12 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { getOrderStatusLabel, getOrderStatusColor, getPaymentStatusLabel, getPaymentStatusColor } from "@/lib/constants";
 
+interface CRMOrderDetailModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  orderId: string | null;
+}
+
 const fmtDate = (d: string | null | undefined) => {
   if (!d) return "—";
   try { return format(new Date(d), "dd MMM yyyy", { locale: it }); } catch { return "—"; }
@@ -79,12 +85,12 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
 
             {/* Status & dates row */}
             <div className="flex flex-wrap gap-3 mt-2">
-              <Badge className={`border-0 ${statusColors[(order as any).status || "draft"]}`}>
-                {(order as any).status || "draft"}
+              <Badge className={`border-0 ${getOrderStatusColor((order as any).status || "draft")}`}>
+                {getOrderStatusLabel((order as any).status || "draft")}
               </Badge>
               {(order as any).payment_status && (
-                <Badge className={`border-0 ${(order as any).payment_status === "Payed" ? "bg-success/20 text-success" : "bg-warning/20 text-warning"}`}>
-                  {(order as any).payment_status}
+                <Badge className={`border-0 ${getPaymentStatusColor((order as any).payment_status)}`}>
+                  {getPaymentStatusLabel((order as any).payment_status)}
                 </Badge>
               )}
               {(order as any).tracking_number && (

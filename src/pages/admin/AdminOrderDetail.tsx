@@ -78,7 +78,7 @@ const AdminOrderDetail = () => {
 
       // Log event on status change
       if (previousStatus !== status) {
-        const statusLabel = statusConfig[status]?.label || status;
+        const statusLabel = getOrderStatusLabel(status);
         await supabase.from("order_events").insert({
           order_id: id,
           event_type: "status_change",
@@ -104,7 +104,7 @@ const AdminOrderDetail = () => {
 
         // Create in-app notification for the dealer
         try {
-          const statusLabel = statusConfig[status]?.label || status;
+          const statusLabel = getOrderStatusLabel(status);
           await supabase.from("client_notifications").insert({
             client_id: (order as any)?.client_id,
             title: `Order ${(order as any)?.order_code || ''} status updated: ${statusLabel}`,
@@ -129,7 +129,7 @@ const AdminOrderDetail = () => {
   const client = order.clients as any;
   const items = (order.order_items || []) as any[];
   const currentStatus = order.status || "draft";
-  const sc = statusConfig[currentStatus] || statusConfig.draft;
+  const sc = { label: getOrderStatusLabel(currentStatus), color: getOrderStatusColor(currentStatus) };
   const productsTotal = Number(order.total_amount || 0);
   const shippingVal = parseFloat(shippingCost) || 0;
 
@@ -165,7 +165,7 @@ const AdminOrderDetail = () => {
               </SelectTrigger>
               <SelectContent>
                 {statusOptions.map(s => (
-                  <SelectItem key={s} value={s}>{statusConfig[s]?.label || s}</SelectItem>
+                  <SelectItem key={s} value={s}>{getOrderStatusLabel(s)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
