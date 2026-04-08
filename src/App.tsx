@@ -71,6 +71,8 @@ import CRMTasks from "./pages/crm/CRMTasks";
 import CRMAnalytics from "./pages/crm/CRMAnalytics";
 import CRMAutomations from "./pages/crm/CRMAutomations";
 import CRMHelp from "./pages/crm/CRMHelp";
+import CRMOrders from "./pages/crm/CRMOrders";
+import CRMOrderDetail from "./pages/crm/CRMOrderDetail";
 
 const queryClient = new QueryClient();
 
@@ -155,6 +157,8 @@ const App = () => (
               <Route path="organizations/:id" element={<CRMOrganizationDetail />} />
               <Route path="contacts" element={<CRMContactsPeople />} />
               <Route path="email-templates" element={<CRMEmailTemplates />} />
+              <Route path="orders" element={<CRMOrders />} />
+              <Route path="orders/:id" element={<CRMOrderDetail />} />
               <Route path="tasks" element={<CRMTasks />} />
               <Route path="analytics" element={<CRMAnalytics />} />
               <Route path="automations" element={<CRMAutomations />} />
