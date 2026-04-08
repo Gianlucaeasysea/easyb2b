@@ -461,68 +461,66 @@ const CRMLeads = () => {
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: "60vh" }}>
             {LEAD_STAGES.map(stage => (
-              <Droppable key={stage.value} droppableId={stage.value}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`min-w-[260px] w-[260px] flex-shrink-0 rounded-xl border border-border p-3 transition-colors ${stage.columnColor} ${snapshot.isDraggingOver ? "bg-primary/5 border-primary/30" : "bg-secondary/30"}`}
-                    style={{ borderTopWidth: "3px" }}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className={`text-xs font-heading font-bold uppercase tracking-wider ${stage.color.split(" ").find(c => c.startsWith("text-")) || "text-muted-foreground"}`}>{stage.label}</h3>
-                      <Badge variant="outline" className="text-[10px] h-5 px-1.5">{kanbanLeads[stage.value]?.length || 0}</Badge>
-                    </div>
-                    <ScrollArea className="h-[calc(60vh-60px)]">
-                      <div className="space-y-2 pr-2">
-                        {kanbanLeads[stage.value]?.map((lead, index) => (
-                          <Draggable key={lead.id} draggableId={lead.id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                onClick={() => setDetailLead(lead)}
-                                className={`glass-card-solid p-3 rounded-lg cursor-pointer hover:border-primary/30 transition-all ${snapshot.isDragging ? "shadow-lg border-primary/50" : ""}`}
-                              >
-                                <p className="font-heading font-semibold text-sm text-foreground truncate">{lead.company_name}</p>
-                                {lead.contact_name && <p className="text-xs text-muted-foreground truncate">{lead.contact_name}</p>}
-                                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                  {lead.zone && <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">{lead.zone}</span>}
-                                  {lead.source && <span className="text-[10px] text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded">{lead.source}</span>}
-                                  {lead.updated_at && (
-                                    <span className="text-[10px] text-muted-foreground ml-auto">
-                                      {differenceInDays(new Date(), new Date(lead.updated_at))}d
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-1 mt-2" onClick={e => e.stopPropagation()}>
-                                  {lead.email && (
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-warning" onClick={() => window.open(`mailto:${lead.email}?subject=${encodeURIComponent("Easysea — Follow-up")}`)}>
-                                      <Mail size={12} />
-                                    </Button>
-                                  )}
-                                  {lead.phone && (
-                                    <>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => window.open(`tel:${lead.phone}`)}>
-                                        <Phone size={12} />
-                                      </Button>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-success" onClick={() => openWhatsApp(lead.phone!, lead.contact_name || lead.company_name)}>
-                                        <MessageCircle size={12} />
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
+              <div key={stage.value} className={`min-w-[260px] w-[260px] flex-shrink-0 rounded-xl border border-border transition-colors ${stage.columnColor}`} style={{ borderTopWidth: "3px" }}>
+                <div className="flex items-center justify-between p-3 pb-0 mb-3">
+                  <h3 className={`text-xs font-heading font-bold uppercase tracking-wider ${stage.color.split(" ").find(c => c.startsWith("text-")) || "text-muted-foreground"}`}>{stage.label}</h3>
+                  <Badge variant="outline" className="text-[10px] h-5 px-1.5">{kanbanLeads[stage.value]?.length || 0}</Badge>
+                </div>
+                <Droppable droppableId={stage.value}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`p-3 pt-0 space-y-2 min-h-[calc(60vh-60px)] overflow-y-auto transition-colors ${snapshot.isDraggingOver ? "bg-primary/5" : "bg-secondary/30"}`}
+                      style={{ maxHeight: "calc(60vh - 60px)" }}
+                    >
+                      {kanbanLeads[stage.value]?.map((lead, index) => (
+                        <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              onClick={() => setDetailLead(lead)}
+                              className={`glass-card-solid p-3 rounded-lg cursor-pointer hover:border-primary/30 transition-all ${snapshot.isDragging ? "shadow-lg border-primary/50" : ""}`}
+                            >
+                              <p className="font-heading font-semibold text-sm text-foreground truncate">{lead.company_name}</p>
+                              {lead.contact_name && <p className="text-xs text-muted-foreground truncate">{lead.contact_name}</p>}
+                              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                {lead.zone && <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">{lead.zone}</span>}
+                                {lead.source && <span className="text-[10px] text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded">{lead.source}</span>}
+                                {lead.updated_at && (
+                                  <span className="text-[10px] text-muted-foreground ml-auto">
+                                    {differenceInDays(new Date(), new Date(lead.updated_at))}d
+                                  </span>
+                                )}
                               </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                )}
-              </Droppable>
+                              <div className="flex items-center gap-1 mt-2" onClick={e => e.stopPropagation()}>
+                                {lead.email && (
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-warning" onClick={() => window.open(`mailto:${lead.email}?subject=${encodeURIComponent("Easysea — Follow-up")}`)}>
+                                    <Mail size={12} />
+                                  </Button>
+                                )}
+                                {lead.phone && (
+                                  <>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => window.open(`tel:${lead.phone}`)}>
+                                      <Phone size={12} />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-success" onClick={() => openWhatsApp(lead.phone!, lead.contact_name || lead.company_name)}>
+                                      <MessageCircle size={12} />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
             ))}
           </div>
         </DragDropContext>
