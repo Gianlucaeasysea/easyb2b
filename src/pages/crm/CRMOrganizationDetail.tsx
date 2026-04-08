@@ -1128,14 +1128,15 @@ const CRMOrganizationDetail = () => {
 export default CRMOrganizationDetail;
 
 // Pricing Tab component
-function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPriceLists, assignPriceList, removePriceList, queryClient }: {
+function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPriceLists, assignPriceList, removePriceList, priceListItemCounts, queryClient }: {
   clientId: string;
   client: Tables<"clients">;
   discountTiers: Tables<"discount_tiers">[];
   allPriceLists: Tables<"price_lists">[];
-  assignedPriceLists: Array<{ id: string; price_list_id: string; price_lists: { id: string; name: string; description: string | null; discount_tier_id: string | null } | null }>;
+  assignedPriceLists: Array<{ id: string; price_list_id: string; created_at: string; price_lists: { id: string; name: string; description: string | null; discount_tier_id: string | null } | null }>;
   assignPriceList: (id: string) => Promise<void>;
   removePriceList: (id: string) => Promise<void>;
+  priceListItemCounts: Record<string, number>;
   queryClient: ReturnType<typeof useQueryClient>;
 }) {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
