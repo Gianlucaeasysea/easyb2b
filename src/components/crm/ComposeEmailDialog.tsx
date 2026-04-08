@@ -194,8 +194,8 @@ export const ComposeEmailDialog = ({
       setBody(data.draft || "");
       setSubject(data.subject || subject || "");
       toast.success("Bozza AI generata");
-    } catch (err: any) {
-      toast.error("Errore generazione bozza: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "ComposeEmailDialog.generateDraft");
     } finally {
       setGenerating(false);
     }
@@ -281,8 +281,8 @@ export const ComposeEmailDialog = ({
       setCcEmails([]);
       onOpenChange(false);
       onSent?.();
-    } catch (err: any) {
-      toast.error("Errore: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "ComposeEmailDialog.send");
     } finally {
       setSending(false);
     }

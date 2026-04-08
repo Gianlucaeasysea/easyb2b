@@ -33,7 +33,7 @@ const contactTypeLabels: Record<string, string> = {
   general: "General",
 };
 
-const channelIcons: Record<string, any> = {
+const channelIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   email: Mail,
   phone: Phone,
   whatsapp: MessageCircle,

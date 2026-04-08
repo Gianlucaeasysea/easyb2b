@@ -138,7 +138,7 @@ const CRMAutomations = () => {
       toast.success(editingRule ? "Regola aggiornata" : "Regola creata");
       closeWizard();
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (error: unknown) => showErrorToast(error, "CRMAutomations.saveRule"),
   });
 
   const deleteRule = useMutation({
