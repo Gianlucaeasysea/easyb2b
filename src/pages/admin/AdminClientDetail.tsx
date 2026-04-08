@@ -540,7 +540,7 @@ const AdminClientDetail = () => {
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading">Payment Terms</span>
           </div>
           <p className="font-heading text-xl font-bold text-foreground">
-            {{ prepaid: "Anticipato", "30_days": "30 gg", "60_days": "60 gg", "90_days": "90 gg", end_of_month: "Fine mese" }[(client as any).payment_terms] || tier.label}
+            {{ prepaid: "Anticipato", "30_days": "30 gg", "60_days": "60 gg", "90_days": "90 gg", end_of_month: "Fine mese" }[(client as any).payment_terms] || "30 gg"}
           </p>
           <p className="text-xs text-muted-foreground">Listino: {assignedPriceLists && assignedPriceLists.length > 0 ? (assignedPriceLists as any[]).map((plc: any) => plc.price_lists?.name).join(", ") : "—"}</p>
         </div>

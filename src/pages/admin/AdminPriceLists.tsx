@@ -69,7 +69,7 @@ const AdminPriceLists = () => {
   const { data: clients } = useQuery({
     queryKey: ["clients-for-pricelist"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("clients").select("id, company_name, discount_class").order("company_name");
+      const { data, error } = await supabase.from("clients").select("id, company_name").order("company_name");
       if (error) throw error;
       return data;
     },
