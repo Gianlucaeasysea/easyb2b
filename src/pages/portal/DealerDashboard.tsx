@@ -5,13 +5,7 @@ import { Package, ShoppingBag, TrendingUp, ArrowUpRight, Clock, CheckCircle, Tru
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-
-const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  draft: { label: "Draft", color: "text-muted-foreground border-muted", icon: Clock },
-  confirmed: { label: "Confirmed", color: "text-chart-4 border-chart-4", icon: CheckCircle },
-  shipped: { label: "Shipped", color: "text-primary border-primary", icon: Truck },
-  delivered: { label: "Delivered", color: "text-success border-success", icon: CheckCircle },
-};
+import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 
 const DealerDashboard = () => {
   const { user } = useAuth();
@@ -171,13 +165,13 @@ const DealerDashboard = () => {
         ) : (
           <div className="space-y-0">
             {orders.slice(0, 5).map(order => {
-              const cfg = statusConfig[order.status || "draft"];
-              const Icon = cfg?.icon || Clock;
+              const statusLabel = getOrderStatusLabel(order.status || "draft");
+              const statusColor = getOrderStatusColor(order.status || "draft");
               return (
                 <div key={order.id} className="flex items-center justify-between py-3.5 border-b border-border last:border-0">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                      <Icon size={14} className={cfg?.color?.split(" ")[0]} />
+                      <Package size={14} className="text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-sm font-heading font-bold text-foreground">
@@ -187,7 +181,7 @@ const DealerDashboard = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge variant="outline" className={`text-[10px] rounded-full font-heading ${cfg?.color}`}>{cfg?.label}</Badge>
+                    <Badge className={`border-0 text-[10px] rounded-full font-heading ${statusColor}`}>{statusLabel}</Badge>
                     <span className="font-heading font-black text-foreground text-sm">€{Number(order.total_amount || 0).toFixed(2)}</span>
                   </div>
                 </div>

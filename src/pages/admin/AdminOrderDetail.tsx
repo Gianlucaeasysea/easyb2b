@@ -14,26 +14,12 @@ import { toast } from "sonner";
 import OrderDocuments from "@/components/OrderDocuments";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
+import {
+  ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor,
+  getPaymentStatusLabel, getPaymentStatusColor,
+} from "@/lib/constants";
 
-const statusOptions = [
-  "draft", "confirmed", "processing", "To be prepared", "Ready", "On the road", "Delivered", "Payed", "Returned", "cancelled", "lost"
-];
-
-const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  draft: { label: "Draft", color: "bg-muted text-muted-foreground", icon: Clock },
-  "To be prepared": { label: "To be prepared", color: "bg-warning/20 text-warning", icon: Clock },
-  Ready: { label: "Ready", color: "bg-chart-4/20 text-chart-4", icon: CheckCircle },
-  "On the road": { label: "On the road", color: "bg-primary/20 text-primary", icon: Truck },
-  Delivered: { label: "Delivered", color: "bg-success/20 text-success", icon: Package },
-  Payed: { label: "Payed", color: "bg-success/20 text-success", icon: CheckCircle },
-  Returned: { label: "Returned", color: "bg-destructive/20 text-destructive", icon: Clock },
-  cancelled: { label: "Cancelled", color: "bg-destructive/20 text-destructive", icon: Clock },
-  lost: { label: "Lost", color: "bg-destructive/20 text-destructive", icon: Clock },
-  confirmed: { label: "Nuovo Ordine", color: "bg-warning/20 text-warning", icon: Clock },
-  processing: { label: "Confermato", color: "bg-chart-4/20 text-chart-4", icon: CheckCircle },
-  shipped: { label: "Shipped", color: "bg-primary/20 text-primary", icon: Truck },
-  delivered: { label: "Delivered", color: "bg-success/20 text-success", icon: Package },
-};
+const statusOptions = Object.keys(ORDER_STATUS_MAP);
 
 const AdminOrderDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -92,7 +78,7 @@ const AdminOrderDetail = () => {
 
       // Log event on status change
       if (previousStatus !== status) {
-        const statusLabel = statusConfig[status]?.label || status;
+        const statusLabel = getOrderStatusLabel(status);
         await supabase.from("order_events").insert({
           order_id: id,
           event_type: "status_change",
@@ -118,7 +104,7 @@ const AdminOrderDetail = () => {
 
         // Create in-app notification for the dealer
         try {
-          const statusLabel = statusConfig[status]?.label || status;
+          const statusLabel = getOrderStatusLabel(status);
           await supabase.from("client_notifications").insert({
             client_id: (order as any)?.client_id,
             title: `Order ${(order as any)?.order_code || ''} status updated: ${statusLabel}`,
@@ -143,7 +129,7 @@ const AdminOrderDetail = () => {
   const client = order.clients as any;
   const items = (order.order_items || []) as any[];
   const currentStatus = order.status || "draft";
-  const sc = statusConfig[currentStatus] || statusConfig.draft;
+  const sc = { label: getOrderStatusLabel(currentStatus), color: getOrderStatusColor(currentStatus) };
   const productsTotal = Number(order.total_amount || 0);
   const shippingVal = parseFloat(shippingCost) || 0;
 
@@ -179,7 +165,7 @@ const AdminOrderDetail = () => {
               </SelectTrigger>
               <SelectContent>
                 {statusOptions.map(s => (
-                  <SelectItem key={s} value={s}>{statusConfig[s]?.label || s}</SelectItem>
+                  <SelectItem key={s} value={s}>{getOrderStatusLabel(s)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

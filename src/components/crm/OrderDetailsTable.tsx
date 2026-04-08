@@ -8,25 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Package, Search, Filter } from "lucide-react";
+import { ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 
 const fmt = (d: string | null | undefined, f: string) => {
   if (!d) return "—";
   const dt = new Date(d);
   return isValid(dt) ? format(dt, f) : "—";
-};
-
-const statusBadge: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  confirmed: "bg-warning/20 text-warning",
-  processing: "bg-primary/20 text-primary",
-  shipped: "bg-chart-2/20 text-chart-2",
-  delivered: "bg-chart-4/20 text-chart-4",
-  Delivered: "bg-chart-4/20 text-chart-4",
-  cancelled: "bg-destructive/20 text-destructive",
-  "To be prepared": "bg-warning/20 text-warning",
-  Ready: "bg-chart-4/20 text-chart-4",
-  "On the road": "bg-primary/20 text-primary",
-  Payed: "bg-chart-4/20 text-chart-4",
 };
 
 interface OrderDetailsTableProps {
@@ -114,13 +101,9 @@ const OrderDetailsTable = ({ limit, showFilters = true, title = "Dettaglio Ordin
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutti</SelectItem>
-              <SelectItem value="confirmed">Confermato</SelectItem>
-              <SelectItem value="processing">In lavorazione</SelectItem>
-              <SelectItem value="shipped">Spedito</SelectItem>
-              <SelectItem value="delivered">Consegnato</SelectItem>
-              <SelectItem value="Delivered">Delivered</SelectItem>
-              <SelectItem value="Payed">Pagato</SelectItem>
-              <SelectItem value="cancelled">Annullato</SelectItem>
+              {Object.entries(ORDER_STATUS_MAP).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(0); }} className="w-[150px] h-9 text-sm bg-secondary border-border" placeholder="Da" />
@@ -176,8 +159,8 @@ const OrderDetailsTable = ({ limit, showFilters = true, title = "Dettaglio Ordin
                       <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{productSummary}</TableCell>
                       <TableCell className="text-right font-bold text-sm">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
                       <TableCell>
-                        <Badge className={`border-0 text-[10px] ${statusBadge[o.status || "draft"] || "bg-muted text-muted-foreground"}`}>
-                          {o.status || "draft"}
+                        <Badge className={`border-0 text-[10px] ${getOrderStatusColor(o.status || "draft")}`}>
+                          {getOrderStatusLabel(o.status || "draft")}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{fmt(o.created_at, "dd/MM/yy")}</TableCell>

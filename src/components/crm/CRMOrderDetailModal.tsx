@@ -7,26 +7,13 @@ import { Button } from "@/components/ui/button";
 import { ShoppingBag, Calendar, Truck, FileText, Clock, Download, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { getOrderStatusLabel, getOrderStatusColor, getPaymentStatusLabel, getPaymentStatusColor } from "@/lib/constants";
 
 interface CRMOrderDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   orderId: string | null;
 }
-
-const statusColors: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  confirmed: "bg-chart-4/20 text-chart-4",
-  processing: "bg-primary/20 text-primary",
-  shipped: "bg-primary/20 text-primary",
-  delivered: "bg-success/20 text-success",
-  Delivered: "bg-success/20 text-success",
-  "To be prepared": "bg-warning/20 text-warning",
-  Ready: "bg-chart-4/20 text-chart-4",
-  "On the road": "bg-primary/20 text-primary",
-  Payed: "bg-success/20 text-success",
-  cancelled: "bg-destructive/20 text-destructive",
-};
 
 const fmtDate = (d: string | null | undefined) => {
   if (!d) return "—";
@@ -98,12 +85,12 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
 
             {/* Status & dates row */}
             <div className="flex flex-wrap gap-3 mt-2">
-              <Badge className={`border-0 ${statusColors[(order as any).status || "draft"]}`}>
-                {(order as any).status || "draft"}
+              <Badge className={`border-0 ${getOrderStatusColor((order as any).status || "draft")}`}>
+                {getOrderStatusLabel((order as any).status || "draft")}
               </Badge>
               {(order as any).payment_status && (
-                <Badge className={`border-0 ${(order as any).payment_status === "Payed" ? "bg-success/20 text-success" : "bg-warning/20 text-warning"}`}>
-                  {(order as any).payment_status}
+                <Badge className={`border-0 ${getPaymentStatusColor((order as any).payment_status)}`}>
+                  {getPaymentStatusLabel((order as any).payment_status)}
                 </Badge>
               )}
               {(order as any).tracking_number && (

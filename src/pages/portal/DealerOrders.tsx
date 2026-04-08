@@ -11,60 +11,22 @@ import {
 import { format } from "date-fns";
 import { useState } from "react";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
+import { ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 
 const ORDER_PHASES = [
   { key: "confirmed", label: "Ordine Ricevuto", icon: CheckCircle },
   { key: "processing", label: "Confermato", icon: Package },
-  { key: "To be prepared", label: "In Preparazione", icon: Clock },
-  { key: "Ready", label: "Pronto", icon: CheckCircle },
-  { key: "On the road", label: "In Transito", icon: Truck },
-  { key: "Delivered", label: "Consegnato", icon: Package },
+  { key: "ready_to_ship", label: "In Preparazione", icon: Clock },
+  { key: "shipped", label: "Pronto", icon: CheckCircle },
+  { key: "delivered", label: "Consegnato", icon: Package },
 ];
 
-const statusConfig: Record<string, { label: string; color: string; icon: any; message?: string }> = {
-  draft: { label: "Bozza", color: "text-muted-foreground border-muted", icon: Clock },
-  confirmed: {
-    label: "Ordine Ricevuto",
-    color: "text-chart-4 border-chart-4",
-    icon: CheckCircle,
-    message: "Il tuo ordine è stato ricevuto ed è in fase di revisione. Riceverai una conferma con la fattura a breve.",
-  },
-  processing: {
-    label: "Confermato",
-    color: "text-primary border-primary",
-    icon: Package,
-    message: "Il tuo ordine è stato confermato e la fattura è disponibile nei documenti. Stiamo preparando la spedizione.",
-  },
-  "To be prepared": {
-    label: "In Preparazione",
-    color: "text-warning border-warning",
-    icon: Clock,
-    message: "Il tuo ordine è in fase di preparazione nel nostro magazzino.",
-  },
-  Ready: {
-    label: "Pronto per la Spedizione",
-    color: "text-chart-4 border-chart-4",
-    icon: CheckCircle,
-    message: "Il tuo ordine è pronto e sarà spedito a breve. Riceverai il tracking non appena disponibile.",
-  },
-  "On the road": {
-    label: "In Transito",
-    color: "text-primary border-primary",
-    icon: Truck,
-    message: "Il tuo ordine è stato spedito! Usa il link di tracking per seguire la consegna.",
-  },
-  shipped: { label: "Spedito", color: "text-primary border-primary", icon: Truck },
-  delivered: { label: "Consegnato", color: "text-success border-success", icon: Package },
-  Delivered: {
-    label: "Consegnato",
-    color: "text-success border-success",
-    icon: Package,
-    message: "Il tuo ordine è stato consegnato con successo.",
-  },
-  Payed: { label: "Pagato", color: "text-success border-success", icon: CheckCircle },
-  Returned: { label: "Reso", color: "text-destructive border-destructive", icon: Clock },
-  cancelled: { label: "Annullato", color: "text-destructive border-destructive", icon: Clock },
-  lost: { label: "Perso", color: "text-destructive border-destructive", icon: Clock },
+const STATUS_MESSAGES: Record<string, string> = {
+  confirmed: "Il tuo ordine è stato ricevuto ed è in fase di revisione. Riceverai una conferma con la fattura a breve.",
+  processing: "Il tuo ordine è stato confermato e la fattura è disponibile nei documenti. Stiamo preparando la spedizione.",
+  ready_to_ship: "Il tuo ordine è pronto e sarà spedito a breve. Riceverai il tracking non appena disponibile.",
+  shipped: "Il tuo ordine è stato spedito! Usa il link di tracking per seguire la consegna.",
+  delivered: "Il tuo ordine è stato consegnato con successo.",
 };
 
 const DOC_TYPE_LABELS: Record<string, string> = {
@@ -135,8 +97,9 @@ const DealerOrders = () => {
         <div className="space-y-4">
           {orders.map(order => {
             const status = order.status || "draft";
-            const cfg = statusConfig[status] || statusConfig.draft;
-            const Icon = cfg?.icon || Clock;
+            const statusLabel = getOrderStatusLabel(status);
+            const statusColor = getOrderStatusColor(status);
+            const statusMessage = STATUS_MESSAGES[status] || null;
             const isExpanded = expandedOrder === order.id;
             const docs = (order as any).order_documents || [];
             const items = (order.order_items || []) as any[];
@@ -156,7 +119,7 @@ const DealerOrders = () => {
                       status === "confirmed" || status === "processing" ? "bg-primary/10" :
                       "bg-muted"
                     }`}>
-                      <Icon size={18} className={cfg?.color?.split(" ")[0]} />
+                      <Package size={18} className="text-muted-foreground" />
                     </div>
                     <div>
                       <p className="font-heading font-bold text-foreground">
@@ -169,7 +132,7 @@ const DealerOrders = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Badge variant="outline" className={`text-xs ${cfg?.color}`}>{cfg?.label}</Badge>
+                    <Badge className={`border-0 text-xs ${statusColor}`}>{statusLabel}</Badge>
                     <span className="font-heading font-bold text-foreground text-lg">
                       €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
                     </span>
@@ -180,10 +143,10 @@ const DealerOrders = () => {
                 {isExpanded && (
                   <div className="border-t border-border">
                     {/* Status message */}
-                    {cfg.message && (
+                    {statusMessage && (
                       <div className="px-5 py-3 bg-primary/5 border-b border-border flex items-start gap-3">
                         <Bell size={14} className="text-primary mt-0.5 shrink-0" />
-                        <p className="text-sm text-foreground">{cfg.message}</p>
+                        <p className="text-sm text-foreground">{statusMessage}</p>
                       </div>
                     )}
 
