@@ -262,8 +262,19 @@ const CRMOrganizationDetail = () => {
       if (error.code === "23505") toast.info("Listino già assegnato");
       else toast.error(error.message);
     } else {
-      toast.success("Listino assegnato");
+      const plName = allPriceLists?.find(pl => pl.id === priceListId)?.name || "Listino";
+      toast.success(`Listino "${plName}" assegnato a ${client?.company_name}`);
       refetchAssignedLists();
+      // Notify dealer
+      if (client?.id) {
+        await supabase.from("client_notifications").insert({
+          client_id: client.id,
+          title: "Listino prezzi aggiornato",
+          body: "Il tuo listino prezzi è stato aggiornato. Visita il catalogo per vedere i nuovi prezzi.",
+          type: "info",
+          target_role: "dealer",
+        } as any);
+      }
     }
   };
 
