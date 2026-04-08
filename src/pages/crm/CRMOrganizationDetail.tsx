@@ -1290,6 +1290,27 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
               </Select>
             </div>
 
+            {/* Current assignment note */}
+            {assignedPriceLists.length > 0 && (
+              <p className="text-xs text-muted-foreground bg-secondary/50 p-2 rounded">
+                Listino attuale: <strong>{assignedPriceLists.map(a => a.price_lists?.name).join(", ")}</strong>. Il nuovo listino verrà aggiunto.
+              </p>
+            )}
+
+            {/* Selected list description */}
+            {selectedListId && (() => {
+              const sel = allPriceLists.find(pl => pl.id === selectedListId);
+              const tier = discountTiers.find(t => t.id === sel?.discount_tier_id);
+              const count = priceListItemCounts[selectedListId] || 0;
+              return sel ? (
+                <div className="p-3 bg-secondary/50 rounded-lg text-xs space-y-1">
+                  <p className="font-semibold text-foreground">{sel.name}</p>
+                  {sel.description && <p className="text-muted-foreground">{sel.description}</p>}
+                  <p className="text-muted-foreground">{count} prodotti inclusi {tier ? `· Sconto base: -${tier.discount_pct}%` : ""}</p>
+                </div>
+              ) : null;
+            })()}
+
             {/* Preview */}
             {selectedListId && (
               <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
