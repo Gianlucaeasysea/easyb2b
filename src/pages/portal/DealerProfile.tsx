@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SafeHtml } from "@/components/ui/SafeHtml";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -156,10 +156,33 @@ const DealerProfile = () => {
 
   // --- Bank Details ---
   const [bank, setBank] = useState({ bank_name: "", iban: "", swift_bic: "", account_holder: "" });
-  const bankLoaded = bankDetails !== undefined;
+  const [bankInitialized, setBankInitialized] = useState(false);
+  const [bankErrors, setBankErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (bankDetails && !bankInitialized) {
+      setBank({
+        bank_name: bankDetails.bank_name || "",
+        iban: bankDetails.iban || "",
+        swift_bic: bankDetails.swift_bic || "",
+        account_holder: bankDetails.account_holder || "",
+      });
+      setBankInitialized(true);
+    }
+  }, [bankDetails, bankInitialized]);
+
+  const validateBank = () => {
+    const errors: Record<string, string> = {};
+    if (!bank.account_holder.trim()) errors.account_holder = "Intestatario obbligatorio";
+    if (!bank.bank_name.trim()) errors.bank_name = "Nome banca obbligatorio";
+    if (!bank.iban.trim() || bank.iban.trim().length < 15) errors.iban = "IBAN obbligatorio (min. 15 caratteri)";
+    setBankErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const saveBank = useMutation({
     mutationFn: async () => {
+      if (!validateBank()) throw new Error("Correggi gli errori nel form");
       if (bankDetails?.id) {
         const { error } = await supabase.from("client_bank_details" as any).update(bank as any).eq("id", bankDetails.id);
         if (error) throw error;
@@ -170,15 +193,10 @@ const DealerProfile = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-bank"] });
-      toast.success("Dati bancari salvati");
+      toast.success("Dati bancari salvati con successo");
     },
     onError: (e: any) => toast.error(e.message),
   });
-
-  // Sync bank state when data loads
-  if (bankLoaded && bankDetails && bank.iban === "" && bankDetails.iban) {
-    setBank({ bank_name: bankDetails.bank_name || "", iban: bankDetails.iban || "", swift_bic: bankDetails.swift_bic || "", account_holder: bankDetails.account_holder || "" });
-  }
 
   return (
     <div>
@@ -279,16 +297,19 @@ const DealerProfile = () => {
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Account Holder</label>
-                <Input value={bank.account_holder} onChange={e => setBank(p => ({ ...p, account_holder: e.target.value }))} className="bg-secondary border-border text-sm" />
+                <label className="text-xs text-muted-foreground mb-1 block">Intestatario *</label>
+                <Input value={bank.account_holder} onChange={e => { setBank(p => ({ ...p, account_holder: e.target.value })); setBankErrors(p => ({ ...p, account_holder: "" })); }} className={`bg-secondary border-border text-sm ${bankErrors.account_holder ? "border-destructive" : ""}`} />
+                {bankErrors.account_holder && <p className="text-xs text-destructive mt-1">{bankErrors.account_holder}</p>}
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Bank Name</label>
-                <Input value={bank.bank_name} onChange={e => setBank(p => ({ ...p, bank_name: e.target.value }))} className="bg-secondary border-border text-sm" />
+                <label className="text-xs text-muted-foreground mb-1 block">Nome Banca *</label>
+                <Input value={bank.bank_name} onChange={e => { setBank(p => ({ ...p, bank_name: e.target.value })); setBankErrors(p => ({ ...p, bank_name: "" })); }} className={`bg-secondary border-border text-sm ${bankErrors.bank_name ? "border-destructive" : ""}`} />
+                {bankErrors.bank_name && <p className="text-xs text-destructive mt-1">{bankErrors.bank_name}</p>}
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">IBAN</label>
-                <Input value={bank.iban} onChange={e => setBank(p => ({ ...p, iban: e.target.value }))} className="bg-secondary border-border text-sm" />
+                <label className="text-xs text-muted-foreground mb-1 block">IBAN *</label>
+                <Input value={bank.iban} onChange={e => { setBank(p => ({ ...p, iban: e.target.value })); setBankErrors(p => ({ ...p, iban: "" })); }} className={`bg-secondary border-border text-sm ${bankErrors.iban ? "border-destructive" : ""}`} />
+                {bankErrors.iban && <p className="text-xs text-destructive mt-1">{bankErrors.iban}</p>}
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">SWIFT / BIC</label>
