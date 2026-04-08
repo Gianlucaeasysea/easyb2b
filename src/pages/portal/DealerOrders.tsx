@@ -42,6 +42,9 @@ const DOC_TYPE_LABELS: Record<string, string> = {
   order_confirmation: "Conferma Ordine",
   invoice: "Fattura",
   delivery_note: "DDT / Bolla di Spedizione",
+  ddt: "DDT",
+  credit_note: "Nota di Credito",
+  proforma: "Proforma",
   warranty: "Certificato di Garanzia",
   other: "Altro",
 };

@@ -21,6 +21,13 @@ interface CRMOrderDetailModalProps {
   orderId: string | null;
 }
 
+const DOC_TYPE_LABELS: Record<string, string> = {
+  invoice: "Fattura", ddt: "DDT", credit_note: "Nota di Credito",
+  proforma: "Proforma", order_confirmation: "Conferma Ordine",
+  delivery_note: "DDT", warranty: "Garanzia", other: "Altro",
+};
+const docTypeLabel = (type: string) => DOC_TYPE_LABELS[type] || type;
+
 const fmtDate = (d: string | null | undefined) => {
   if (!d) return "—";
   try { return format(new Date(d), "dd MMM yyyy", { locale: it }); } catch { return "—"; }
@@ -219,27 +226,31 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
             </div>
 
             {/* Documents */}
-            {documents && documents.length > 0 && (
+            {documents && (
               <div className="mt-5">
                 <h3 className="font-heading font-bold text-foreground mb-2 flex items-center gap-2 text-sm">
                   <FileText size={14} /> Documenti ({documents.length})
                 </h3>
-                <div className="space-y-2">
-                  {documents.map((doc: any) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <FileText size={14} className="text-primary" />
-                        <div>
-                          <p className="text-xs font-medium text-foreground">{doc.file_name}</p>
-                          <p className="text-[10px] text-muted-foreground">{doc.doc_type} · {fmtDate(doc.created_at)}</p>
+                {documents.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">Nessun documento disponibile</p>
+                ) : (
+                  <div className="space-y-2">
+                    {documents.map((doc: any) => (
+                      <div key={doc.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <FileText size={14} className="text-primary" />
+                          <div>
+                            <p className="text-xs font-medium text-foreground">{doc.file_name}</p>
+                            <p className="text-[10px] text-muted-foreground">{docTypeLabel(doc.doc_type)} · {fmtDate(doc.created_at)}</p>
+                          </div>
                         </div>
+                        <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => handleDownloadDoc(doc.file_path)}>
+                          <Download size={12} /> Scarica
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => handleDownloadDoc(doc.file_path)}>
-                        <Download size={12} /> Scarica
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

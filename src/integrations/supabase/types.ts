@@ -1046,6 +1046,7 @@ export type Database = {
           file_name: string
           file_path: string
           id: string
+          note: string | null
           order_id: string
           uploaded_by: string | null
         }
@@ -1055,6 +1056,7 @@ export type Database = {
           file_name: string
           file_path: string
           id?: string
+          note?: string | null
           order_id: string
           uploaded_by?: string | null
         }
@@ -1064,6 +1066,7 @@ export type Database = {
           file_name?: string
           file_path?: string
           id?: string
+          note?: string | null
           order_id?: string
           uploaded_by?: string | null
         }
