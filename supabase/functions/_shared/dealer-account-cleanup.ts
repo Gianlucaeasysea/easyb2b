@@ -63,7 +63,7 @@ export const cleanupOrphanedDealerAccountByEmail = async (
   if (allowedClientId) {
     const { error: unlinkError } = await adminClient
       .from("clients")
-      .update({ user_id: null, portal_password: null })
+      .update({ user_id: null })
       .eq("id", allowedClientId);
 
     if (unlinkError) {
