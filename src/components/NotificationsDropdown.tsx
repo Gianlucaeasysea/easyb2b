@@ -145,6 +145,18 @@ export function NotificationsDropdown({ basePath, targetRole }: NotificationsDro
             ))
           )}
         </div>
+        {notifications.length > 0 && (
+          <div className="border-t border-border px-4 py-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-primary hover:text-primary/80"
+              onClick={() => { setOpen(false); navigate(`${basePath}/notifications`); }}
+            >
+              Vedi tutte
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
