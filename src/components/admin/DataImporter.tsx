@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 
 type ImportType = "clients" | "orders";
 
@@ -243,8 +244,8 @@ export default function DataImporter() {
 
       setStep("done");
       toast.success(`Importazione completata: ${importedCount || "tutti i"} record importati`);
-    } catch (err: any) {
-      toast.error("Errore durante l'importazione: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "DataImporter.import");
       setStep("preview");
     }
   }, [getMappedData, importType]);

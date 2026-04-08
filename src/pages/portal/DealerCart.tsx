@@ -10,6 +10,7 @@ import { ShoppingCart, Trash2, Minus, Plus, CheckCircle, ArrowLeft, AlertTriangl
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 
 const MIN_ORDER_AMOUNT = 100; // Minimum order €100
 
@@ -121,15 +122,15 @@ const DealerCart = () => {
           },
         });
       } catch (emailErr) {
-        console.error("Email notification failed:", emailErr);
+        showErrorToast(emailErr, "DealerCart.emailNotification");
       }
 
       setOrderConfirmed({ id: order.id, code: (order as any).order_code || `#${order.id.slice(0, 8).toUpperCase()}` });
       clearCart();
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
       toast.success("Order placed successfully!");
-    } catch (err: any) {
-      toast.error("Failed to place order: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "DealerCart.submitOrder");
     } finally {
       setSubmitting(false);
     }

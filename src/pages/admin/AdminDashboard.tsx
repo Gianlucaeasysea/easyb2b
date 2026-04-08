@@ -8,6 +8,7 @@ import { format, differenceInDays } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -49,8 +50,8 @@ const AdminDashboard = () => {
       toast.success(`Sync completata: ${data.newOrders} nuovi ordini, ${data.updatedOrders} aggiornati`);
       queryClient.invalidateQueries({ queryKey: ["admin-orders-dash"] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-    } catch (err: any) {
-      toast.error("Sync fallita: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "AdminDashboard.sync");
     } finally {
       setSyncing(false);
     }

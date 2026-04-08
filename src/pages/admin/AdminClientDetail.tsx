@@ -17,6 +17,7 @@ import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 
@@ -295,8 +296,8 @@ const AdminClientDetail = () => {
       setShowCreateOrder(false);
       setOrderItems([]);
       setNewOrderNotes("");
-    } catch (err: any) {
-      toast.error("Errore: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "AdminClientDetail.createOrder");
     } finally {
       setCreatingOrder(false);
     }
@@ -322,8 +323,8 @@ const AdminClientDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-client-documents", id] });
       toast.success("Document uploaded");
       setDocTitle("");
-    } catch (err: any) {
-      toast.error("Upload failed: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "AdminClientDetail.docUpload");
     } finally {
       setUploadingDoc(false);
       if (docInputRef.current) docInputRef.current.value = "";
@@ -336,8 +337,8 @@ const AdminClientDetail = () => {
       await supabase.from("client_documents").delete().eq("id", doc.id);
       queryClient.invalidateQueries({ queryKey: ["admin-client-documents", id] });
       toast.success("Document deleted");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (error) {
+      showErrorToast(error, "AdminClientDetail.deleteDoc");
     }
   };
 
@@ -386,7 +387,7 @@ const AdminClientDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-clients"] });
       toast.success("Client updated");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (error) => showErrorToast(error, "AdminClientDetail.updateClient"),
   });
 
   const deleteClient = useMutation({
@@ -398,7 +399,7 @@ const AdminClientDetail = () => {
       toast.success("Client deleted");
       navigate("/admin/clients");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (error) => showErrorToast(error, "AdminClientDetail.deleteClient"),
   });
 
   const addContact = useMutation({
@@ -413,7 +414,7 @@ const AdminClientDetail = () => {
       setShowAddContact(false);
       toast.success("Contact added");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (error) => showErrorToast(error, "AdminClientDetail.addContact"),
   });
 
   const removeContact = useMutation({
@@ -425,7 +426,7 @@ const AdminClientDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-client-contacts", id] });
       toast.success("Contact removed");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (error) => showErrorToast(error, "AdminClientDetail.removeContact"),
   });
 
   const addAddress = useMutation({
@@ -440,7 +441,7 @@ const AdminClientDetail = () => {
       setShowAddAddress(false);
       toast.success("Address added");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (error) => showErrorToast(error, "AdminClientDetail.addAddress"),
   });
 
   const removeAddress = useMutation({
@@ -452,7 +453,7 @@ const AdminClientDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-client-addresses", id] });
       toast.success("Address removed");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (error) => showErrorToast(error, "AdminClientDetail.removeAddress"),
   });
 
   const saveBank = useMutation({
@@ -469,7 +470,7 @@ const AdminClientDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-client-bank", id] });
       toast.success("Bank details saved");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (error) => showErrorToast(error, "AdminClientDetail.saveBank"),
   });
 
   const createDealerAccount = async () => {
@@ -487,7 +488,7 @@ const AdminClientDetail = () => {
       toast.success("Account dealer creato!");
       queryClient.invalidateQueries({ queryKey: ["admin-client", id] });
       setShowCreateAccount(false);
-    } catch (e: any) { toast.error(e.message); } finally { setCreatingAccount(false); }
+    } catch (error) { showErrorToast(error, "AdminClientDetail.createDealerAccount"); } finally { setCreatingAccount(false); }
   };
 
   const copyToClipboard = (text: string, label: string) => {

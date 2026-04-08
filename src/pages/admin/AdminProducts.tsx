@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Package, Search, RefreshCw, ChevronRight, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -94,8 +95,8 @@ const AdminProducts = () => {
       }
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
       toast.success(`Sincronizzati ${variants.length} prodotti da Shopify`);
-    } catch (err: any) {
-      toast.error("Errore sync: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "AdminProducts.shopifySync");
     } finally {
       setSyncing(false);
     }

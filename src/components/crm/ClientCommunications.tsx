@@ -14,6 +14,7 @@ import { it } from "date-fns/locale";
 import { useState, useMemo } from "react";
 import { ComposeEmailDialog } from "./ComposeEmailDialog";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import { requestGmailAuthorizationCode } from "@/lib/gmailOAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -148,8 +149,8 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
       if (data?.error) throw new Error(data.details || data.error);
       toast.success("Gmail collegato con successo!");
       await refetchGmailStatus();
-    } catch (err: any) {
-      toast.error(err?.message || "Errore durante il collegamento Gmail");
+    } catch (error) {
+      showErrorToast(error, "ClientCommunications.connectGmail");
     } finally {
       setConnectingGmail(false);
     }
@@ -172,8 +173,8 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
       }
       toast.success(`Sincronizzazione completata: ${result?.synced || 0} nuove email importate`);
       await Promise.all([refetch(), refetchGmailStatus()]);
-    } catch (err: any) {
-      toast.error("Errore durante la sincronizzazione");
+    } catch (error) {
+      showErrorToast(error, "ClientCommunications.syncGmail");
     } finally {
       setSyncing(false);
     }

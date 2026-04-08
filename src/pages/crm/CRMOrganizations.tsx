@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import { differenceInDays, format } from "date-fns";
 import * as XLSX from "xlsx";
 import { deleteClientsCascade } from "@/lib/crmEntityActions";
@@ -149,7 +150,7 @@ const CRMOrganizations = () => {
       setSelected(new Set());
       toast.success("Organizzazioni eliminate");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (error) => showErrorToast(error, "CRMOrganizations.deleteClients"),
   });
 
   const countries = [...new Set(clients?.map(c => c.country).filter(Boolean) || [])].sort();

@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { showErrorToast } from "@/lib/errorHandler";
 import { useAuth } from "@/contexts/AuthContext";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import LeadDetailPanel from "@/components/crm/LeadDetailPanel";
@@ -151,7 +152,7 @@ const CRMLeads = () => {
       queryClient.invalidateQueries({ queryKey: ["crm-organizations"] });
       toast({ title: "Lead convertito in organizzazione", description: newClient.company_name });
     },
-    onError: (e: any) => toast({ title: "Errore", description: e.message, variant: "destructive" }),
+    onError: (error) => showErrorToast(error, "CRMLeads.convertToOrg"),
   });
 
   const deleteLeads = useMutation({
@@ -161,7 +162,7 @@ const CRMLeads = () => {
       setSelected(new Set());
       toast({ title: `${ids.length} lead eliminati` });
     },
-    onError: (e: any) => toast({ title: "Errore", description: e.message, variant: "destructive" }),
+    onError: (error) => showErrorToast(error, "CRMLeads.deleteLeads"),
   });
 
   const openWhatsApp = (phone: string, name: string) => {

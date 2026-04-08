@@ -6,6 +6,7 @@ import { PackagePlus, Eye, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 
 const AdminNewOrders = () => {
@@ -46,8 +47,8 @@ const AdminNewOrders = () => {
         await supabase.functions.invoke('send-order-notification', {
           body: { orderId: id, orderCode, type: 'status_update' },
         });
-      } catch (e) {
-        console.error("Email failed:", e);
+      } catch (error) {
+        showErrorToast(error, "AdminNewOrders.confirmEmail");
       }
     },
     onSuccess: () => {
@@ -71,8 +72,8 @@ const AdminNewOrders = () => {
         await supabase.functions.invoke('send-order-notification', {
           body: { orderId: id, orderCode, type: 'status_update' },
         });
-      } catch (e) {
-        console.error("Email failed:", e);
+      } catch (error) {
+        showErrorToast(error, "AdminNewOrders.rejectEmail");
       }
     },
     onSuccess: () => {
