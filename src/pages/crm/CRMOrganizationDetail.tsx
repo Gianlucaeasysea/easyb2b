@@ -15,7 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   ArrowLeft, Building2, Mail, Phone, Globe, MapPin, ShoppingBag,
   MessageCircle, Send, Clock, TrendingUp, Users, FileText, CalendarDays, BarChart3,
-  Plus, Crown, Star, Pencil, Trash2, Check, X, StickyNote, Upload, Handshake, CheckSquare, Tag, Eye
+  Plus, Crown, Star, Pencil, Trash2, Check, X, StickyNote, Upload, Handshake, CheckSquare, Tag, Eye,
+  UserCheck, RefreshCw
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { isPast } from "date-fns";
@@ -79,6 +80,41 @@ const CRMOrganizationDetail = () => {
   });
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [taskForm, setTaskForm] = useState({ title: "", type: "call", priority: "medium", due_date: "", description: "" });
+  const [creatingCredentials, setCreatingCredentials] = useState(false);
+
+  const generatePassword = () => {
+    const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$";
+    return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  };
+
+  const handleCreateCredentials = async () => {
+    if (!client?.email) {
+      toast.error("Questa organizzazione non ha un'email configurata");
+      return;
+    }
+    setCreatingCredentials(true);
+    try {
+      const password = generatePassword();
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-dealer-account`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ client_id: id, email: client.email, password }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Errore nella creazione");
+      toast.success("Credenziali create e inviate via email al dealer");
+      queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
+    } catch (err: any) {
+      toast.error(err.message || "Errore nella creazione delle credenziali");
+    } finally {
+      setCreatingCredentials(false);
+    }
+  };
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["crm-org", id],
@@ -1127,8 +1163,18 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
         </div>
 
         {!client.user_id && (
-          <div className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-warning/10 border border-warning/20">
+          <div className="flex items-center justify-between gap-2 p-3 mb-4 rounded-lg bg-warning/10 border border-warning/20">
             <span className="text-warning text-xs">⚠️ Questa organizzazione non ha ancora un account cliente collegato</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs gap-1 border-warning/30 text-warning hover:bg-warning/20"
+              disabled={creatingCredentials}
+              onClick={handleCreateCredentials}
+            >
+              {creatingCredentials ? <RefreshCw size={12} className="animate-spin" /> : <UserCheck size={12} />}
+              Crea Credenziali
+            </Button>
           </div>
         )}
 
