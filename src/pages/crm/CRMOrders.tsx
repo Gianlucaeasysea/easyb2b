@@ -195,14 +195,11 @@ const CRMOrders = () => {
       </div>
 
       <TablePagination
-        page={page}
+        currentPage={page}
         totalPages={totalPages}
-        from={from}
-        to={to}
-        totalCount={totalCount}
-        onNextPage={nextPage}
-        onPrevPage={prevPage}
-        onGoToPage={goToPage}
+        totalItems={totalCount}
+        pageSize={25}
+        onPageChange={goToPage}
       />
     </div>
   );
