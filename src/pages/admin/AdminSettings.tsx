@@ -99,7 +99,50 @@ const AdminSettings = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
-  return (
+  // Notification email config
+  const { data: notifEmails } = useQuery({
+    queryKey: ["admin-notif-emails"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "notification_emails")
+        .single();
+      if (error) throw error;
+      return (data?.value || { to: [], bcc: [] }) as { to: string[]; bcc: string[] };
+    },
+  });
+
+  const saveNotifEmails = useMutation({
+    mutationFn: async (val: { to: string[]; bcc: string[] }) => {
+      const { error } = await supabase
+        .from("app_settings")
+        .update({ value: val as any, updated_at: new Date().toISOString() })
+        .eq("key", "notification_emails");
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Destinatari notifiche aggiornati");
+      qc.invalidateQueries({ queryKey: ["admin-notif-emails"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const addEmail = (type: "to" | "bcc", email: string) => {
+    if (!isValidEmail(email)) { toast.error("Email non valida"); return; }
+    const current = notifEmails || { to: [], bcc: [] };
+    if (current[type].includes(email.toLowerCase())) { toast.error("Email già presente"); return; }
+    saveNotifEmails.mutate({ ...current, [type]: [...current[type], email.toLowerCase()] });
+    if (type === "to") setNewToEmail(""); else setNewBccEmail("");
+  };
+
+  const removeEmail = (type: "to" | "bcc", email: string) => {
+    const current = notifEmails || { to: [], bcc: [] };
+    saveNotifEmails.mutate({ ...current, [type]: current[type].filter(e => e !== email) });
+  };
+
     <div>
       <h1 className="font-heading text-2xl font-bold text-foreground mb-2">Settings</h1>
       <p className="text-sm text-muted-foreground mb-8">Platform configuration</p>
