@@ -62,13 +62,13 @@ const CRMContactsPeople = () => {
 
   const { data: contacts } = useQuery({
     queryKey: ["crm-all-contacts"],
-    queryFn: async () => {
+    queryFn: async (): Promise<ContactWithClient[]> => {
       const { data, error } = await supabase
         .from("client_contacts")
         .select("*, clients(id, company_name)")
         .order("contact_name");
       if (error) throw error;
-      return data;
+      return (data || []) as unknown as ContactWithClient[];
     },
   });
 
