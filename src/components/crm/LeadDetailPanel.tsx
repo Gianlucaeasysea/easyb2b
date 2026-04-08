@@ -116,6 +116,9 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
       if (error) throw error;
       return status;
     },
+    onMutate: (newStatus) => {
+      setLocalStatus(newStatus);
+    },
     onSuccess: (newStatus) => {
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       toast({ title: "Status updated" });
@@ -125,6 +128,9 @@ const LeadDetailPanel = ({ lead, open, onClose }: Props) => {
         to_stage: newStatus,
         client_name: lead.company_name,
       });
+    },
+    onError: () => {
+      setLocalStatus(null);
     },
   });
 
