@@ -14,6 +14,20 @@ export const invokeDealerAccountAction = async <T>(payload: DealerAccountPayload
     throw new Error("Sessione non valida. Effettua di nuovo il login.");
   }
 
+  try {
+    const { data, error } = await supabase.functions.invoke("create-dealer-account", {
+      body: payload,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return data as T;
+  } catch {
+    // Fallback for preview/runtime environments where the SDK transport can fail intermittently.
+  }
+
   let response: Response;
 
   try {
