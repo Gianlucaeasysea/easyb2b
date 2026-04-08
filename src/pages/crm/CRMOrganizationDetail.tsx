@@ -324,7 +324,6 @@ const CRMOrganizationDetail = () => {
       toast.error(err.message || "Errore eliminazione");
     }
   };
-  };
 
   const editContact = (c: any) => {
     setContactForm({
