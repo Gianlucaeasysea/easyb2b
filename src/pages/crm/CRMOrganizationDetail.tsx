@@ -344,8 +344,8 @@ const CRMOrganizationDetail = () => {
             {client.country || ""} {client.zone ? `· ${client.zone}` : ""}
           </p>
         </div>
-        <Badge className={`border-0 ${statusColors[client.status || "lead"]}`}>
-          {statusLabel[client.status || "lead"] || client.status || "lead"}
+        <Badge className={`border-0 ${getClientStatusColor(client.status || "lead")}`}>
+          {getClientStatusLabel(client.status || "lead")}
         </Badge>
         {client.email && (
           <Button size="sm" onClick={() => setComposeOpen(true)} className="gap-1">
@@ -571,7 +571,7 @@ const CRMOrganizationDetail = () => {
             {!orders?.length ? (
               <div className="p-8 text-center text-muted-foreground text-sm">
                 <ShoppingBag size={32} className="mx-auto mb-2 opacity-30" />
-                <p>Nessun ordine — il cliente è in {statusLabel[client.status || "lead"] || "onboarding"}</p>
+                <p>Nessun ordine — il cliente è in {getClientStatusLabel(client.status || "lead")}</p>
               </div>
             ) : (
               <Table>
@@ -590,10 +590,10 @@ const CRMOrganizationDetail = () => {
                     <TableRow key={o.id} className="hover:bg-secondary/50 cursor-pointer" onClick={() => setSelectedOrderId(o.id)}>
                       <TableCell className="font-mono text-xs font-semibold text-primary">{(o as any).order_code || `#${o.id.slice(0, 8)}`}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{fmtDate(o.created_at)}</TableCell>
-                      <TableCell><Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"]}`}>{o.status || "draft"}</Badge></TableCell>
+                      <TableCell><Badge className={`border-0 text-[10px] ${getOrderStatusColor(o.status || "draft")}`}>{getOrderStatusLabel(o.status || "draft")}</Badge></TableCell>
                       <TableCell>
                         {(o as any).payment_status ? (
-                          <Badge className={`border-0 text-[10px] ${(o as any).payment_status === 'Payed' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>{(o as any).payment_status}</Badge>
+                          <Badge className={`border-0 text-[10px] ${getPaymentStatusColor((o as any).payment_status)}`}>{getPaymentStatusLabel((o as any).payment_status)}</Badge>
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm font-semibold">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
@@ -1090,7 +1090,6 @@ export default CRMOrganizationDetail;
 
 // Deals sub-tab component
 const stageColors: Record<string, string> = {
-  ...statusColors,
   qualification: "bg-primary/20 text-primary",
   proposal: "bg-warning/20 text-warning",
   negotiation: "bg-chart-4/20 text-chart-4",

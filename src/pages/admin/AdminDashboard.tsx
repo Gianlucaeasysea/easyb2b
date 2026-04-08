@@ -184,7 +184,7 @@ const AdminDashboard = () => {
       const st = o.status || "draft";
       map[st] = (map[st] || 0) + 1;
     });
-    return Object.entries(map).map(([name, value]) => ({ name, value, fill: ORDER_STATUS_COLORS[name] || "#9ca3af" }));
+    return Object.entries(map).map(([name, value]) => ({ name, value, fill: ORDER_STATUS_CHART_COLORS[name] || "#9ca3af" }));
   })();
 
   // Late payments (payment_status pending/to be paid, created > 30 days ago)

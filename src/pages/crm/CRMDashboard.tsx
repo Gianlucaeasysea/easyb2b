@@ -413,7 +413,8 @@ const CRMDashboard = () => {
             {newOrders.map(o => {
               const docs = (o as any).order_documents || [];
               const hasDocs = hasInvoiceOrConfirmation(docs);
-              const phase = phaseConfig[o.status || "confirmed"] || phaseConfig.confirmed;
+              const phaseLabel = getOrderStatusLabel(o.status || "confirmed");
+              const phaseColor = getOrderStatusColor(o.status || "confirmed");
               return (
                 <div key={o.id} className="p-4 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 transition-colors">
                   <div className="flex items-start justify-between mb-2">
