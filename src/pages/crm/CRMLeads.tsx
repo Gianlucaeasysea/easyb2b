@@ -342,7 +342,7 @@ const CRMLeads = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(l => (
+              {pageLeads.map(l => (
                 <TableRow key={l.id} className="cursor-pointer">
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggleSelect(l.id)} />
@@ -389,6 +389,7 @@ const CRMLeads = () => {
               ))}
             </TableBody>
           </Table>
+          <PaginationControls page={page} totalPages={totalPages} from={from} to={to} totalCount={totalCount} onPrev={prevPage} onNext={nextPage} onGoTo={goToPage} />
         </div>
       ) : (
         /* ────── KANBAN VIEW ────── */
