@@ -14,6 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Send, Sparkles, Loader2, Users, Plus, X, Variable, Save, Clock, AlertTriangle, Paperclip, FileIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";

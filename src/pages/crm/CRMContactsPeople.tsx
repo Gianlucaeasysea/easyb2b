@@ -33,7 +33,8 @@ const contactTypeLabels: Record<string, string> = {
   general: "General",
 };
 
-const channelIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+type LucideIcon = typeof Mail;
+const channelIcons: Record<string, LucideIcon> = {
   email: Mail,
   phone: Phone,
   whatsapp: MessageCircle,

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import { useAuth } from "@/contexts/AuthContext";
 import { Copy, Pencil, Plus, Trash2, Zap, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
