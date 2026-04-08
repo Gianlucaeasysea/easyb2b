@@ -1,38 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, MailWarning } from "lucide-react";
-import { loadGoogleIdentityScript, requestGmailAuthorizationCodeOnCurrentOrigin } from "@/lib/gmailOAuth";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { CheckCircle2, Loader2, MailWarning, RefreshCw } from "lucide-react";
+import { loadGoogleIdentityScript } from "@/lib/gmailOAuth";
 import { Button } from "@/components/ui/button";
 
 type PopupState = "idle" | "loading" | "success" | "error";
 
 const POPUP_SOURCE = "gmail-oauth-popup";
+const GOOGLE_CLIENT_ID = "495157225927-5vl858qj6audau88lafer0d2hq69e0aj.apps.googleusercontent.com";
+const GMAIL_SCOPES = [
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.send",
+].join(" ");
 
 const GmailOAuthPopup = () => {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const [state, setState] = useState<PopupState>("idle");
   const [message, setMessage] = useState("Clicca il pulsante per autorizzare Gmail.");
-  const [isGoogleReady, setIsGoogleReady] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    void loadGoogleIdentityScript()
-      .then(() => {
-        if (!isMounted) return;
-        setIsGoogleReady(true);
-        setState("idle");
-        setMessage("Clicca il pulsante per autorizzare Gmail.");
-      })
-      .catch((error) => {
-        if (!isMounted) return;
-        setState("error");
-        setMessage(error instanceof Error ? error.message : "Impossibile preparare Google OAuth.");
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const [isReady, setIsReady] = useState(false);
 
   const targetOrigin = useMemo(() => {
     const rawValue = searchParams.get("targetOrigin");
@@ -44,28 +28,87 @@ const GmailOAuthPopup = () => {
     }
   }, [searchParams]);
 
-  const notifyParent = (payload: Record<string, string>) => {
+  const notifyParent = useCallback((payload: Record<string, string>) => {
     window.opener?.postMessage(
       { source: POPUP_SOURCE, ...payload },
       targetOrigin,
     );
-  };
+  }, [targetOrigin]);
 
-  const handleAuthorize = async () => {
-    if (!isGoogleReady) return;
-    setState("loading");
-    setMessage("Sto aprendo il consenso Google...");
-    try {
-      const code = await requestGmailAuthorizationCodeOnCurrentOrigin(searchParams.get("loginHint") || undefined);
+  // Check if returning from Google redirect with authorization code
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const stateParam = params.get("state");
+
+    if (code) {
+      // Returning from Google consent — parse targetOrigin from state
+      let resolvedTargetOrigin = targetOrigin;
+      if (stateParam) {
+        try {
+          const parsed = JSON.parse(stateParam);
+          if (parsed.targetOrigin) resolvedTargetOrigin = parsed.targetOrigin;
+        } catch { /* ignore */ }
+      }
+
       setState("success");
       setMessage("Autorizzazione completata, torno al CRM...");
-      notifyParent({ type: "success", code, redirectUri: window.location.origin });
-      window.setTimeout(() => window.close(), 150);
-    } catch (error) {
-      const nextMessage = error instanceof Error ? error.message : "Errore durante l'autorizzazione Google.";
+
+      window.opener?.postMessage(
+        {
+          source: POPUP_SOURCE,
+          type: "success",
+          code,
+          redirectUri: window.location.origin,
+        },
+        resolvedTargetOrigin,
+      );
+
+      window.setTimeout(() => window.close(), 300);
+      return;
+    }
+
+    // No code — preload Google Identity Services script
+    let isMounted = true;
+    void loadGoogleIdentityScript()
+      .then(() => { if (isMounted) setIsReady(true); })
+      .catch((err) => {
+        if (!isMounted) return;
+        setState("error");
+        setMessage(err instanceof Error ? err.message : "Impossibile preparare Google OAuth.");
+      });
+    return () => { isMounted = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleAuthorize = () => {
+    if (!isReady) return;
+    setState("loading");
+    setMessage("Reindirizzamento a Google...");
+
+    const loginHint = searchParams.get("loginHint") || "business@easysea.org";
+
+    // Build the redirect URI pointing back to this same page
+    const redirectUri = window.location.origin + window.location.pathname;
+
+    // Encode targetOrigin in state so we can recover it on return
+    const stateValue = JSON.stringify({ targetOrigin });
+
+    try {
+      const gw = window as Window & { google?: any };
+      const client = gw.google.accounts.oauth2.initCodeClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: GMAIL_SCOPES,
+        ux_mode: "redirect",
+        redirect_uri: redirectUri,
+        state: stateValue,
+        login_hint: loginHint,
+        prompt: "consent",
+        include_granted_scopes: true,
+      });
+      client.requestCode();
+    } catch (err) {
       setState("error");
-      setMessage(nextMessage);
-      notifyParent({ type: "error", message: nextMessage });
+      setMessage(err instanceof Error ? err.message : "Errore durante l'avvio dell'autorizzazione.");
     }
   };
 
@@ -89,7 +132,7 @@ const GmailOAuthPopup = () => {
           </div>
 
           {(state === "idle" || state === "error") && (
-            <Button onClick={handleAuthorize} className="mt-2 w-full" disabled={!isGoogleReady}>
+            <Button onClick={handleAuthorize} className="mt-2 w-full" disabled={!isReady}>
               Autorizza Gmail
             </Button>
           )}
