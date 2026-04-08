@@ -155,6 +155,62 @@ const AdminOrderDetail = () => {
     }
   };
 
+  const handleConfirmOrder = async () => {
+    if (!id || !order) return;
+    setSaving(true);
+    try {
+      await supabase.from("orders").update({ status: "confirmed" }).eq("id", id);
+      await supabase.from("order_events").insert({
+        order_id: id, event_type: "status_change", title: "Stato aggiornato: Confermato",
+      });
+      await supabase.from("client_notifications").insert({
+        client_id: order.client_id,
+        title: "Ordine confermato",
+        body: `Il tuo ordine #${order.order_code || id.slice(0, 8)} è stato confermato ed è in lavorazione.`,
+        type: "order", order_id: id,
+      });
+      try {
+        await supabase.functions.invoke('send-order-notification', {
+          body: { orderId: id, orderCode: order.order_code, type: 'status_update' },
+        });
+      } catch {}
+      queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      setStatus("confirmed");
+      toast.success("Ordine confermato");
+    } catch (error) {
+      showErrorToast(error, "AdminOrderDetail.confirmOrder");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRejectOrder = async () => {
+    if (!id || !order || !rejectReason.trim()) return;
+    setRejecting(true);
+    try {
+      await supabase.from("orders").update({ status: "cancelled", internal_notes: `Rifiutato: ${rejectReason}` }).eq("id", id);
+      await supabase.from("order_events").insert({
+        order_id: id, event_type: "status_change", title: "Ordine rifiutato", description: rejectReason,
+      });
+      await supabase.from("client_notifications").insert({
+        client_id: order.client_id,
+        title: "Ordine rifiutato",
+        body: `Il tuo ordine #${order.order_code || id.slice(0, 8)} è stato rifiutato. Motivo: ${rejectReason}`,
+        type: "order", order_id: id,
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      setStatus("cancelled");
+      setShowRejectDialog(false);
+      toast.success("Ordine rifiutato");
+    } catch (error) {
+      showErrorToast(error, "AdminOrderDetail.rejectOrder");
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   if (isLoading) return <p className="text-muted-foreground p-6">Loading...</p>;
   if (!order) return <p className="text-muted-foreground p-6">Order not found.</p>;
 
