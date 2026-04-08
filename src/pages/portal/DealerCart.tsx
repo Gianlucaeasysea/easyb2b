@@ -117,7 +117,7 @@ const DealerCart = () => {
         await supabase.functions.invoke('send-order-notification', {
           body: {
             orderId: order.id,
-            orderCode: (order as any).order_code || `ES-${order.id.slice(0, 4).toUpperCase()}`,
+            orderCode: order.order_code || `ES-${order.id.slice(0, 4).toUpperCase()}`,
             type: 'order_received',
           },
         });
@@ -125,7 +125,7 @@ const DealerCart = () => {
         showErrorToast(emailErr, "DealerCart.emailNotification");
       }
 
-      setOrderConfirmed({ id: order.id, code: (order as any).order_code || `#${order.id.slice(0, 8).toUpperCase()}` });
+      setOrderConfirmed({ id: order.id, code: order.order_code || `#${order.id.slice(0, 8).toUpperCase()}` });
       clearCart();
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
       toast.success("Order placed successfully!");

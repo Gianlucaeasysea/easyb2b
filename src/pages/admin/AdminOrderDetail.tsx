@@ -19,6 +19,29 @@ import {
   ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor,
   getPaymentStatusLabel, getPaymentStatusColor,
 } from "@/lib/constants";
+import type { Tables } from "@/integrations/supabase/types";
+
+type OrderRow = Tables<"orders">;
+
+interface OrderWithRelations extends OrderRow {
+  clients: {
+    company_name: string;
+    country: string | null;
+    contact_name: string | null;
+    email: string | null;
+  } | null;
+  order_items: Array<{
+    id: string;
+    quantity: number;
+    unit_price: number;
+    subtotal: number;
+    discount_pct: number | null;
+    products: {
+      name: string;
+      sku: string | null;
+    } | null;
+  }>;
+}
 
 const statusOptions = Object.keys(ORDER_STATUS_MAP);
 
@@ -37,7 +60,7 @@ const AdminOrderDetail = () => {
         .eq("id", id!)
         .single();
       if (error) throw error;
-      return data;
+      return data as unknown as OrderWithRelations;
     },
     enabled: !!id,
   });
@@ -55,7 +78,7 @@ const AdminOrderDetail = () => {
     setTrackingNumber(order.tracking_number || "");
     setTrackingUrl(order.tracking_url || "");
     setInternalNotes(order.internal_notes || "");
-    setShippingCost(String(Number((order as any).shipping_cost_client || 0)));
+    setShippingCost(String(Number(order.shipping_cost_client || 0)));
   }
 
   const handleSave = async () => {
@@ -95,7 +118,7 @@ const AdminOrderDetail = () => {
           await supabase.functions.invoke('send-order-notification', {
             body: {
               orderId: id,
-              orderCode: (order as any)?.order_code,
+              orderCode: order?.order_code,
               type: 'status_update',
             },
           });
@@ -107,8 +130,8 @@ const AdminOrderDetail = () => {
         try {
           const statusLabel = getOrderStatusLabel(status);
           await supabase.from("client_notifications").insert({
-            client_id: (order as any)?.client_id,
-            title: `Order ${(order as any)?.order_code || ''} status updated: ${statusLabel}`,
+            client_id: order?.client_id ?? "",
+            title: `Order ${order?.order_code || ''} status updated: ${statusLabel}`,
             body: trackingNumber ? `Tracking: ${trackingNumber}` : `Your order status has been updated to "${statusLabel}".`,
             type: "order",
             order_id: id,
@@ -127,8 +150,8 @@ const AdminOrderDetail = () => {
   if (isLoading) return <p className="text-muted-foreground p-6">Loading...</p>;
   if (!order) return <p className="text-muted-foreground p-6">Order not found.</p>;
 
-  const client = order.clients as any;
-  const items = (order.order_items || []) as any[];
+  const client = order.clients;
+  const items = order.order_items || [];
   const currentStatus = order.status || "draft";
   const sc = { label: getOrderStatusLabel(currentStatus), color: getOrderStatusColor(currentStatus) };
   const productsTotal = Number(order.total_amount || 0);
@@ -143,7 +166,7 @@ const AdminOrderDetail = () => {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">
-            Order {(order as any).order_code || `#${order.id.slice(0, 8).toUpperCase()}`}
+            Order {order.order_code || `#${order.id.slice(0, 8).toUpperCase()}`}
           </h1>
           <p className="text-sm text-muted-foreground">
             {client?.company_name} · {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
@@ -210,9 +233,9 @@ const AdminOrderDetail = () => {
               <p><span className="text-muted-foreground">Country:</span> {client?.country || "—"}</p>
             </div>
             <div className="mt-3 pt-3 border-t border-border space-y-2 text-sm">
-              <p><span className="text-muted-foreground">Payment:</span> <Badge className={`border-0 text-[10px] ml-1 ${getPaymentStatusColor((order as any).payment_status || "unpaid")}`}>{getPaymentStatusLabel((order as any).payment_status || "unpaid")}</Badge></p>
-              <p><span className="text-muted-foreground">Data Pagamento:</span> {(order as any).payed_date || "—"}</p>
-              <p><span className="text-muted-foreground">Delivery Date:</span> {(order as any).delivery_date || "—"}</p>
+              <p><span className="text-muted-foreground">Payment:</span> <Badge className={`border-0 text-[10px] ml-1 ${getPaymentStatusColor(order.payment_status || "unpaid")}`}>{getPaymentStatusLabel(order.payment_status || "unpaid")}</Badge></p>
+              <p><span className="text-muted-foreground">Data Pagamento:</span> {order.payed_date || "—"}</p>
+              <p><span className="text-muted-foreground">Delivery Date:</span> {order.delivery_date || "—"}</p>
             </div>
             {order.notes && (
               <div className="mt-4 pt-3 border-t border-border">
@@ -247,7 +270,7 @@ const AdminOrderDetail = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.length > 0 ? items.map((item: any) => (
+            {items.length > 0 ? items.map((item) => (
               <TableRow key={item.id}>
                 <TableCell>
                   <p className="text-sm font-heading font-semibold">{item.products?.name || "—"}</p>
@@ -288,7 +311,7 @@ const AdminOrderDetail = () => {
             clientName={client.company_name || "Client"}
             clientEmail={client.email}
             orderId={order.id}
-            orderCode={(order as any).order_code}
+            orderCode={order.order_code}
           />
         </div>
       )}
