@@ -135,6 +135,47 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_logs: {
+        Row: {
+          action_taken: string | null
+          details: Json | null
+          executed_at: string | null
+          id: string
+          rule_id: string | null
+          rule_name: string | null
+          target_record_id: string | null
+          trigger_event: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          details?: Json | null
+          executed_at?: string | null
+          id?: string
+          rule_id?: string | null
+          rule_name?: string | null
+          target_record_id?: string | null
+          trigger_event?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          details?: Json | null
+          executed_at?: string | null
+          id?: string
+          rule_id?: string | null
+          rule_name?: string | null
+          target_record_id?: string | null
+          trigger_event?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_rules: {
         Row: {
           action_config: Json | null
