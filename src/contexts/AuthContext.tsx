@@ -86,77 +86,80 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loadRole = useCallback(async (userId: string) => {
     setRoleError(false);
 
-    // Use cached role immediately if available
     const cached = getCachedRole(userId);
+    let resolvedRole: AppRole | null = cached;
+
     if (cached) {
       setRole(cached);
+      setLoading(false);
     }
 
-    // Set up a timeout
     const timeoutId = window.setTimeout(() => {
-      if (!role && !cached) {
+      if (!resolvedRole) {
         setRoleError(true);
         setLoading(false);
         toast.error("Impossibile caricare il ruolo utente. Riprova.");
       }
     }, ROLE_TIMEOUT_MS);
 
-    const fetched = await fetchRoleWithRetry(userId);
+    try {
+      const fetched = await fetchRoleWithRetry(userId);
+      resolvedRole = fetched;
 
-    clearTimeout(timeoutId);
-
-    if (fetched) {
-      setRole(fetched);
-      setRoleError(false);
-    } else if (!cached) {
-      setRoleError(true);
+      if (fetched) {
+        setRole(fetched);
+        setRoleError(false);
+      } else if (!cached) {
+        setRoleError(true);
+      }
+    } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
     }
-
-    setLoading(false);
   }, [fetchRoleWithRetry]);
 
   const retryRole = useCallback(() => {
     if (user) {
       setLoading(true);
       setRoleError(false);
-      loadRole(user.id);
+      void loadRole(user.id);
     }
   }, [user, loadRole]);
 
   useEffect(() => {
     let mounted = true;
 
+    const handleSession = (nextSession: Session | null) => {
+      if (!mounted) return;
+
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (nextSession?.user) {
+        setLoading(true);
+        void loadRole(nextSession.user.id);
+      } else {
+        setRole(null);
+        setRoleError(false);
+        setLoading(false);
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (!mounted) return;
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await loadRole(session.user.id);
-        } else {
-          setRole(null);
-          setRoleError(false);
-          setLoading(false);
-        }
+      (_event, nextSession) => {
+        handleSession(nextSession);
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!mounted) return;
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadRole(session.user.id);
-      } else {
-        setLoading(false);
-      }
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      handleSession(initialSession);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadRole]);
 
   const signInWithEmail = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
