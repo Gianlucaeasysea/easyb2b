@@ -12,6 +12,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
+import { getOrderStatusLabel, getOrderStatusColor, ORDER_STATUS_CHART_COLORS } from "@/lib/constants";
 
 const StatCard = ({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string; sub?: string }) => (
   <div className="glass-card-solid p-6">
@@ -25,36 +26,6 @@ const StatCard = ({ icon: Icon, label, value, sub }: { icon: any; label: string;
     {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
   </div>
 );
-
-const statusColors: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  confirmed: "bg-chart-4/20 text-chart-4",
-  shipped: "bg-primary/20 text-primary",
-  delivered: "bg-success/20 text-success",
-  Delivered: "bg-success/20 text-success",
-  "To be prepared": "bg-warning/20 text-warning",
-  Ready: "bg-chart-4/20 text-chart-4",
-  "On the road": "bg-primary/20 text-primary",
-  Payed: "bg-success/20 text-success",
-  lost: "bg-destructive/20 text-destructive",
-  Returned: "bg-destructive/20 text-destructive",
-};
-
-const ORDER_STATUS_COLORS: Record<string, string> = {
-  draft: "#9ca3af",
-  confirmed: "#3b82f6",
-  processing: "#f59e0b",
-  "To be prepared": "#f59e0b",
-  Ready: "#3b82f6",
-  shipped: "#8b5cf6",
-  "On the road": "#8b5cf6",
-  delivered: "#22c55e",
-  Delivered: "#22c55e",
-  cancelled: "#ef4444",
-  Returned: "#ef4444",
-  lost: "#ef4444",
-  Payed: "#22c55e",
-};
 
 const CHART_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#f97316", "#ec4899", "#14b8a6", "#6366f1"];
 
@@ -403,7 +374,7 @@ const AdminDashboard = () => {
                   <p className="text-xs text-muted-foreground font-mono">{o.order_code || o.id.slice(0, 8)}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className={`border-0 text-[10px] ${statusColors[o.status || "draft"] || "bg-muted text-muted-foreground"}`}>{o.status}</Badge>
+                  <Badge className={`border-0 text-[10px] ${getOrderStatusColor(o.status || "draft")}`}>{getOrderStatusLabel(o.status || "draft")}</Badge>
                   <span className="font-mono text-sm font-semibold text-foreground">€{Number(o.total_amount || 0).toFixed(0)}</span>
                 </div>
               </Link>
