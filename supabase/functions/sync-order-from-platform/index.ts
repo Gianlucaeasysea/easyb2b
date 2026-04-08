@@ -1,12 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -34,7 +31,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Find the client by platform_client_id
     const { data: client, error: clientErr } = await supabase
       .from("clients")
       .select("id, status, total_orders_count, total_orders_value")
@@ -48,7 +44,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insert order
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .insert({
@@ -70,7 +65,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insert order items if provided
     if (items?.length && order) {
       for (const item of items) {
         await supabase.from("order_items").insert({
@@ -83,7 +77,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Recalculate client order stats
     const { data: allOrders } = await supabase
       .from("orders")
       .select("created_at, total_amount")
@@ -97,7 +90,6 @@ Deno.serve(async (req) => {
     const lastOrderDate = lastOrder?.created_at?.slice(0, 10) || null;
     const lastOrderValue = Number(lastOrder?.total_amount || 0);
 
-    // Calculate avg frequency
     let avgFrequency: number | null = null;
     if (allOrders && allOrders.length >= 2) {
       const dates = allOrders.map((o) => new Date(o.created_at).getTime());
@@ -108,7 +100,6 @@ Deno.serve(async (req) => {
       avgFrequency = Math.round(totalDiff / (dates.length - 1) / (1000 * 60 * 60 * 24));
     }
 
-    // Update client
     const newStatus = client.status === "onboarding" ? "active" : client.status;
 
     await supabase

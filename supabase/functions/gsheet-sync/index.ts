@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SHEET_ID = "1S_Si86x7GdKAuRdRkx5wFK231lGnujChZtFXwo9tMzg";
 const GID = "724823086";
@@ -98,79 +94,45 @@ function parseEuroPrice(val: string): number {
 function parseDate(val: string): string | null {
   if (!val || val === "-" || val === "—") return null;
   const trimmed = val.trim();
-
   const dmy = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (dmy) {
     return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
   }
-
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
   return null;
 }
 
 function normalizeText(value: string): string {
-  return value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[™®]/g, "")
-    .replace(/\u200b/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
+  return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[™®]/g, "").replace(/\u200b/g, "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 function normalizeCompanyName(value: string): string {
-  return normalizeText(value)
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return normalizeText(value).replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function normalizeOrderCode(value: string): string {
-  return normalizeCompanyName(value)
-    .replace(/\bno\b/g, "")
-    .replace(/\bn\b/g, "")
-    .replace(/\bof\b/g, "")
-    .replace(/\bdel\b/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return normalizeCompanyName(value).replace(/\bno\b/g, "").replace(/\bn\b/g, "").replace(/\bof\b/g, "").replace(/\bdel\b/g, "").replace(/\s+/g, " ").trim();
 }
 
 function normalizeProductName(name: string): string {
   return normalizeText(name);
 }
 
-function buildFallbackKey(
-  companyName: string,
-  totalAmount: number,
-  orderType: string | null,
-  referenceDate: string | null,
-  status: string | null,
-  paymentStatus: string | null,
-): string | null {
+function buildFallbackKey(companyName: string, totalAmount: number, orderType: string | null, referenceDate: string | null, status: string | null, paymentStatus: string | null): string | null {
   const normalizedCompany = normalizeCompanyName(companyName);
   if (!normalizedCompany) return null;
-
   const normalizedOrderType = normalizeText(orderType || "");
   if (totalAmount > 0) {
     return `${normalizedCompany}|amount|${totalAmount.toFixed(2)}|${normalizedOrderType}`;
   }
-
   const normalizedStatus = normalizeText(status || "");
   const normalizedPaymentStatus = normalizeText(paymentStatus || "");
   const normalizedReferenceDate = referenceDate || "";
-
   if (!normalizedReferenceDate && !normalizedStatus && !normalizedPaymentStatus) return null;
-
   return `${normalizedCompany}|zero|${normalizedOrderType}|${normalizedReferenceDate}|${normalizedStatus}|${normalizedPaymentStatus}`;
 }
 
-function resolveOrderTimestamp(
-  orderDate: string | null,
-  payedDate: string | null,
-  pickupDate: string | null,
-  deliveryDate: string | null,
-): string | null {
+function resolveOrderTimestamp(orderDate: string | null, payedDate: string | null, pickupDate: string | null, deliveryDate: string | null): string | null {
   return orderDate || payedDate || pickupDate || deliveryDate;
 }
 
@@ -181,6 +143,8 @@ function shouldSkipRow(row: SheetRow): boolean {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -221,24 +185,14 @@ serve(async (req) => {
 
     (existingOrders as ExistingOrderRow[] | null)?.forEach((order) => {
       if (!order.order_code) return;
-
       const exactCode = order.order_code.trim();
       exactOrderMap.set(exactCode, order.id);
-
       const normalizedCode = normalizeOrderCode(exactCode);
       if (normalizedCode && !normalizedOrderMap.has(normalizedCode)) {
         normalizedOrderMap.set(normalizedCode, order.id);
       }
-
       const companyName = order.clients?.company_name || "";
-      const fallbackKey = buildFallbackKey(
-        companyName,
-        Number(order.total_amount || 0),
-        order.order_type,
-        order.payed_date || order.created_at?.slice(0, 10) || null,
-        order.status,
-        order.payment_status,
-      );
+      const fallbackKey = buildFallbackKey(companyName, Number(order.total_amount || 0), order.order_type, order.payed_date || order.created_at?.slice(0, 10) || null, order.status, order.payment_status);
       if (fallbackKey) {
         const ids = fallbackOrderMap.get(fallbackKey) || [];
         ids.push(order.id);
@@ -339,14 +293,7 @@ serve(async (req) => {
       }
 
       if (!orderId) {
-        const fallbackKey = buildFallbackKey(
-          business,
-          itemsTotal,
-          orderType,
-          payedDate || effectiveOrderDate,
-          status,
-          paymentStatus,
-        );
+        const fallbackKey = buildFallbackKey(business, itemsTotal, orderType, payedDate || effectiveOrderDate, status, paymentStatus);
         const fallbackIds = fallbackKey ? fallbackOrderMap.get(fallbackKey) || [] : [];
         if (fallbackIds.length === 1) {
           orderId = fallbackIds[0];
@@ -379,14 +326,7 @@ serve(async (req) => {
 
       exactOrderMap.set(orderCode, orderId);
       normalizedOrderMap.set(normalizeOrderCode(orderCode), orderId);
-      const fallbackKey = buildFallbackKey(
-        business,
-        itemsTotal,
-        orderType,
-        payedDate || effectiveOrderDate,
-        status,
-        paymentStatus,
-      );
+      const fallbackKey = buildFallbackKey(business, itemsTotal, orderType, payedDate || effectiveOrderDate, status, paymentStatus);
       if (fallbackKey) {
         fallbackOrderMap.set(fallbackKey, [orderId]);
       }

@@ -1,14 +1,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders } from '../_shared/cors.ts'
 
 const GMAIL_USER = 'business@easysea.org'
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -24,7 +22,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Auth check
   const authHeader = req.headers.get('Authorization') || ''
   const token = authHeader.replace('Bearer ', '')
   const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
@@ -38,7 +35,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Check role
   const adminClient = createClient(supabaseUrl, supabaseServiceKey)
   const { data: roleData } = await adminClient.rpc('get_user_role', { _user_id: user.id })
   if (!roleData || !['admin', 'sales'].includes(roleData)) {
@@ -73,10 +69,7 @@ Deno.serve(async (req) => {
         hostname: 'smtp.gmail.com',
         port: 465,
         tls: true,
-        auth: {
-          username: GMAIL_USER,
-          password: gmailPassword,
-        },
+        auth: { username: GMAIL_USER, password: gmailPassword },
       },
     })
 
@@ -92,7 +85,6 @@ Deno.serve(async (req) => {
 
     await client.close()
 
-    // Log communication
     await adminClient.from('client_communications').insert({
       client_id,
       order_id: order_id || null,
@@ -110,7 +102,6 @@ Deno.serve(async (req) => {
   } catch (err: any) {
     console.error('Email send failed:', err)
 
-    // Log failure
     await adminClient.from('client_communications').insert({
       client_id,
       order_id: order_id || null,
