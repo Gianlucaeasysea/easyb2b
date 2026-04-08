@@ -744,7 +744,7 @@ const AdminClientDetail = () => {
                           const { error } = await supabase.functions.invoke("reset-dealer-password", { body: { email: client.email } });
                           if (error) throw error;
                           toast.success(`Email di reset password inviata a ${client.email}`);
-                        } catch (e: any) { toast.error(e.message || "Errore invio reset"); }
+                        } catch (e) { toast.error(e instanceof Error ? e.message : "Errore invio reset"); }
                       }}>
                         <KeyRound size={12} /> Reset Password
                       </Button>
