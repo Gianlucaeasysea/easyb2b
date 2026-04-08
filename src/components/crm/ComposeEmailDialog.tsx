@@ -420,8 +420,8 @@ export const ComposeEmailDialog = ({
                   if (error) throw error;
                   setAttachments(prev => [...prev, { name: file.name, path, size: file.size }]);
                 }
-              } catch (err: any) {
-                toast.error("Errore upload: " + err.message);
+              } catch (error) {
+                showErrorToast(error, "ComposeEmailDialog.uploadAttachment");
               } finally {
                 setUploading(false);
                 if (fileInputRef.current) fileInputRef.current.value = "";
