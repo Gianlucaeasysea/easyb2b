@@ -93,9 +93,13 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
     );
   }, [communications, filterEmail]);
 
+  type CommRow = Tables<"client_communications">;
+  interface EmailMetadata { from?: string; to?: string; cc?: string; [key: string]: unknown }
+  const getMeta = (comm: CommRow): EmailMetadata | null => comm.metadata as EmailMetadata | null;
+
   const groupedByThread = useMemo(() => {
-    const threads = new Map<string, any[]>();
-    const standalone: any[] = [];
+    const threads = new Map<string, CommRow[]>();
+    const standalone: CommRow[] = [];
     for (const c of filteredCommunications) {
       if (c.gmail_thread_id) {
         const existing = threads.get(c.gmail_thread_id) || [];
@@ -106,21 +110,22 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
       }
     }
     const threadGroups = Array.from(threads.entries()).map(([threadId, msgs]) => {
-      msgs.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      msgs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       return { threadId, msgs, lastDate: new Date(msgs[msgs.length - 1].created_at).getTime() };
     });
     threadGroups.sort((a, b) => b.lastDate - a.lastDate);
     const sortedStandalone = [...standalone].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    const merged: any[] = [];
+    type MergedItem = { type: "thread"; threadId: string; msgs: CommRow[]; lastDate: number } | { type: "single"; msg: CommRow; threadId: string };
+    const merged: MergedItem[] = [];
     let tIdx = 0, sIdx = 0;
     while (tIdx < threadGroups.length || sIdx < sortedStandalone.length) {
       const threadDate = tIdx < threadGroups.length ? threadGroups[tIdx].lastDate : -Infinity;
       const standaloneDate = sIdx < sortedStandalone.length ? new Date(sortedStandalone[sIdx].created_at).getTime() : -Infinity;
       if (threadDate >= standaloneDate) {
-        merged.push({ type: "thread" as const, ...threadGroups[tIdx] });
+        merged.push({ type: "thread", ...threadGroups[tIdx] });
         tIdx++;
       } else {
-        merged.push({ type: "single" as const, msg: sortedStandalone[sIdx], threadId: sortedStandalone[sIdx].id });
+        merged.push({ type: "single", msg: sortedStandalone[sIdx], threadId: sortedStandalone[sIdx].id });
         sIdx++;
       }
     }
