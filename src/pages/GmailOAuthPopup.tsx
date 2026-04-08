@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Loader2, MailWarning } from "lucide-react";
-import { requestGmailAuthorizationCodeOnCurrentOrigin } from "@/lib/gmailOAuth";
+import { loadGoogleIdentityScript, requestGmailAuthorizationCodeOnCurrentOrigin } from "@/lib/gmailOAuth";
 import { Button } from "@/components/ui/button";
 
 type PopupState = "idle" | "loading" | "success" | "error";
@@ -11,6 +11,28 @@ const GmailOAuthPopup = () => {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const [state, setState] = useState<PopupState>("idle");
   const [message, setMessage] = useState("Clicca il pulsante per autorizzare Gmail.");
+  const [isGoogleReady, setIsGoogleReady] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void loadGoogleIdentityScript()
+      .then(() => {
+        if (!isMounted) return;
+        setIsGoogleReady(true);
+        setState("idle");
+        setMessage("Clicca il pulsante per autorizzare Gmail.");
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        setState("error");
+        setMessage(error instanceof Error ? error.message : "Impossibile preparare Google OAuth.");
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const targetOrigin = useMemo(() => {
     const rawValue = searchParams.get("targetOrigin");
@@ -30,6 +52,7 @@ const GmailOAuthPopup = () => {
   };
 
   const handleAuthorize = async () => {
+    if (!isGoogleReady) return;
     setState("loading");
     setMessage("Sto aprendo il consenso Google...");
     try {
@@ -66,7 +89,7 @@ const GmailOAuthPopup = () => {
           </div>
 
           {(state === "idle" || state === "error") && (
-            <Button onClick={handleAuthorize} className="mt-2 w-full">
+            <Button onClick={handleAuthorize} className="mt-2 w-full" disabled={!isGoogleReady}>
               Autorizza Gmail
             </Button>
           )}

@@ -63,6 +63,45 @@ export const GMAIL_POPUP_BRIDGE_URL = "https://easyb2b.lovable.app/oauth/gmail-p
 
 let googleIdentityScriptPromise: Promise<void> | null = null;
 
+function createGmailAuthorizationCodeRequest(loginHint = "business@easysea.org") {
+  return new Promise<string>((resolve, reject) => {
+    const googleWindow = window as Window & { google?: GoogleIdentityServices };
+    const googleOauth = googleWindow.google?.accounts?.oauth2;
+
+    if (!googleOauth) {
+      reject(new Error("Google Identity Services non è disponibile."));
+      return;
+    }
+
+    const client = googleOauth.initCodeClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: GMAIL_SCOPES,
+      ux_mode: "popup",
+      ...(loginHint ? { login_hint: loginHint } : {}),
+      prompt: "select_account consent",
+      include_granted_scopes: true,
+      callback: (response) => {
+        if (response.error) {
+          reject(new Error(response.error_description || response.error));
+          return;
+        }
+
+        if (!response.code) {
+          reject(new Error("Google non ha restituito un authorization code valido."));
+          return;
+        }
+
+        resolve(response.code);
+      },
+      error_callback: (error) => {
+        reject(new Error(getPopupErrorMessage(error)));
+      },
+    });
+
+    client.requestCode();
+  });
+}
+
 function getPopupErrorMessage(error: GoogleOAuthError) {
   switch (error.type) {
     case "popup_failed_to_open":
@@ -137,44 +176,14 @@ function getPopupBridgeOrigin() {
 }
 
 export async function requestGmailAuthorizationCodeOnCurrentOrigin(loginHint = "business@easysea.org") {
+  const googleWindow = window as Window & { google?: GoogleIdentityServices };
+
+  if (googleWindow.google?.accounts?.oauth2) {
+    return createGmailAuthorizationCodeRequest(loginHint);
+  }
+
   await loadGoogleIdentityScript();
-
-  return await new Promise<string>((resolve, reject) => {
-    const googleWindow = window as Window & { google?: GoogleIdentityServices };
-    const googleOauth = googleWindow.google?.accounts?.oauth2;
-
-    if (!googleOauth) {
-      reject(new Error("Google Identity Services non è disponibile."));
-      return;
-    }
-
-    const client = googleOauth.initCodeClient({
-      client_id: GOOGLE_CLIENT_ID,
-      scope: GMAIL_SCOPES,
-      ux_mode: "popup",
-      ...(loginHint ? { login_hint: loginHint } : {}),
-      prompt: "select_account consent",
-      include_granted_scopes: true,
-      callback: (response) => {
-        if (response.error) {
-          reject(new Error(response.error_description || response.error));
-          return;
-        }
-
-        if (!response.code) {
-          reject(new Error("Google non ha restituito un authorization code valido."));
-          return;
-        }
-
-        resolve(response.code);
-      },
-      error_callback: (error) => {
-        reject(new Error(getPopupErrorMessage(error)));
-      },
-    });
-
-    client.requestCode();
-  });
+  return createGmailAuthorizationCodeRequest(loginHint);
 }
 
 function requestGmailAuthorizationCodeFromPublishedBridge(loginHint: string) {
