@@ -27,7 +27,7 @@ const items: SidebarItem[] = [
   { title: "Organizzazioni", url: "/crm/organizations", icon: Building2 },
   { title: "Contatti", url: "/crm/contacts", icon: Users },
   { title: "Attività", url: "/crm/activities", icon: Activity },
-  { title: "Ordini", url: "/crm/orders", icon: Package },
+  { title: "Ordini", url: "/crm/orders", icon: Package, badgeKey: "submitted_orders" },
   { title: "Task", url: "/crm/tasks", icon: CheckSquare, badgeKey: "overdue_tasks" },
   { title: "Analytics", url: "/crm/analytics", icon: BarChart3 },
   { title: "Template Email", url: "/crm/email-templates", icon: MailPlus },
