@@ -1,76 +1,50 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Loader2, MailWarning } from "lucide-react";
 import { requestGmailAuthorizationCodeOnCurrentOrigin } from "@/lib/gmailOAuth";
+import { Button } from "@/components/ui/button";
 
-type PopupState = "loading" | "success" | "error";
+type PopupState = "idle" | "loading" | "success" | "error";
 
 const POPUP_SOURCE = "gmail-oauth-popup";
 
 const GmailOAuthPopup = () => {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
-  const [state, setState] = useState<PopupState>("loading");
-  const [message, setMessage] = useState("Sto aprendo il consenso Google...");
+  const [state, setState] = useState<PopupState>("idle");
+  const [message, setMessage] = useState("Clicca il pulsante per autorizzare Gmail.");
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const targetOrigin = (() => {
-      const rawValue = searchParams.get("targetOrigin");
-
-      if (!rawValue) return "*";
-
-      try {
-        return new URL(rawValue).origin;
-      } catch {
-        return "*";
-      }
-    })();
-
-    const notifyParent = (payload: Record<string, string>) => {
-      window.opener?.postMessage(
-        {
-          source: POPUP_SOURCE,
-          ...payload,
-        },
-        targetOrigin,
-      );
-    };
-
-    const run = async () => {
-      try {
-        const code = await requestGmailAuthorizationCodeOnCurrentOrigin(searchParams.get("loginHint") || undefined);
-
-        if (cancelled) return;
-
-        setState("success");
-        setMessage("Autorizzazione completata, torno al CRM...");
-        notifyParent({
-          type: "success",
-          code,
-          redirectUri: window.location.origin,
-        });
-
-        window.setTimeout(() => window.close(), 150);
-      } catch (error) {
-        if (cancelled) return;
-
-        const nextMessage = error instanceof Error ? error.message : "Errore durante l'autorizzazione Google.";
-
-        setState("error");
-        setMessage(nextMessage);
-        notifyParent({
-          type: "error",
-          message: nextMessage,
-        });
-      }
-    };
-
-    void run();
-
-    return () => {
-      cancelled = true;
-    };
+  const targetOrigin = useMemo(() => {
+    const rawValue = searchParams.get("targetOrigin");
+    if (!rawValue) return "*";
+    try {
+      return new URL(rawValue).origin;
+    } catch {
+      return "*";
+    }
   }, [searchParams]);
+
+  const notifyParent = (payload: Record<string, string>) => {
+    window.opener?.postMessage(
+      { source: POPUP_SOURCE, ...payload },
+      targetOrigin,
+    );
+  };
+
+  const handleAuthorize = async () => {
+    setState("loading");
+    setMessage("Sto aprendo il consenso Google...");
+    try {
+      const code = await requestGmailAuthorizationCodeOnCurrentOrigin(searchParams.get("loginHint") || undefined);
+      setState("success");
+      setMessage("Autorizzazione completata, torno al CRM...");
+      notifyParent({ type: "success", code, redirectUri: window.location.origin });
+      window.setTimeout(() => window.close(), 150);
+    } catch (error) {
+      const nextMessage = error instanceof Error ? error.message : "Errore durante l'autorizzazione Google.";
+      setState("error");
+      setMessage(nextMessage);
+      notifyParent({ type: "error", message: nextMessage });
+    }
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-10">
@@ -90,6 +64,12 @@ const GmailOAuthPopup = () => {
             <h1 className="text-xl font-semibold text-foreground">Collegamento Gmail</h1>
             <p className="text-sm text-muted-foreground">{message}</p>
           </div>
+
+          {(state === "idle" || state === "error") && (
+            <Button onClick={handleAuthorize} className="mt-2 w-full">
+              Autorizza Gmail
+            </Button>
+          )}
         </div>
       </section>
     </main>
