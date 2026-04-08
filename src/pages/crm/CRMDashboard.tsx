@@ -22,7 +22,7 @@ const safeFormat = (d: string | null | undefined, fmt: string) => {
   return isValid(dt) ? format(dt, fmt) : "—";
 };
 
-const StatCard = ({ icon: Icon, label, value, color, sub }: { icon: any; label: string; value: string; color?: string; sub?: string }) => (
+const StatCard = ({ icon: Icon, label, value, color, sub }: { icon: typeof Users; label: string; value: string; color?: string; sub?: string }) => (
   <div className="glass-card-solid p-6">
     <div className="flex items-center gap-3 mb-3">
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color || "gradient-blue"}`}>
