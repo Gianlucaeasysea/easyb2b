@@ -231,7 +231,7 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
                         <FileText size={14} className="text-primary" />
                         <div>
                           <p className="text-xs font-medium text-foreground">{doc.file_name}</p>
-                          <p className="text-[10px] text-muted-foreground">{doc.doc_type} · {fmtDate(doc.created_at)}</p>
+                          <p className="text-[10px] text-muted-foreground">{docTypeLabel(doc.doc_type)} · {fmtDate(doc.created_at)}</p>
                         </div>
                       </div>
                       <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => handleDownloadDoc(doc.file_path)}>
