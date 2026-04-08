@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import * as XLSX from "xlsx";
 import {
   ORDER_STATUS_MAP, getOrderStatusLabel, getOrderStatusColor,
@@ -112,7 +113,7 @@ const AdminOrders = () => {
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["admin-orders"] });
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (error) => showErrorToast(error, "AdminOrders.bulkUpdate"),
   });
 
   const exportCSV = async () => {

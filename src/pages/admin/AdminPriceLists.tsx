@@ -150,8 +150,8 @@ const AdminPriceLists = () => {
       }
       qc.invalidateQueries({ queryKey: ["all-products"] });
       toast.success(`Sincronizzati ${upserted} prodotti da Shopify`);
-    } catch (err: any) {
-      toast.error("Errore sync Shopify: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "AdminPriceLists.shopifySync");
     } finally {
       setSyncing(false);
     }
@@ -169,7 +169,7 @@ const AdminPriceLists = () => {
       setTierForm({ name: "", label: "", discount_pct: 0, sort_order: 0 });
       toast.success("Classe di sconto creata");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (error) => showErrorToast(error, "AdminPriceLists.createTier"),
   });
 
   const deleteTier = useMutation({
@@ -227,7 +227,7 @@ const AdminPriceLists = () => {
       setActiveListId(data.id);
       toast.success("Listino prezzi creato");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (error) => showErrorToast(error, "AdminPriceLists.createList"),
   });
 
   const updateList = useMutation({
@@ -244,7 +244,7 @@ const AdminPriceLists = () => {
       setShowEditList(false);
       toast.success("Listino aggiornato");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (error) => showErrorToast(error, "AdminPriceLists.updateList"),
   });
 
   const deleteList = useMutation({
@@ -298,8 +298,8 @@ const AdminPriceLists = () => {
       qc.invalidateQueries({ queryKey: ["price-list-client-counts"] });
       setActiveListId(newList.id);
       toast.success(`Listino "${pl.name}" duplicato`);
-    } catch (err: any) {
-      toast.error("Errore duplicazione: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "AdminPriceLists.duplicate");
     }
   };
 

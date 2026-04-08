@@ -13,6 +13,7 @@ import { Users, Search, ArrowRight, Plus, Trash2, Settings2, Clock } from "lucid
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import { differenceInDays } from "date-fns";
 import { deleteClientsCascade } from "@/lib/crmEntityActions";
 import { TablePagination } from "@/components/ui/TablePagination";
@@ -122,7 +123,7 @@ const AdminClients = () => {
       setNewClient({ company_name: "", contact_name: "", email: "", phone: "", country: "", address: "", business_type: "", status: "active", discount_class: "standard", website: "", vat_number: "", zone: "", notes: "" });
       toast.success("Cliente creato");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (error) => showErrorToast(error, "AdminClients.createClient"),
   });
 
   const executeBulk = async () => {
@@ -130,7 +131,7 @@ const AdminClients = () => {
     const ids = Array.from(selected);
 
     if (bulkAction === "delete") {
-      try { await deleteClientsCascade(ids); } catch (error: any) { toast.error(error.message); return; }
+      try { await deleteClientsCascade(ids); } catch (error) { showErrorToast(error, "AdminClients.bulkDelete"); return; }
       toast.success(`${ids.length} clienti eliminati`);
     } else if (bulkAction === "status") {
       const { error } = await supabase.from("clients").update({ status: bulkStatus }).in("id", ids);

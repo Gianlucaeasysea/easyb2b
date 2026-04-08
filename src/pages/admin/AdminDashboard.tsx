@@ -49,8 +49,8 @@ const AdminDashboard = () => {
       toast.success(`Sync completata: ${data.newOrders} nuovi ordini, ${data.updatedOrders} aggiornati`);
       queryClient.invalidateQueries({ queryKey: ["admin-orders-dash"] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-    } catch (err: any) {
-      toast.error("Sync fallita: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "AdminDashboard.sync");
     } finally {
       setSyncing(false);
     }

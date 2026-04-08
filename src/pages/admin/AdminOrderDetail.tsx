@@ -11,6 +11,7 @@ import { ArrowLeft, Clock, CheckCircle, Truck, Package, Mail } from "lucide-reac
 import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
+import { showErrorToast } from "@/lib/errorHandler";
 import OrderDocuments from "@/components/OrderDocuments";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
@@ -99,7 +100,7 @@ const AdminOrderDetail = () => {
             },
           });
         } catch (emailErr) {
-          console.error("Email notification failed:", emailErr);
+          showErrorToast(emailErr, "AdminOrderDetail.emailNotification");
         }
 
         // Create in-app notification for the dealer
@@ -113,11 +114,11 @@ const AdminOrderDetail = () => {
             order_id: id,
           });
         } catch (notifErr) {
-          console.error("In-app notification failed:", notifErr);
+          showErrorToast(notifErr, "AdminOrderDetail.inAppNotification");
         }
       }
-    } catch (err: any) {
-      toast.error("Failed: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "AdminOrderDetail.save");
     } finally {
       setSaving(false);
     }

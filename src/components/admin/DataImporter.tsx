@@ -243,8 +243,8 @@ export default function DataImporter() {
 
       setStep("done");
       toast.success(`Importazione completata: ${importedCount || "tutti i"} record importati`);
-    } catch (err: any) {
-      toast.error("Errore durante l'importazione: " + err.message);
+    } catch (error) {
+      showErrorToast(error, "DataImporter.import");
       setStep("preview");
     }
   }, [getMappedData, importType]);
