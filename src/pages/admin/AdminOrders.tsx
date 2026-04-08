@@ -17,7 +17,7 @@ import { showErrorToast } from "@/lib/errorHandler";
 import * as XLSX from "xlsx";
 import {
   ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor,
-  getPaymentStatusLabel, getPaymentStatusColor,
+  getPaymentStatusLabel, getPaymentStatusColor, canTransitionTo,
 } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
 import BulkActionBar, { runBulkOperation, bulkResultToast } from "@/components/admin/BulkActionBar";
@@ -38,6 +38,8 @@ const AdminOrders = () => {
   const [bulkStatus, setBulkStatus] = useState("confirmed");
   const [showPaidConfirm, setShowPaidConfirm] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [showTransitionWarning, setShowTransitionWarning] = useState(false);
+  const [transitionInfo, setTransitionInfo] = useState<{ valid: string[]; invalid: string[]; target: string }>({ valid: [], invalid: [], target: "" });
 
   useEffect(() => { setPage(1); }, [search, statusFilter, dateFrom, dateTo]);
 
@@ -96,16 +98,40 @@ const AdminOrders = () => {
     else setSelected(new Set(orders.map(o => o.id)));
   };
 
-  // Bulk: update status
-  const handleBulkStatus = async () => {
+  // Bulk: update status — with transition validation
+  const handleBulkStatusCheck = () => {
+    const ids = Array.from(selected);
+    const selectedOrders = orders.filter(o => ids.includes(o.id));
+    const valid: string[] = [];
+    const invalid: string[] = [];
+    selectedOrders.forEach(o => {
+      if (canTransitionTo(o.status || "draft", bulkStatus)) valid.push(o.id);
+      else invalid.push(o.id);
+    });
+    if (invalid.length > 0 && valid.length > 0) {
+      setTransitionInfo({ valid, invalid, target: bulkStatus });
+      setShowStatusDialog(false);
+      setShowTransitionWarning(true);
+    } else if (invalid.length > 0 && valid.length === 0) {
+      toast.error(`Nessuno dei ${invalid.length} ordini selezionati può passare allo stato "${getOrderStatusLabel(bulkStatus)}".`);
+    } else {
+      executeBulkStatus(valid);
+    }
+  };
+
+  const executeBulkStatus = async (ids: string[]) => {
     setBulkLoading(true);
     try {
-      const ids = Array.from(selected);
       const result = await runBulkOperation(ids, async (id) => {
         const { error } = await supabase.from("orders").update({ status: bulkStatus }).eq("id", id);
         if (error) throw error;
       });
-      bulkResultToast(toast.success, toast.error, result, "ordini");
+      const skipped = transitionInfo.invalid.length;
+      if (skipped > 0) {
+        toast.success(`Aggiornati: ${result.ok} ordini. Saltati: ${skipped} (stato non compatibile).`);
+      } else {
+        bulkResultToast(toast.success, toast.error, result, "ordini");
+      }
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["admin-orders"] });
     } catch (error) {
@@ -113,6 +139,8 @@ const AdminOrders = () => {
     } finally {
       setBulkLoading(false);
       setShowStatusDialog(false);
+      setShowTransitionWarning(false);
+      setTransitionInfo({ valid: [], invalid: [], target: "" });
     }
   };
 
@@ -374,7 +402,7 @@ const AdminOrders = () => {
           </Select>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowStatusDialog(false)}>Annulla</Button>
-            <Button onClick={handleBulkStatus} disabled={bulkLoading}>
+            <Button onClick={handleBulkStatusCheck} disabled={bulkLoading}>
               {bulkLoading ? "Aggiornamento..." : "Applica"}
             </Button>
           </DialogFooter>
@@ -392,6 +420,26 @@ const AdminOrders = () => {
             <Button variant="outline" onClick={() => setShowPaidConfirm(false)}>Annulla</Button>
             <Button onClick={handleBulkPaid} disabled={bulkLoading}>
               {bulkLoading ? "Aggiornamento..." : "Conferma"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transition Warning Dialog */}
+      <Dialog open={showTransitionWarning} onOpenChange={setShowTransitionWarning}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Attenzione</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {transitionInfo.invalid.length} di {transitionInfo.valid.length + transitionInfo.invalid.length} ordini selezionati non possono passare allo stato "{getOrderStatusLabel(transitionInfo.target)}".
+            Stato attuale non compatibile.
+          </p>
+          <p className="text-sm text-foreground font-medium">
+            Vuoi procedere con i {transitionInfo.valid.length} ordini validi?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTransitionWarning(false)}>Annulla</Button>
+            <Button onClick={() => executeBulkStatus(transitionInfo.valid)} disabled={bulkLoading}>
+              {bulkLoading ? "Aggiornamento..." : `Procedi con ${transitionInfo.valid.length} ordini`}
             </Button>
           </DialogFooter>
         </DialogContent>

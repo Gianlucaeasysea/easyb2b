@@ -19,7 +19,7 @@ import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import {
   ORDER_STATUSES, PAYMENT_STATUSES, getOrderStatusLabel, getOrderStatusColor,
-  getPaymentStatusLabel, getPaymentStatusColor,
+  getPaymentStatusLabel, getPaymentStatusColor, getAvailableTransitions, canTransitionTo,
 } from "@/lib/constants";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -45,7 +45,7 @@ interface OrderWithRelations extends OrderRow {
   }>;
 }
 
-const statusOptions = Object.keys(ORDER_STATUSES);
+// statusOptions computed dynamically based on current order status
 
 const AdminOrderDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -90,9 +90,13 @@ const AdminOrderDetail = () => {
 
   const handleSave = async () => {
     if (!id) return;
+    const previousStatus = order?.status || "draft";
+    if (status !== previousStatus && !canTransitionTo(previousStatus, status)) {
+      toast.error("Transizione di stato non consentita");
+      return;
+    }
     setSaving(true);
     try {
-      const previousStatus = order?.status;
       const { error } = await supabase.from("orders").update({
         status,
         payment_status: paymentStatus,
@@ -266,16 +270,30 @@ const AdminOrderDetail = () => {
           <h3 className="font-heading font-bold text-foreground text-sm">Gestione Ordine</h3>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Status</label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="bg-secondary border-border rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map(s => (
-                  <SelectItem key={s} value={s}>{getOrderStatusLabel(s)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {(() => {
+              const transitions = getAvailableTransitions(order.status || "draft");
+              if (transitions.length === 0) {
+                return (
+                  <div className="flex items-center gap-2">
+                    <Badge className={`border-0 ${getOrderStatusColor(order.status || "draft")}`}>{getOrderStatusLabel(order.status || "draft")}</Badge>
+                    <span className="text-xs text-muted-foreground italic">Stato finale — non modificabile</span>
+                  </div>
+                );
+              }
+              const options = [order.status || "draft", ...transitions];
+              return (
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="bg-secondary border-border rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.map(s => (
+                      <SelectItem key={s} value={s}>{getOrderStatusLabel(s)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              );
+            })()}
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Stato Pagamento</label>
