@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Tables } from "@/integrations/supabase/types";
-import DOMPurify from "dompurify";
+import { SafeHtml } from "@/components/ui/SafeHtml";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
