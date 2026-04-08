@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { clearCartStorage } from "@/contexts/CartContext";
 
 type AppRole = "admin" | "dealer" | "sales" | "operations";
 
@@ -179,6 +180,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRole(null);
     setRoleError(false);
     clearCachedRole(userId);
+    clearCartStorage(userId);
   };
 
   return (
