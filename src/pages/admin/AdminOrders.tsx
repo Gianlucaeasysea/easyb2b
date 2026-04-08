@@ -424,6 +424,26 @@ const AdminOrders = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Transition Warning Dialog */}
+      <Dialog open={showTransitionWarning} onOpenChange={setShowTransitionWarning}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Attenzione</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {transitionInfo.invalid.length} di {transitionInfo.valid.length + transitionInfo.invalid.length} ordini selezionati non possono passare allo stato "{getOrderStatusLabel(transitionInfo.target)}".
+            Stato attuale non compatibile.
+          </p>
+          <p className="text-sm text-foreground font-medium">
+            Vuoi procedere con i {transitionInfo.valid.length} ordini validi?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTransitionWarning(false)}>Annulla</Button>
+            <Button onClick={() => executeBulkStatus(transitionInfo.valid)} disabled={bulkLoading}>
+              {bulkLoading ? "Aggiornamento..." : `Procedi con ${transitionInfo.valid.length} ordini`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
