@@ -143,6 +143,7 @@ const AdminSettings = () => {
     saveNotifEmails.mutate({ ...current, [type]: current[type].filter(e => e !== email) });
   };
 
+  return (
     <div>
       <h1 className="font-heading text-2xl font-bold text-foreground mb-2">Settings</h1>
       <p className="text-sm text-muted-foreground mb-8">Platform configuration</p>
