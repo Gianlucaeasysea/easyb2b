@@ -18,6 +18,8 @@ import LeadDetailPanel from "@/components/crm/LeadDetailPanel";
 import { differenceInDays } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { deleteLeadsCascade } from "@/lib/crmEntityActions";
+import { usePaginatedData } from "@/hooks/usePaginatedData";
+import { PaginationControls } from "@/components/PaginationControls";
 
 const LEAD_STAGES = [
   { value: "request", label: "Request", color: "border-muted-foreground text-muted-foreground", bg: "bg-muted/50" },
