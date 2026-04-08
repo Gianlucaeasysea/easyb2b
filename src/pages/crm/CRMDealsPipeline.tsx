@@ -265,7 +265,6 @@ const CRMDealsPipeline = () => {
                                 </div>
                               )}
                             </Draggable>
-                            </Draggable>
                           );
                         })}
                       </AnimatePresence>
