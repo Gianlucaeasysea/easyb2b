@@ -138,8 +138,8 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
   };
 
   const handleDownload = async (filePath: string) => {
-    const { data } = supabase.storage.from("order-documents").getPublicUrl(filePath);
-    if (data?.publicUrl) window.open(data.publicUrl, "_blank");
+    const { data } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 300);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   };
 
   const docTypeLabel = (type: string) => DOC_TYPES.find(d => d.value === type)?.label || type;

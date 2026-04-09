@@ -93,9 +93,9 @@ const DealerProfile = () => {
     other: "Other",
   };
 
-  const getDocUrl = (filePath: string) => {
-    const { data } = supabase.storage.from("client-documents").getPublicUrl(filePath);
-    return data.publicUrl;
+  const getDocUrl = async (filePath: string) => {
+    const { data } = await supabase.storage.from("client-documents").createSignedUrl(filePath, 300);
+    return data?.signedUrl || "";
   };
 
   // --- Contacts CRUD ---

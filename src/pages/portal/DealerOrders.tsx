@@ -122,9 +122,9 @@ const DealerOrders = () => {
     }
   }, [highlightId, orders]);
 
-  const getDownloadUrl = (filePath: string) => {
-    const { data } = supabase.storage.from("order-documents").getPublicUrl(filePath);
-    return data.publicUrl;
+  const getDownloadUrl = async (filePath: string) => {
+    const { data } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 300);
+    return data?.signedUrl || "";
   };
 
   const getPhaseIndex = (status: string) => {
