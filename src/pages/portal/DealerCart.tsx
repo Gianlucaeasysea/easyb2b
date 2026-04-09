@@ -283,7 +283,7 @@ const DealerCart = () => {
               <span className="text-xs text-muted-foreground italic">Calculated after confirmation</span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t border-border mt-2">
-              <span className="font-heading font-bold text-foreground">Subtotal</span>
+              <span className="font-heading font-bold text-foreground">Estimated Total</span>
               <span className="font-heading text-2xl font-bold text-foreground">€{totalAmount.toFixed(2)}</span>
             </div>
           </div>
