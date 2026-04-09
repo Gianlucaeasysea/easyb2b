@@ -123,7 +123,7 @@ const DealerDashboard = () => {
               )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Standard pricing applied (Class {discountClass})</p>
+            <p className="text-sm text-muted-foreground">No price list assigned</p>
           )}
         </div>
 
