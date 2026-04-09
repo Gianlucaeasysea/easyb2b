@@ -1,14 +1,14 @@
 // ── Order Status ──────────────────────────────────────────────
 export const ORDER_STATUSES = {
-  draft: "Bozza",
-  submitted: "Inviato",
-  confirmed: "Confermato",
-  processing: "In lavorazione",
-  ready_to_ship: "Pronto per spedizione",
-  shipped: "Spedito",
-  delivered: "Consegnato",
-  cancelled: "Annullato",
-  returned: "Reso",
+  draft: "Draft",
+  submitted: "Submitted",
+  confirmed: "Confirmed",
+  processing: "Processing",
+  ready_to_ship: "Ready to Ship",
+  shipped: "Shipped",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+  returned: "Returned",
 } as const;
 
 /** @deprecated Use ORDER_STATUSES instead */
@@ -28,9 +28,9 @@ export const ORDER_STATUS_COLORS: Record<string, string> = {
 
 // ── Payment Status ───────────────────────────────────────────
 export const PAYMENT_STATUSES = {
-  unpaid: "Non pagato",
-  pending: "In attesa",
-  paid: "Pagato",
+  unpaid: "Unpaid",
+  pending: "Pending",
+  paid: "Paid",
 } as const;
 
 /** @deprecated Use PAYMENT_STATUSES instead */

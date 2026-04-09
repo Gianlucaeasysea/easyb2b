@@ -12,13 +12,13 @@ import {
 
 const allItems = [
   { title: "Dashboard", url: "/portal", icon: LayoutDashboard },
-  { title: "Catalogo", url: "/portal/catalog", icon: Package },
-  { title: "Carrello", url: "/portal/cart", icon: ShoppingCart },
-  { title: "I Miei Ordini", url: "/portal/orders", icon: ShoppingBag },
-  { title: "Fatture", url: "/portal/invoices", icon: Receipt },
-  { title: "Notifiche", url: "/portal/notifications", icon: Bell },
-  { title: "Profilo", url: "/portal/profile", icon: UserCircle },
-  { title: "Supporto", url: "/portal/support", icon: HelpCircle },
+  { title: "Catalog", url: "/portal/catalog", icon: Package },
+  { title: "Cart", url: "/portal/cart", icon: ShoppingCart },
+  { title: "My Orders", url: "/portal/orders", icon: ShoppingBag },
+  { title: "Invoices", url: "/portal/invoices", icon: Receipt },
+  { title: "Notifications", url: "/portal/notifications", icon: Bell },
+  { title: "Profile", url: "/portal/profile", icon: UserCircle },
+  { title: "Support", url: "/portal/support", icon: HelpCircle },
 ];
 
 export function DealerSidebar() {
@@ -53,7 +53,7 @@ export function DealerSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Portale Dealer</SidebarGroupLabel>
+          <SidebarGroupLabel>Dealer Portal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {allItems.map((item) => (
@@ -62,8 +62,8 @@ export function DealerSidebar() {
                     <NavLink to={item.url} end={item.url === "/portal"} className="hover:bg-muted/50" activeClassName="bg-muted text-primary font-medium">
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
-                      {!collapsed && item.title === "Carrello" && <CartSavedIndicator />}
-                      {!collapsed && item.title === "Notifiche" && unreadCount && unreadCount > 0 ? (
+                      {!collapsed && item.title === "Cart" && <CartSavedIndicator />}
+                      {!collapsed && item.title === "Notifications" && unreadCount && unreadCount > 0 ? (
                         <Badge className="ml-auto bg-destructive text-destructive-foreground text-[10px] h-5 min-w-5 px-1.5 rounded-full">{unreadCount}</Badge>
                       ) : null}
                     </NavLink>

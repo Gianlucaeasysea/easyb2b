@@ -15,11 +15,11 @@ import { showErrorToast } from "@/lib/errorHandler";
 const MIN_ORDER_AMOUNT = 100;
 
 const PAYMENT_TERMS_LABELS: Record<string, string> = {
-  prepaid: "Anticipato",
-  "30_days": "30 giorni data fattura",
-  "60_days": "60 giorni data fattura",
-  "90_days": "90 giorni data fattura",
-  end_of_month: "Fine mese",
+  prepaid: "Prepaid",
+  "30_days": "Net 30 days",
+  "60_days": "Net 60 days",
+  "90_days": "Net 90 days",
+  end_of_month: "End of month",
 };
 
 // Same mapping as DealerCatalog
@@ -129,7 +129,7 @@ const DealerCart = () => {
         }
         setOrderConfirmed({ id: order.id, code: order.order_code || `#${order.id.slice(0, 8).toUpperCase()}` });
       } else {
-        toast.success("Bozza salvata! Puoi completare l'ordine in qualsiasi momento dalla sezione Ordini.");
+        toast.success("Draft saved! You can complete the order anytime from My Orders.");
         navigate("/portal/orders");
       }
 
@@ -146,15 +146,15 @@ const DealerCart = () => {
     return (
       <div className="max-w-lg mx-auto text-center py-20">
         <CheckCircle className="mx-auto text-success mb-6" size={64} />
-        <h1 className="font-heading text-3xl font-bold text-foreground mb-3">Ordine Inviato!</h1>
+        <h1 className="font-heading text-3xl font-bold text-foreground mb-3">Order Submitted!</h1>
         <p className="text-muted-foreground mb-2">
-          Il tuo ordine <span className="font-mono font-semibold text-foreground">{orderConfirmed.code}</span> è stato inviato con successo.
+          Your order <span className="font-mono font-semibold text-foreground">{orderConfirmed.code}</span> has been submitted successfully.
         </p>
-        <p className="text-sm text-muted-foreground mb-2">Riceverai una conferma dal nostro team.</p>
-        <p className="text-sm text-muted-foreground mb-8">Puoi monitorare lo stato nella sezione Ordini.</p>
+        <p className="text-sm text-muted-foreground mb-2">You will receive a confirmation from our team.</p>
+        <p className="text-sm text-muted-foreground mb-8">You can track the status in My Orders.</p>
         <div className="flex gap-3 justify-center">
-          <Button onClick={() => navigate("/portal/orders")} className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">I Miei Ordini</Button>
-          <Button variant="outline" onClick={() => { setOrderConfirmed(null); navigate("/portal/catalog"); }}>Continua Shopping</Button>
+          <Button onClick={() => navigate("/portal/orders")} className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">My Orders</Button>
+          <Button variant="outline" onClick={() => { setOrderConfirmed(null); navigate("/portal/catalog"); }}>Continue Shopping</Button>
         </div>
       </div>
     );
@@ -164,10 +164,10 @@ const DealerCart = () => {
     return (
       <div className="text-center py-20">
         <ShoppingCart className="mx-auto text-muted-foreground mb-4" size={48} />
-        <h1 className="font-heading text-2xl font-bold text-foreground mb-2">Il tuo carrello è vuoto</h1>
-        <p className="text-muted-foreground mb-6">Sfoglia il catalogo per aggiungere prodotti al tuo ordine.</p>
+        <h1 className="font-heading text-2xl font-bold text-foreground mb-2">Your cart is empty</h1>
+        <p className="text-muted-foreground mb-6">Browse the catalog to add products to your order.</p>
         <Link to="/portal/catalog">
-          <Button className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">Sfoglia Catalogo</Button>
+          <Button className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">Browse Catalog</Button>
         </Link>
       </div>
     );
@@ -179,12 +179,12 @@ const DealerCart = () => {
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">Revisione Ordine</h1>
-          <p className="text-sm text-muted-foreground">{totalItems} articol{totalItems !== 1 ? "i" : "o"} nel carrello</p>
+          <h1 className="font-heading text-2xl font-bold text-foreground">Order Review</h1>
+          <p className="text-sm text-muted-foreground">{totalItems} item{totalItems !== 1 ? "s" : ""} in cart</p>
         </div>
         <Link to="/portal/catalog">
           <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-            <ArrowLeft size={14} /> Continua lo Shopping
+            <ArrowLeft size={14} /> Continue Shopping
           </Button>
         </Link>
       </div>
@@ -193,21 +193,20 @@ const DealerCart = () => {
         <div className="flex items-center gap-3 p-4 rounded-lg bg-warning/10 border border-warning/30 mb-6">
           <AlertTriangle className="text-warning shrink-0" size={20} />
           <div>
-            <p className="text-sm font-heading font-semibold text-warning">Ordine minimo non raggiunto</p>
+            <p className="text-sm font-heading font-semibold text-warning">Minimum order not reached</p>
             <p className="text-xs text-muted-foreground">
-              L'ordine minimo è di <span className="font-semibold text-foreground">€{MIN_ORDER_AMOUNT.toFixed(2)}</span>. 
-              Ti mancano <span className="font-semibold text-foreground">€{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)}</span>.
+              The minimum order is <span className="font-semibold text-foreground">€{MIN_ORDER_AMOUNT.toFixed(2)}</span>. 
+              You need <span className="font-semibold text-foreground">€{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)}</span> more.
             </p>
           </div>
         </div>
       )}
 
-      {/* Payment Terms Card */}
       {client && (
         <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/10 mb-6">
           <Clock size={18} className="text-primary shrink-0" />
           <div>
-            <p className="text-sm font-heading font-semibold text-foreground">Termini di Pagamento: {paymentTermsLabel}</p>
+            <p className="text-sm font-heading font-semibold text-foreground">Payment Terms: {paymentTermsLabel}</p>
             {(client as any)?.payment_terms_notes && (
               <p className="text-xs text-muted-foreground mt-0.5">{(client as any).payment_terms_notes}</p>
             )}
@@ -215,7 +214,6 @@ const DealerCart = () => {
         </div>
       )}
 
-      {/* Cart items */}
       <div className="space-y-3 mb-8">
         {items.map(item => {
           const leadTime = getLeadTime(item.name);
@@ -245,7 +243,7 @@ const DealerCart = () => {
                   </div>
                 )}
                 {outOfStock && (
-                  <Badge variant="outline" className="mt-1 text-[10px] text-destructive border-destructive/30">Esaurito</Badge>
+                  <Badge variant="outline" className="mt-1 text-[10px] text-destructive border-destructive/30">Out of Stock</Badge>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -260,14 +258,13 @@ const DealerCart = () => {
         })}
       </div>
 
-      {/* Notes & Summary */}
       <div className="grid md:grid-cols-2 gap-6">
         <div>
-          <label className="text-sm font-heading font-semibold text-foreground mb-2 block">Note Ordine (opzionale)</label>
-          <Textarea placeholder="Istruzioni speciali, preferenze di consegna..." value={notes} onChange={e => setNotes(e.target.value)} className="rounded-lg bg-secondary border-border resize-none" rows={4} />
+          <label className="text-sm font-heading font-semibold text-foreground mb-2 block">Order Notes (optional)</label>
+          <Textarea placeholder="Special instructions, delivery preferences..." value={notes} onChange={e => setNotes(e.target.value)} className="rounded-lg bg-secondary border-border resize-none" rows={4} />
         </div>
         <div className="glass-card-solid p-6">
-          <h3 className="font-heading font-bold text-foreground mb-4">Riepilogo Ordine</h3>
+          <h3 className="font-heading font-bold text-foreground mb-4">Order Summary</h3>
           <div className="space-y-2 mb-4">
             {items.map(item => (
               <div key={item.productId} className="flex justify-between text-sm">
@@ -278,26 +275,26 @@ const DealerCart = () => {
           </div>
           <div className="border-t border-border pt-3 mb-2">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-muted-foreground">Subtotale prodotti</span>
+              <span className="text-sm text-muted-foreground">Products subtotal</span>
               <span className="font-heading font-semibold text-foreground">€{totalAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-muted-foreground">Spedizione</span>
-              <span className="text-xs text-muted-foreground italic">Calcolata dopo la conferma</span>
+              <span className="text-sm text-muted-foreground">Shipping</span>
+              <span className="text-xs text-muted-foreground italic">Calculated after confirmation</span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t border-border mt-2">
-              <span className="font-heading font-bold text-foreground">Subtotale</span>
+              <span className="font-heading font-bold text-foreground">Subtotal</span>
               <span className="font-heading text-2xl font-bold text-foreground">€{totalAmount.toFixed(2)}</span>
             </div>
           </div>
           <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10 mb-4">
             <Truck size={14} className="text-primary shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground">
-              Le spese di spedizione verranno calcolate dopo la conferma dell'ordine. Riceverai una fattura aggiornata con il totale finale.
+              Shipping costs will be calculated after order confirmation. You will receive an updated invoice with the final total.
             </p>
           </div>
           {belowMinimum && (
-            <p className="text-xs text-warning mb-4">Ordine minimo: €{MIN_ORDER_AMOUNT.toFixed(2)} — aggiungi €{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)}</p>
+            <p className="text-xs text-warning mb-4">Minimum order: €{MIN_ORDER_AMOUNT.toFixed(2)} — add €{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)}</p>
           )}
           <div className="space-y-2">
             <Button
@@ -305,7 +302,7 @@ const DealerCart = () => {
               disabled={submitting || belowMinimum}
               className="w-full bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6 text-base disabled:opacity-50"
             >
-              {submitting ? "Invio in corso..." : belowMinimum ? `Minimo €${MIN_ORDER_AMOUNT} richiesto` : "Invia Ordine"}
+              {submitting ? "Submitting..." : belowMinimum ? `Minimum €${MIN_ORDER_AMOUNT} required` : "Submit Order"}
             </Button>
             <Button
               variant="outline"
@@ -314,7 +311,7 @@ const DealerCart = () => {
               className="w-full gap-2 font-heading font-semibold"
             >
               <Save size={14} />
-              {savingDraft ? "Salvataggio..." : "Salva come Bozza"}
+              {savingDraft ? "Saving..." : "Save as Draft"}
             </Button>
           </div>
         </div>

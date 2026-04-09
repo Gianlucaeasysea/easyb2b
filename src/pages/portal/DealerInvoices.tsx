@@ -16,9 +16,9 @@ const paymentTermsDays: Record<string, number> = {
 };
 
 const paymentStatusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  paid: { label: "Pagato", variant: "default" },
-  unpaid: { label: "Non pagato", variant: "destructive" },
-  partial: { label: "Parziale", variant: "secondary" },
+  paid: { label: "Paid", variant: "default" },
+  unpaid: { label: "Unpaid", variant: "destructive" },
+  partial: { label: "Partial", variant: "secondary" },
 };
 
 const DealerInvoices = () => {
@@ -66,7 +66,7 @@ const DealerInvoices = () => {
   const handleDownload = async (filePath: string, fileName: string) => {
     const { data, error } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 300);
     if (error || !data?.signedUrl) {
-      toast.error("Errore nel download del documento");
+      toast.error("Error downloading document");
       return;
     }
     window.open(data.signedUrl, "_blank");
@@ -78,7 +78,6 @@ const DealerInvoices = () => {
     return addDays(new Date(order.created_at), days);
   };
 
-  // Sort: overdue unpaid first, then by date
   const sortedOrders = [...orders].sort((a, b) => {
     const aOverdue = a.payment_status !== "paid" && getDueDate(a) < new Date();
     const bOverdue = b.payment_status !== "paid" && getDueDate(b) < new Date();
@@ -92,16 +91,16 @@ const DealerInvoices = () => {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="font-heading text-2xl font-bold text-foreground">Fatture & Pagamenti</h1>
-        <p className="text-sm text-muted-foreground">Visualizza lo stato dei pagamenti e scarica le fatture</p>
+        <h1 className="font-heading text-2xl font-bold text-foreground">Invoices & Payments</h1>
+        <p className="text-sm text-muted-foreground">View payment status and download invoices</p>
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Caricamento...</p>
+        <p className="text-sm text-muted-foreground">Loading...</p>
       ) : !orders.length ? (
         <div className="text-center py-16 text-muted-foreground">
           <Receipt size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm">Nessun ordine con fattura disponibile.</p>
+          <p className="text-sm">No orders with invoices available.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -125,16 +124,16 @@ const DealerInvoices = () => {
                         {ps.label}
                       </Badge>
                       {isOverdue && (
-                        <Badge variant="destructive" className="text-[10px]">Scaduto</Badge>
+                        <Badge variant="destructive" className="text-[10px]">Overdue</Badge>
                       )}
                     </div>
 
                     <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                      <span>Data: {format(new Date(order.created_at), "dd/MM/yyyy")}</span>
-                      <span>Totale: €{Number(order.total_amount || 0).toFixed(2)}</span>
-                      <span>Scadenza: {format(dueDate, "dd/MM/yyyy")}</span>
+                      <span>Date: {format(new Date(order.created_at), "dd/MM/yyyy")}</span>
+                      <span>Total: €{Number(order.total_amount || 0).toFixed(2)}</span>
+                      <span>Due: {format(dueDate, "dd/MM/yyyy")}</span>
                       {order.payed_date && (
-                        <span className="text-success">Pagato il: {format(new Date(order.payed_date), "dd/MM/yyyy")}</span>
+                        <span className="text-success">Paid on: {format(new Date(order.payed_date), "dd/MM/yyyy")}</span>
                       )}
                     </div>
                   </div>
@@ -149,12 +148,12 @@ const DealerInvoices = () => {
                           className="text-xs gap-1"
                           onClick={() => handleDownload(doc.file_path, doc.file_name)}
                         >
-                          <Download size={12} /> Fattura
+                          <Download size={12} /> Invoice
                         </Button>
                       ))
                     ) : (
                       <span className="text-xs text-muted-foreground italic flex items-center gap-1">
-                        <Clock size={12} /> In attesa
+                        <Clock size={12} /> Pending
                       </span>
                     )}
                   </div>

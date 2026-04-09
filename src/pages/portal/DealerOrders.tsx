@@ -22,32 +22,32 @@ import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
 
 const ORDER_PHASES = [
-  { key: "submitted", label: "Inviato", icon: Send },
-  { key: "confirmed", label: "Confermato", icon: CheckCircle },
-  { key: "processing", label: "In Lavorazione", icon: Package },
-  { key: "ready_to_ship", label: "In Preparazione", icon: Clock },
-  { key: "shipped", label: "Spedito", icon: Truck },
-  { key: "delivered", label: "Consegnato", icon: Package },
+  { key: "submitted", label: "Submitted", icon: Send },
+  { key: "confirmed", label: "Confirmed", icon: CheckCircle },
+  { key: "processing", label: "Processing", icon: Package },
+  { key: "ready_to_ship", label: "Ready to Ship", icon: Clock },
+  { key: "shipped", label: "Shipped", icon: Truck },
+  { key: "delivered", label: "Delivered", icon: Package },
 ];
 
 const STATUS_MESSAGES: Record<string, string> = {
-  submitted: "Il tuo ordine è stato inviato ed è in attesa di conferma dal nostro team.",
-  confirmed: "Il tuo ordine è stato confermato ed è in fase di revisione. Riceverai una conferma con la fattura a breve.",
-  processing: "Il tuo ordine è stato confermato e la fattura è disponibile nei documenti. Stiamo preparando la spedizione.",
-  ready_to_ship: "Il tuo ordine è pronto e sarà spedito a breve. Riceverai il tracking non appena disponibile.",
-  shipped: "Il tuo ordine è stato spedito! Usa il link di tracking per seguire la consegna.",
-  delivered: "Il tuo ordine è stato consegnato con successo.",
+  submitted: "Your order has been submitted and is awaiting confirmation from our team.",
+  confirmed: "Your order has been confirmed and is under review. You will receive an invoice shortly.",
+  processing: "Your order has been confirmed and the invoice is available in the documents section. We are preparing shipment.",
+  ready_to_ship: "Your order is ready and will be shipped shortly. You will receive tracking information as soon as available.",
+  shipped: "Your order has been shipped! Use the tracking link to follow the delivery.",
+  delivered: "Your order has been delivered successfully.",
 };
 
 const DOC_TYPE_LABELS: Record<string, string> = {
-  order_confirmation: "Conferma Ordine",
-  invoice: "Fattura",
-  delivery_note: "DDT / Bolla di Spedizione",
+  order_confirmation: "Order Confirmation",
+  invoice: "Invoice",
+  delivery_note: "Delivery Note",
   ddt: "DDT",
-  credit_note: "Nota di Credito",
+  credit_note: "Credit Note",
   proforma: "Proforma",
-  warranty: "Certificato di Garanzia",
-  other: "Altro",
+  warranty: "Warranty Certificate",
+  other: "Other",
 };
 
 const DealerOrders = () => {
@@ -119,7 +119,7 @@ const DealerOrders = () => {
     setDuplicatingId(order.id);
     try {
       const items = (order.order_items || []) as any[];
-      if (!items.length) { toast.error("L'ordine non ha prodotti da duplicare"); return; }
+      if (!items.length) { toast.error("This order has no items to duplicate"); return; }
 
       // Fetch current prices from client's price list
       const { data: priceListClients } = await supabase.from("price_list_clients").select("price_list_id").eq("client_id", client.id);
@@ -141,7 +141,7 @@ const DealerOrders = () => {
         const currentPrice = available ? (priceMap[item.product_id] ?? (product?.price ? Number(product.price) : null)) : null;
         return {
           product_id: item.product_id,
-          name: item.products?.name || "Prodotto sconosciuto",
+          name: item.products?.name || "Unknown product",
           sku: item.products?.sku || "—",
           quantity: item.quantity,
           originalPrice: Number(item.unit_price || 0),
@@ -186,14 +186,14 @@ const DealerOrders = () => {
           subtotal: i.currentPrice! * i.quantity,
         }));
 
-      if (!validItems.length) { toast.error("Nessun prodotto disponibile per la duplicazione"); return; }
+      if (!validItems.length) { toast.error("No available products to duplicate"); return; }
 
       const excludedCount = itemsToUse.length - validItems.length;
 
       const { data: newOrder, error: orderErr } = await supabase.rpc("create_order_with_items", {
         p_client_id: client.id,
         p_status: "draft",
-        p_notes: `Duplicato da ordine ${(order as any).order_code || order.id.slice(0, 8)}`,
+        p_notes: `Duplicated from order ${(order as any).order_code || order.id.slice(0, 8)}`,
         p_payment_terms: (client as any).payment_terms || null,
         p_items: validItems,
       });
@@ -202,9 +202,9 @@ const DealerOrders = () => {
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
       const newCode = (newOrder as any)?.order_code || (newOrder as any)?.id?.slice(0, 8);
       if (excludedCount > 0) {
-        toast.warning(`Ordine duplicato come bozza #${newCode}. ${excludedCount} prodotti non disponibili esclusi. Verificalo prima di inviarlo.`);
+        toast.warning(`Order duplicated as draft #${newCode}. ${excludedCount} unavailable products excluded. Review before submitting.`);
       } else {
-        toast.success(`Ordine duplicato come bozza #${newCode}. Verificalo prima di inviarlo.`);
+        toast.success(`Order duplicated as draft #${newCode}. Review before submitting.`);
       }
     } catch (error) {
       showErrorToast(error, "DealerOrders.duplicate");
@@ -221,7 +221,7 @@ const DealerOrders = () => {
       const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", order.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      toast.success("Ordine annullato con successo");
+      toast.success("Order cancelled successfully");
     } catch (error) {
       showErrorToast(error, "DealerOrders.cancel");
     } finally {
@@ -236,13 +236,13 @@ const DealerOrders = () => {
     setDeletingDraftId(order.id);
     try {
       // Mark linked deal as lost
-      await supabase.from("deals").update({ stage: "closed_lost", lost_reason: "Bozza eliminata dal dealer", closed_at: new Date().toISOString() }).eq("order_id", order.id).eq("source", "dealer_draft");
+      await supabase.from("deals").update({ stage: "closed_lost", lost_reason: "Draft deleted by dealer", closed_at: new Date().toISOString() }).eq("order_id", order.id).eq("source", "dealer_draft");
       // Delete order items then order
       await supabase.from("order_items").delete().eq("order_id", order.id);
       const { error } = await supabase.from("orders").delete().eq("id", order.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      toast.success("Bozza eliminata");
+      toast.success("Draft deleted");
     } catch (error) {
       showErrorToast(error, "DealerOrders.deleteDraft");
     } finally {
@@ -308,7 +308,7 @@ const DealerOrders = () => {
       } catch {}
 
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      toast.success("Ordine inviato con successo!");
+      toast.success("Order submitted successfully!");
       setEditingDraft(null);
     } catch (error) {
       showErrorToast(error, "DealerOrders.submitDraft");
@@ -321,20 +321,20 @@ const DealerOrders = () => {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">I Miei Ordini</h1>
-          <p className="text-sm text-muted-foreground">Visualizza e traccia tutti i tuoi ordini B2B</p>
+          <h1 className="font-heading text-2xl font-bold text-foreground">My Orders</h1>
+          <p className="text-sm text-muted-foreground">View and track all your B2B orders</p>
         </div>
-        <Badge variant="outline" className="text-xs">{orders?.length || 0} ordini</Badge>
+        <Badge variant="outline" className="text-xs">{orders?.length || 0} orders</Badge>
       </div>
 
       {isLoading ? (
         <div className="text-center py-20 text-muted-foreground flex items-center justify-center gap-2">
-          <Loader2 className="animate-spin" size={16} /> Caricamento ordini...
+          <Loader2 className="animate-spin" size={16} /> Loading orders...
         </div>
       ) : !orders?.length ? (
         <div className="text-center py-20 glass-card-solid">
           <ShoppingBag className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">Nessun ordine ancora. Sfoglia il catalogo per effettuare il primo ordine.</p>
+          <p className="text-muted-foreground">No orders yet. Browse the catalog to place your first order.</p>
         </div>
       ) : (
         <>
@@ -342,7 +342,7 @@ const DealerOrders = () => {
           {draftOrders.length > 0 && (
             <div className="mb-6">
               <h2 className="font-heading text-lg font-bold text-foreground mb-3 flex items-center gap-2">
-                <Edit3 size={16} /> Bozze ({draftOrders.length})
+                <Edit3 size={16} /> Drafts ({draftOrders.length})
               </h2>
               <div className="space-y-2">
                 {draftOrders.map((order: any) => {
@@ -355,21 +355,21 @@ const DealerOrders = () => {
                         </div>
                         <div>
                           <p className="font-heading font-bold text-foreground">
-                            {order.order_code || `Bozza #${order.id.slice(0, 8).toUpperCase()}`}
+                            {order.order_code || `Draft #${order.id.slice(0, 8).toUpperCase()}`}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
-                            {items.length > 0 && <span className="ml-2">· {items.length} prodott{items.length > 1 ? "i" : "o"}</span>}
+                            {items.length > 0 && <span className="ml-2">· {items.length} product{items.length > 1 ? "s" : ""}</span>}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Badge className="border-0 text-xs bg-muted text-muted-foreground">Bozza</Badge>
+                        <Badge className="border-0 text-xs bg-muted text-muted-foreground">Draft</Badge>
                         <span className="font-heading font-bold text-foreground">
                           €{Number(order.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
                         </span>
                         <Button size="sm" onClick={() => openDraftEditor(order)}>
-                          Completa Ordine
+                          Complete Order
                         </Button>
                         <Button
                           variant="ghost"
@@ -421,13 +421,13 @@ const DealerOrders = () => {
                     </div>
                     <div>
                       <p className="font-heading font-bold text-foreground">
-                        {(order as any).order_code || `Ordine #${order.id.slice(0, 8).toUpperCase()}`}
+                        {(order as any).order_code || `Order #${order.id.slice(0, 8).toUpperCase()}`}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
-                        {items.length > 0 && <span className="ml-2">· {items.length} prodott{items.length > 1 ? "i" : "o"}</span>}
+                        {items.length > 0 && <span className="ml-2">· {items.length} product{items.length > 1 ? "s" : ""}</span>}
                         {(order as any).payment_due_date && (
-                          <span className="ml-2">· Scadenza: <span className={`font-semibold ${
+                          <span className="ml-2">· Due: <span className={`font-semibold ${
                             (order as any).payment_status === "paid" ? "text-success" :
                             new Date((order as any).payment_due_date) < new Date() ? "text-destructive" :
                             differenceInDays(new Date((order as any).payment_due_date), new Date()) <= 7 ? "text-warning" :
@@ -438,8 +438,8 @@ const DealerOrders = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                     {isDraft && <Badge className="border-0 text-xs bg-muted text-muted-foreground">Bozza</Badge>}
-                    {isSubmitted && <Badge className="border-0 text-xs bg-blue-100 text-blue-700">Inviato - In attesa di conferma</Badge>}
+                     {isDraft && <Badge className="border-0 text-xs bg-muted text-muted-foreground">Draft</Badge>}
+                    {isSubmitted && <Badge className="border-0 text-xs bg-blue-100 text-blue-700">Submitted - Awaiting confirmation</Badge>}
                     {!isDraft && !isSubmitted && <Badge className={`border-0 text-xs ${statusColor}`}>{statusLabel}</Badge>}
                     <span className="font-heading font-bold text-foreground text-lg">
                       €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
@@ -449,9 +449,9 @@ const DealerOrders = () => {
                         variant="ghost" size="sm"
                         className="h-7 text-destructive hover:text-destructive/80 text-xs"
                         onClick={(e) => { e.stopPropagation(); setConfirmCancel(order); }}
-                        title="Annulla Ordine"
+                        title="Cancel Order"
                       >
-                        <XCircle size={14} className="mr-1" /> Annulla
+                        <XCircle size={14} className="mr-1" /> Cancel
                       </Button>
                     )}
                     {!isCancelled && (
@@ -460,7 +460,7 @@ const DealerOrders = () => {
                         className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
                         disabled={duplicatingId === order.id}
                         onClick={(e) => { e.stopPropagation(); handlePrepareDuplicate(order); }}
-                        title="Duplica Ordine"
+                        title="Duplicate Order"
                       >
                         {duplicatingId === order.id ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
                       </Button>
@@ -480,7 +480,7 @@ const DealerOrders = () => {
                     )}
                     {isSalesOrder && (
                       <div className="px-5 py-2 bg-muted/50 border-b border-border">
-                        <p className="text-xs text-muted-foreground italic">📋 Ordine creato dal referente commerciale</p>
+                        <p className="text-xs text-muted-foreground italic">📋 Order created by sales representative</p>
                       </div>
                     )}
 
@@ -489,7 +489,7 @@ const DealerOrders = () => {
                       <div className="px-5 py-4 border-b border-border">
                         <div className="flex items-center gap-2 text-destructive">
                           <XCircle size={16} />
-                          <span className="text-sm font-semibold">Ordine Annullato</span>
+                          <span className="text-sm font-semibold">Order Cancelled</span>
                         </div>
                       </div>
                     ) : phaseIdx >= 0 && (
@@ -534,7 +534,7 @@ const DealerOrders = () => {
                               </div>
                               <span className={`text-[9px] mt-1 text-center max-w-[70px] leading-tight ${
                                 isPaid ? "font-bold text-success" : "text-muted-foreground"
-                              }`}>Pagato</span>
+                              }`}>Paid</span>
                             </div>
                           </div>
                         </div>

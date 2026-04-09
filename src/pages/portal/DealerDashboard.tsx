@@ -37,11 +37,9 @@ const DealerDashboard = () => {
     },
   });
 
-  // Fix #4: Use price_list_clients junction table instead of price_lists.client_id
   const { data: priceList } = useQuery({
     queryKey: ["my-price-list", client?.id],
     queryFn: async () => {
-      // First check price_list_clients (the correct junction table)
       const { data: plcData } = await supabase
         .from("price_list_clients")
         .select("price_list_id, price_lists(*, discount_tiers(label, discount_pct))")
@@ -49,7 +47,6 @@ const DealerDashboard = () => {
         .limit(1)
         .maybeSingle();
       if (plcData?.price_lists) return plcData.price_lists as any;
-      // Fallback: direct client_id on price_lists
       const { data } = await supabase
         .from("price_lists")
         .select("*, discount_tiers(label, discount_pct)")
@@ -60,7 +57,6 @@ const DealerDashboard = () => {
     enabled: !!client,
   });
 
-  // Fix #5: Fetch discount tiers from DB instead of hardcoded values
   const { data: discountTiers } = useQuery({
     queryKey: ["discount-tiers"],
     queryFn: async () => {
@@ -77,26 +73,24 @@ const DealerDashboard = () => {
   const monthlyTarget = 5000;
   const monthlyProgress = Math.min((totalSpent / monthlyTarget) * 100, 100);
   const discountClass = client?.discount_class || "D";
-  // Use discount_tiers table for lookup
   const discountTier = discountTiers?.find(t => t.name === discountClass);
   const discountPct = discountTier?.discount_pct ?? 10;
 
   const statCards = [
-    { icon: TrendingUp, label: "Classe Sconto", value: `Classe ${discountClass}`, sub: `-${discountPct}% su tutti i prodotti` },
-    { icon: ShoppingBag, label: "Ordini Attivi", value: String(activeOrders.length), sub: `${orders?.length || 0} ordini totali` },
-    { icon: FileText, label: "Fatture Aperte", value: String(openInvoices.length), sub: `€${openInvoiceTotal.toLocaleString()} in sospeso` },
-    { icon: Package, label: "Catalogo", value: String(productCount), sub: "Prodotti disponibili" },
+    { icon: TrendingUp, label: "Discount Class", value: `Class ${discountClass}`, sub: `-${discountPct}% on all products` },
+    { icon: ShoppingBag, label: "Active Orders", value: String(activeOrders.length), sub: `${orders?.length || 0} total orders` },
+    { icon: FileText, label: "Open Invoices", value: String(openInvoices.length), sub: `€${openInvoiceTotal.toLocaleString()} outstanding` },
+    { icon: Package, label: "Catalog", value: String(productCount), sub: "Available products" },
   ];
 
   return (
     <div>
       <div className="mb-8">
         <p className="text-[11px] uppercase tracking-[0.3em] text-primary font-heading font-bold mb-1">Dashboard</p>
-        <h1 className="font-heading text-2xl font-black text-foreground">Bentornato</h1>
+        <h1 className="font-heading text-2xl font-black text-foreground">Welcome back</h1>
         <p className="text-sm text-muted-foreground mt-0.5">{client?.company_name || user?.email}</p>
       </div>
 
-      {/* Stat Cards */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {statCards.map((s) => (
           <div key={s.label} className="glass-card-solid p-6 hover:border-primary/15 transition-colors">
@@ -112,12 +106,11 @@ const DealerDashboard = () => {
         ))}
       </div>
 
-      {/* Price List & Financial */}
       <div className="grid lg:grid-cols-2 gap-4 mb-8">
         <div className="glass-card-solid p-6 hover:border-primary/15 transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <Tag size={15} className="text-primary" />
-            <h2 className="font-heading font-bold text-foreground text-sm">Listino Prezzi Assegnato</h2>
+            <h2 className="font-heading font-bold text-foreground text-sm">Assigned Price List</h2>
           </div>
           {priceList ? (
             <div>
@@ -125,47 +118,46 @@ const DealerDashboard = () => {
               {priceList.description && <p className="text-[11px] text-muted-foreground mt-1">{priceList.description}</p>}
               {(priceList as any).discount_tiers && (
                 <Badge variant="outline" className="mt-2 text-[10px] font-heading rounded-full">
-                  {(priceList as any).discount_tiers.label} — {(priceList as any).discount_tiers.discount_pct}% sconto
+                  {(priceList as any).discount_tiers.label} — {(priceList as any).discount_tiers.discount_pct}% discount
                 </Badge>
               )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Prezzi standard applicati (Classe {discountClass})</p>
+            <p className="text-sm text-muted-foreground">Standard pricing applied (Class {discountClass})</p>
           )}
         </div>
 
         <div className="glass-card-solid p-6 hover:border-primary/15 transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <CreditCard size={15} className="text-primary" />
-            <h2 className="font-heading font-bold text-foreground text-sm">Riepilogo Finanziario</h2>
+            <h2 className="font-heading font-bold text-foreground text-sm">Financial Summary</h2>
           </div>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-heading">Totale Ordinato</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-heading">Total Ordered</p>
               <p className="font-heading font-black text-foreground text-lg">€{totalSpent.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-heading">In Sospeso</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-heading">Outstanding</p>
               <p className="font-heading font-black text-warning text-lg">€{openInvoiceTotal.toLocaleString()}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Monthly Goal */}
       <div className="glass-card-solid p-6 mb-8 hover:border-primary/15 transition-colors">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-heading text-sm font-bold text-foreground flex items-center gap-2">
-            <span className="text-lg">🏆</span> Obiettivo Mensile
+            <span className="text-lg">🏆</span> Monthly Goal
           </h2>
           <Link to="/portal/goals" className="text-[11px] text-primary hover:underline flex items-center gap-1 font-heading font-semibold">
-            Vedi tutti <ArrowUpRight size={11} />
+            View all <ArrowUpRight size={11} />
           </Link>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
           {totalSpent >= monthlyTarget
-            ? "Congratulazioni! Hai raggiunto il tuo obiettivo mensile! 🎉"
-            : `Ti mancano €${(monthlyTarget - totalSpent).toLocaleString()} per sbloccare un ulteriore 5% di sconto.`}
+            ? "Congratulations! You've reached your monthly goal! 🎉"
+            : `You need €${(monthlyTarget - totalSpent).toLocaleString()} more to unlock an additional 5% discount.`}
         </p>
         <div className="w-full bg-secondary rounded-full h-2.5 overflow-hidden">
           <div className="gradient-blue h-full rounded-full transition-all duration-700" style={{ width: `${monthlyProgress}%` }} />
@@ -173,16 +165,15 @@ const DealerDashboard = () => {
         <p className="text-[11px] text-muted-foreground mt-2 font-heading">€{totalSpent.toLocaleString()} / €{monthlyTarget.toLocaleString()}</p>
       </div>
 
-      {/* Recent Orders */}
       <div className="glass-card-solid p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-heading text-sm font-bold text-foreground">Ordini Recenti</h2>
+          <h2 className="font-heading text-sm font-bold text-foreground">Recent Orders</h2>
           <Link to="/portal/orders" className="text-[11px] text-primary hover:underline flex items-center gap-1 font-heading font-semibold">
-            Vedi tutti <ArrowUpRight size={11} />
+            View all <ArrowUpRight size={11} />
           </Link>
         </div>
         {!orders?.length ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">Nessun ordine ancora.</p>
+          <p className="text-sm text-muted-foreground py-6 text-center">No orders yet.</p>
         ) : (
           <div className="space-y-0">
             {orders.slice(0, 5).map(order => {
