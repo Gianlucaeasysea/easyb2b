@@ -206,7 +206,13 @@ const AdminOrderDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       setStatus("confirmed");
-      toast.success("Order confirmed");
+      toast.success("Order confirmed! Don't forget to upload the Order Confirmation document.", {
+        action: { label: "Upload Now", onClick: () => {
+          // Scroll to documents section
+          document.querySelector('[data-documents-section]')?.scrollIntoView({ behavior: 'smooth' });
+        }},
+        duration: 8000,
+      });
     } catch (error) {
       showErrorToast(error, "AdminOrderDetail.confirmOrder");
     } finally {
