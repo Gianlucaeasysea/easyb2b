@@ -215,6 +215,7 @@ const DealerOrders = () => {
         p_status: "draft",
         p_notes: `Duplicated from order ${(order as any).order_code || order.id.slice(0, 8)}`,
         p_payment_terms: (client as any).payment_terms || null,
+        p_internal_notes: null,
         p_items: validItems,
       });
       if (orderErr) throw orderErr;

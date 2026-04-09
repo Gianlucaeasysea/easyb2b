@@ -103,6 +103,7 @@ const DealerCart = () => {
         p_status: status,
         p_notes: notes || null,
         p_payment_terms: (client as any).payment_terms || null,
+        p_internal_notes: null,
         p_items: items.map(item => ({
           product_id: item.productId,
           quantity: item.quantity,

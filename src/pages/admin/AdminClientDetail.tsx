@@ -272,6 +272,7 @@ const AdminClientDetail = () => {
         p_status: "confirmed",
         p_notes: newOrderNotes || null,
         p_order_type: "MANUAL B2B",
+        p_internal_notes: null,
         p_items: orderItems.map(item => ({
           product_id: item.product_id,
           quantity: item.quantity,
