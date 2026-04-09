@@ -26,12 +26,12 @@ type OrderRow = Tables<"orders"> & {
 type QuickFilter = "all" | "new" | "confirmed" | "in_progress" | "completed" | "cancelled";
 
 const quickFilterConfig: { key: QuickFilter; label: string; statuses: string[] }[] = [
-  { key: "all", label: "Tutti", statuses: [] },
-  { key: "new", label: "Nuovi", statuses: ["submitted"] },
-  { key: "confirmed", label: "Confermati", statuses: ["confirmed"] },
-  { key: "in_progress", label: "In Corso", statuses: ["processing", "ready_to_ship", "shipped"] },
-  { key: "completed", label: "Completati", statuses: ["delivered"] },
-  { key: "cancelled", label: "Annullati", statuses: ["cancelled", "returned"] },
+  { key: "all", label: "All", statuses: [] },
+  { key: "new", label: "New", statuses: ["submitted"] },
+  { key: "confirmed", label: "Confirmed", statuses: ["confirmed"] },
+  { key: "in_progress", label: "In Progress", statuses: ["processing", "ready_to_ship", "shipped"] },
+  { key: "completed", label: "Completed", statuses: ["delivered"] },
+  { key: "cancelled", label: "Cancelled", statuses: ["cancelled", "returned"] },
 ];
 
 const CRMOrders = () => {
@@ -93,10 +93,10 @@ const CRMOrders = () => {
   }, [orders]);
 
   const summaryCards = [
-    { key: "new" as QuickFilter, label: "Nuovi Ordini", count: stats.submitted.count, value: stats.submitted.value, icon: ShoppingBag, color: "text-blue-600", highlight: stats.submitted.count > 0 },
-    { key: "confirmed" as QuickFilter, label: "Da Processare", count: stats.confirmed.count, value: stats.confirmed.value, icon: Clock, color: "text-warning" },
-    { key: "in_progress" as QuickFilter, label: "In Corso", count: stats.inProgress.count, value: stats.inProgress.value, icon: Truck, color: "text-chart-4" },
-    { key: "completed" as QuickFilter, label: "Completati (mese)", count: stats.completedMonth.count, value: stats.completedMonth.value, icon: CheckCircle, color: "text-success" },
+    { key: "new" as QuickFilter, label: "New Orders", count: stats.submitted.count, value: stats.submitted.value, icon: ShoppingBag, color: "text-blue-600", highlight: stats.submitted.count > 0 },
+    { key: "confirmed" as QuickFilter, label: "To Process", count: stats.confirmed.count, value: stats.confirmed.value, icon: Clock, color: "text-warning" },
+    { key: "in_progress" as QuickFilter, label: "In Progress", count: stats.inProgress.count, value: stats.inProgress.value, icon: Truck, color: "text-chart-4" },
+    { key: "completed" as QuickFilter, label: "Completed (month)", count: stats.completedMonth.count, value: stats.completedMonth.value, icon: CheckCircle, color: "text-success" },
   ];
 
   // Filtering
@@ -129,9 +129,9 @@ const CRMOrders = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-bold text-foreground">Ordini</h1>
+        <h1 className="font-heading text-2xl font-bold text-foreground">Orders</h1>
         <Button onClick={() => navigate("/crm/orders/new")}>
-          <Plus className="h-4 w-4 mr-1" /> Crea Ordine
+          <Plus className="h-4 w-4 mr-1" /> Create Order
         </Button>
       </div>
 
@@ -180,7 +180,7 @@ const CRMOrders = () => {
         <div className="relative flex-1 min-w-[200px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Cerca per n° ordine o cliente..."
+            placeholder="Search by order # or client..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -193,20 +193,20 @@ const CRMOrders = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-xs">Stato</TableHead>
-              <TableHead className="text-xs">N° Ordine</TableHead>
-              <TableHead className="text-xs">Cliente</TableHead>
-              <TableHead className="text-xs">Data</TableHead>
-              <TableHead className="text-xs text-center">Prodotti</TableHead>
-              <TableHead className="text-xs text-right">Totale</TableHead>
-              <TableHead className="text-xs">Pagamento</TableHead>
+              <TableHead className="text-xs">Status</TableHead>
+              <TableHead className="text-xs">Order #</TableHead>
+              <TableHead className="text-xs">Client</TableHead>
+              <TableHead className="text-xs">Date</TableHead>
+              <TableHead className="text-xs text-center">Items</TableHead>
+              <TableHead className="text-xs text-right">Total</TableHead>
+              <TableHead className="text-xs">Payment</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Caricamento...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Loading...</TableCell></TableRow>
             ) : pageData.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nessun ordine trovato</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No orders found</TableCell></TableRow>
             ) : pageData.map((order) => (
               <TableRow
                 key={order.id}
