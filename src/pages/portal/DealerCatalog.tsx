@@ -160,7 +160,7 @@ const DealerCatalog = () => {
   const selectedRetailPrice = selectedProduct ? Number(selectedProduct.compare_at_price || selectedProduct.price) : 0;
   const selectedHasPrice = !!selectedPlEntry;
   const selectedB2bPrice = selectedPlEntry?.customPrice ?? 0;
-  const selectedDiscountPct = selectedRetailPrice > 0 ? Math.round((1 - selectedB2bPrice / Number(selectedProduct?.price || 1)) * 100) : 0;
+  const selectedDiscountPct = selectedRetailPrice > 0 ? Math.max(0, Math.round((1 - selectedB2bPrice / selectedRetailPrice) * 100)) : 0;
 
   return (
     <div>
