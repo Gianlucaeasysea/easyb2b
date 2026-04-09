@@ -373,7 +373,7 @@ const AdminOrderDetail = () => {
             </div>
             <div className="mt-3 pt-3 border-t border-border space-y-2 text-sm">
               <p><span className="text-muted-foreground">Payment:</span> <Badge className={`border-0 text-[10px] ml-1 ${getPaymentStatusColor(order.payment_status || "unpaid")}`}>{getPaymentStatusLabel(order.payment_status || "unpaid")}</Badge></p>
-              <p><span className="text-muted-foreground">Payment Date:</span> {order.payed_date || "—"}</p>
+              <p><span className="text-muted-foreground">Paid Date:</span> {order.payed_date || "—"}</p>
               <p><span className="text-muted-foreground">Terms:</span> {PAYMENT_TERMS_LABELS[order.payment_terms || ""] || order.payment_terms || "—"}</p>
               {(order as any).payment_due_date && (
                 <p>
