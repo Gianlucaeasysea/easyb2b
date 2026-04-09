@@ -9,18 +9,18 @@ import logo from "@/assets/easysea-logo.png";
 
 const routeNames: Record<string, string> = {
   "": "Dashboard",
-  "requests": "Richieste Dealer",
+  "requests": "Dealer Requests",
   "leads": "Leads",
   "deals": "Deals",
-  "pipeline": "Pipeline Deals",
-  "organizations": "Organizzazioni",
-  "contacts": "Contatti",
-  "activities": "Attività",
-  "tasks": "Task",
+  "pipeline": "Deals Pipeline",
+  "organizations": "Organizations",
+  "contacts": "Contacts",
+  "activities": "Activities",
+  "tasks": "Tasks",
   "analytics": "Analytics",
-  "email-templates": "Template Email",
-  "automations": "Automazioni",
-  "help": "Aiuto",
+  "email-templates": "Email Templates",
+  "automations": "Automations",
+  "help": "Help",
 };
 
 function Breadcrumbs() {

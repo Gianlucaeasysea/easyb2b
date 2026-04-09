@@ -103,14 +103,14 @@ const DealerProfile = () => {
 
   const addContact = useMutation({
     mutationFn: async () => {
-      if (!newContact.contact_name.trim()) throw new Error("Nome obbligatorio");
+      if (!newContact.contact_name.trim()) throw new Error("Name is required");
       const { error } = await supabase.from("client_contacts").insert({ ...newContact, client_id: client!.id });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-contacts"] });
       setNewContact({ contact_name: "", email: "", phone: "", role: "" });
-      toast.success("Contatto aggiunto");
+      toast.success("Contact added");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -122,7 +122,7 @@ const DealerProfile = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-contacts"] });
-      toast.success("Contatto rimosso");
+      toast.success("Contact removed");
     },
   });
 
@@ -131,14 +131,14 @@ const DealerProfile = () => {
 
   const addAddress = useMutation({
     mutationFn: async () => {
-      if (!newAddr.address_line.trim()) throw new Error("Indirizzo obbligatorio");
+      if (!newAddr.address_line.trim()) throw new Error("Address is required");
       const { error } = await supabase.from("client_shipping_addresses" as any).insert({ ...newAddr, client_id: client!.id } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-addresses"] });
       setNewAddr({ label: "", address_line: "", city: "", province: "", postal_code: "", country: "" });
-      toast.success("Indirizzo aggiunto");
+      toast.success("Address added");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -150,7 +150,7 @@ const DealerProfile = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-addresses"] });
-      toast.success("Indirizzo rimosso");
+      toast.success("Address removed");
     },
   });
 
@@ -173,16 +173,16 @@ const DealerProfile = () => {
 
   const validateBank = () => {
     const errors: Record<string, string> = {};
-    if (!bank.account_holder.trim()) errors.account_holder = "Intestatario obbligatorio";
-    if (!bank.bank_name.trim()) errors.bank_name = "Nome banca obbligatorio";
-    if (!bank.iban.trim() || bank.iban.trim().length < 15) errors.iban = "IBAN obbligatorio (min. 15 caratteri)";
+    if (!bank.account_holder.trim()) errors.account_holder = "Account holder is required";
+    if (!bank.bank_name.trim()) errors.bank_name = "Bank name is required";
+    if (!bank.iban.trim() || bank.iban.trim().length < 15) errors.iban = "IBAN is required (min. 15 characters)";
     setBankErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const saveBank = useMutation({
     mutationFn: async () => {
-      if (!validateBank()) throw new Error("Correggi gli errori nel form");
+      if (!validateBank()) throw new Error("Please fix the form errors");
       if (bankDetails?.id) {
         const { error } = await supabase.from("client_bank_details" as any).update(bank as any).eq("id", bankDetails.id);
         if (error) throw error;
@@ -193,7 +193,7 @@ const DealerProfile = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-bank"] });
-      toast.success("Dati bancari salvati con successo");
+      toast.success("Bank details saved successfully");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -297,12 +297,12 @@ const DealerProfile = () => {
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Intestatario *</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Account Holder *</label>
                 <Input value={bank.account_holder} onChange={e => { setBank(p => ({ ...p, account_holder: e.target.value })); setBankErrors(p => ({ ...p, account_holder: "" })); }} className={`bg-secondary border-border text-sm ${bankErrors.account_holder ? "border-destructive" : ""}`} />
                 {bankErrors.account_holder && <p className="text-xs text-destructive mt-1">{bankErrors.account_holder}</p>}
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Nome Banca *</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Bank Name *</label>
                 <Input value={bank.bank_name} onChange={e => { setBank(p => ({ ...p, bank_name: e.target.value })); setBankErrors(p => ({ ...p, bank_name: "" })); }} className={`bg-secondary border-border text-sm ${bankErrors.bank_name ? "border-destructive" : ""}`} />
                 {bankErrors.bank_name && <p className="text-xs text-destructive mt-1">{bankErrors.bank_name}</p>}
               </div>

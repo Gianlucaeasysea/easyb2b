@@ -70,7 +70,7 @@ const AdminProducts = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
-      toast.success("Prodotto aggiornato");
+      toast.success("Product updated");
     },
   });
 
@@ -95,7 +95,7 @@ const AdminProducts = () => {
         if (upsertErr) throw upsertErr;
       }
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
-      toast.success(`Sincronizzati ${variants.length} prodotti da Shopify`);
+      toast.success(`Synced ${variants.length} products from Shopify`);
     } catch (error) {
       showErrorToast(error, "AdminProducts.shopifySync");
     } finally {

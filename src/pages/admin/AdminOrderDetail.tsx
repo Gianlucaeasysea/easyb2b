@@ -24,11 +24,11 @@ import {
 } from "@/lib/constants";
 
 const PAYMENT_TERMS_LABELS: Record<string, string> = {
-  prepaid: "Pagamento anticipato",
-  "30_days": "30 giorni data fattura",
-  "60_days": "60 giorni data fattura",
-  "90_days": "90 giorni data fattura",
-  end_of_month: "Fine mese",
+  prepaid: "Prepaid",
+  "30_days": "Net 30",
+  "60_days": "Net 60",
+  "90_days": "Net 90",
+  end_of_month: "End of Month",
 };
 
 const calculateDueDate = (paymentTerms: string | null, confirmedDate: Date): Date => {
@@ -112,7 +112,7 @@ const AdminOrderDetail = () => {
     if (!id) return;
     const previousStatus = order?.status || "draft";
     if (status !== previousStatus && !canTransitionTo(previousStatus, status)) {
-      toast.error("Transizione di stato non consentita");
+      toast.error("Invalid status transition");
       return;
     }
     setSaving(true);
@@ -138,7 +138,7 @@ const AdminOrderDetail = () => {
         await supabase.from("order_events").insert({
           order_id: id,
           event_type: "status_change",
-          title: `Stato aggiornato: ${statusLabel}`,
+          title: `Status updated: ${statusLabel}`,
           description: trackingNumber ? `Tracking: ${trackingNumber}` : undefined,
         });
         queryClient.invalidateQueries({ queryKey: ["order-events", id] });
@@ -190,12 +190,12 @@ const AdminOrderDetail = () => {
         payment_due_date: format(dueDate, "yyyy-MM-dd"),
       }).eq("id", id);
       await supabase.from("order_events").insert({
-        order_id: id, event_type: "status_change", title: "Stato aggiornato: Confermato",
+        order_id: id, event_type: "status_change", title: "Status updated: Confirmed",
       });
       await supabase.from("client_notifications").insert({
         client_id: order.client_id,
-        title: "Ordine confermato",
-        body: `Il tuo ordine #${order.order_code || id.slice(0, 8)} è stato confermato ed è in lavorazione.`,
+        title: "Order confirmed",
+        body: `Your order #${order.order_code || id.slice(0, 8)} has been confirmed and is being processed.`,
         type: "order", order_id: id,
       });
       try {
@@ -206,7 +206,7 @@ const AdminOrderDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       setStatus("confirmed");
-      toast.success("Ordine confermato");
+      toast.success("Order confirmed");
     } catch (error) {
       showErrorToast(error, "AdminOrderDetail.confirmOrder");
     } finally {
@@ -218,21 +218,21 @@ const AdminOrderDetail = () => {
     if (!id || !order || !rejectReason.trim()) return;
     setRejecting(true);
     try {
-      await supabase.from("orders").update({ status: "cancelled", internal_notes: `Rifiutato: ${rejectReason}` }).eq("id", id);
+      await supabase.from("orders").update({ status: "cancelled", internal_notes: `Rejected: ${rejectReason}` }).eq("id", id);
       await supabase.from("order_events").insert({
-        order_id: id, event_type: "status_change", title: "Ordine rifiutato", description: rejectReason,
+        order_id: id, event_type: "status_change", title: "Order rejected", description: rejectReason,
       });
       await supabase.from("client_notifications").insert({
         client_id: order.client_id,
-        title: "Ordine rifiutato",
-        body: `Il tuo ordine #${order.order_code || id.slice(0, 8)} è stato rifiutato. Motivo: ${rejectReason}`,
+        title: "Order rejected",
+        body: `Your order #${order.order_code || id.slice(0, 8)} has been rejected. Reason: ${rejectReason}`,
         type: "order", order_id: id,
       });
       queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       setStatus("cancelled");
       setShowRejectDialog(false);
-      toast.success("Ordine rifiutato");
+      toast.success("Order rejected");
     } catch (error) {
       showErrorToast(error, "AdminOrderDetail.rejectOrder");
     } finally {
@@ -253,7 +253,7 @@ const AdminOrderDetail = () => {
   return (
     <div className="max-w-4xl">
       <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-4 text-muted-foreground gap-1.5">
-        <ArrowLeft size={14} /> Indietro
+        <ArrowLeft size={14} /> Back
       </Button>
 
       {currentStatus === "submitted" && (
@@ -261,14 +261,14 @@ const AdminOrderDetail = () => {
           <AlertTriangle className="h-4 w-4 text-yellow-600" />
           <AlertDescription className="flex items-center justify-between">
             <span className="text-yellow-800 dark:text-yellow-200 font-medium">
-              Questo ordine è in attesa di conferma
+              This order is awaiting confirmation
             </span>
             <div className="flex gap-2 ml-4">
               <Button size="sm" onClick={handleConfirmOrder} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1">
-                <CheckCircle size={14} /> Conferma Ordine
+                <CheckCircle size={14} /> Confirm Order
               </Button>
               <Button size="sm" variant="destructive" onClick={() => setShowRejectDialog(true)} className="gap-1">
-                <XCircle size={14} /> Rifiuta Ordine
+                <XCircle size={14} /> Reject Order
               </Button>
             </div>
           </AlertDescription>
@@ -292,7 +292,7 @@ const AdminOrderDetail = () => {
       {/* Order management */}
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         <div className="glass-card-solid p-5 space-y-4">
-          <h3 className="font-heading font-bold text-foreground text-sm">Gestione Ordine</h3>
+          <h3 className="font-heading font-bold text-foreground text-sm">Order Management</h3>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Status</label>
             {(() => {
@@ -301,7 +301,7 @@ const AdminOrderDetail = () => {
                 return (
                   <div className="flex items-center gap-2">
                     <Badge className={`border-0 ${getOrderStatusColor(order.status || "draft")}`}>{getOrderStatusLabel(order.status || "draft")}</Badge>
-                    <span className="text-xs text-muted-foreground italic">Stato finale — non modificabile</span>
+                    <span className="text-xs text-muted-foreground italic">Final status — not editable</span>
                   </div>
                 );
               }
@@ -321,7 +321,7 @@ const AdminOrderDetail = () => {
             })()}
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Stato Pagamento</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Payment Status</label>
             <Select value={paymentStatus} onValueChange={setPaymentStatus}>
               <SelectTrigger className="bg-secondary border-border rounded-lg">
                 <SelectValue />
@@ -334,7 +334,7 @@ const AdminOrderDetail = () => {
             </Select>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Costo Spedizione (€) — visibile al cliente</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Shipping Cost (€) — visible to client</label>
             <Input
               type="number"
               min={0}
@@ -354,17 +354,17 @@ const AdminOrderDetail = () => {
             <Input value={trackingUrl} onChange={e => setTrackingUrl(e.target.value)} className="bg-secondary border-border rounded-lg" placeholder="https://..." />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Note Interne</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Internal Notes</label>
             <Textarea value={internalNotes} onChange={e => setInternalNotes(e.target.value)} className="bg-secondary border-border rounded-lg resize-none" rows={3} />
           </div>
           <Button onClick={handleSave} disabled={saving} className="w-full bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">
-            {saving ? "Salvataggio..." : "Salva Modifiche"}
+            {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
 
         <div className="space-y-6">
           <div className="glass-card-solid p-5">
-            <h3 className="font-heading font-bold text-foreground text-sm mb-3">Info Cliente & Ordine</h3>
+            <h3 className="font-heading font-bold text-foreground text-sm mb-3">Client & Order Info</h3>
             <div className="space-y-2 text-sm">
               <p><span className="text-muted-foreground">Company:</span> {client?.company_name}</p>
               <p><span className="text-muted-foreground">Contact:</span> {client?.contact_name || "—"}</p>
@@ -373,18 +373,18 @@ const AdminOrderDetail = () => {
             </div>
             <div className="mt-3 pt-3 border-t border-border space-y-2 text-sm">
               <p><span className="text-muted-foreground">Payment:</span> <Badge className={`border-0 text-[10px] ml-1 ${getPaymentStatusColor(order.payment_status || "unpaid")}`}>{getPaymentStatusLabel(order.payment_status || "unpaid")}</Badge></p>
-              <p><span className="text-muted-foreground">Data Pagamento:</span> {order.payed_date || "—"}</p>
-              <p><span className="text-muted-foreground">Termini:</span> {PAYMENT_TERMS_LABELS[order.payment_terms || ""] || order.payment_terms || "—"}</p>
+              <p><span className="text-muted-foreground">Payment Date:</span> {order.payed_date || "—"}</p>
+              <p><span className="text-muted-foreground">Terms:</span> {PAYMENT_TERMS_LABELS[order.payment_terms || ""] || order.payment_terms || "—"}</p>
               {(order as any).payment_due_date && (
                 <p>
-                  <span className="text-muted-foreground">Scadenza pagamento:</span>{" "}
+                  <span className="text-muted-foreground">Payment Due:</span>{" "}
                   <span className="font-semibold">{format(new Date((order as any).payment_due_date), "dd/MM/yyyy")}</span>
                   {(() => {
                     const due = new Date((order as any).payment_due_date);
                     const today = new Date();
                     const overdue = due < today && order.payment_status !== "paid";
                     const daysOverdue = differenceInDays(today, due);
-                    if (overdue) return <Badge variant="destructive" className="ml-2 text-[10px]">SCADUTO da {daysOverdue} giorni</Badge>;
+                    if (overdue) return <Badge variant="destructive" className="ml-2 text-[10px]">OVERDUE by {daysOverdue} days</Badge>;
                     return null;
                   })()}
                 </p>
@@ -393,7 +393,7 @@ const AdminOrderDetail = () => {
             </div>
             {order.notes && (
               <div className="mt-4 pt-3 border-t border-border">
-                <p className="text-xs text-muted-foreground mb-1">Note del Cliente:</p>
+                <p className="text-xs text-muted-foreground mb-1">Client Notes:</p>
                 <p className="text-sm text-foreground">{order.notes}</p>
               </div>
             )}
@@ -405,7 +405,7 @@ const AdminOrderDetail = () => {
 
           <div className="glass-card-solid p-5">
             <h3 className="font-heading font-bold text-foreground text-sm mb-4 flex items-center gap-2">
-              <Clock size={14} /> Storico Notifiche
+              <Clock size={14} /> Notification History
             </h3>
             <OrderEventsTimeline orderId={order.id} />
           </div>
@@ -443,11 +443,11 @@ const AdminOrderDetail = () => {
         </Table>
         <div className="px-4 py-3 border-t border-border space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">Subtotale prodotti</span>
+            <span className="text-xs text-muted-foreground">Products Subtotal</span>
             <span className="text-sm text-foreground">€{productsTotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">Costo spedizione</span>
+            <span className="text-xs text-muted-foreground">Shipping Cost</span>
             {["submitted", "confirmed", "processing"].includes(currentStatus) ? (
               <div className="flex items-center gap-2">
                 <Input
@@ -479,15 +479,15 @@ const AdminOrderDetail = () => {
                       if (shipVal > 0) {
                         await supabase.from("client_notifications").insert({
                           client_id: order.client_id,
-                          title: "Spedizione calcolata",
-                          body: `Il costo di spedizione per il tuo ordine #${order.order_code || id.slice(0, 8)} è €${shipVal.toFixed(2)}. Totale aggiornato: €${newTotal.toFixed(2)}`,
+                          title: "Shipping calculated",
+                          body: `The shipping cost for your order #${order.order_code || id.slice(0, 8)} is €${shipVal.toFixed(2)}. Updated total: €${newTotal.toFixed(2)}`,
                           type: "order",
                           order_id: id,
                         });
                       }
                       queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
                       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-                      toast.success(`Costo spedizione aggiornato: €${shipVal.toFixed(2)}`);
+                      toast.success(`Shipping cost updated: €${shipVal.toFixed(2)}`);
                     } catch (error) {
                       showErrorToast(error, "AdminOrderDetail.saveShipping");
                     } finally {
@@ -495,7 +495,7 @@ const AdminOrderDetail = () => {
                     }
                   }}
                 >
-                  <CheckCircle size={12} /> Salva
+                  <CheckCircle size={12} /> Save
                 </Button>
               </div>
             ) : (
@@ -503,7 +503,7 @@ const AdminOrderDetail = () => {
             )}
           </div>
           <div className="flex justify-between items-center pt-2 border-t border-border">
-            <span className="text-sm font-heading font-bold text-foreground">Totale ordine</span>
+            <span className="text-sm font-heading font-bold text-foreground">Order Total</span>
             <span className="font-heading text-lg font-bold text-foreground">€{(productsTotal + (parseFloat(shippingCost) || 0)).toFixed(2)}</span>
           </div>
         </div>
@@ -526,22 +526,22 @@ const AdminOrderDetail = () => {
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Rifiuta Ordine</DialogTitle>
+            <DialogTitle>Reject Order</DialogTitle>
           </DialogHeader>
           <div>
-            <label className="text-sm text-muted-foreground mb-2 block">Motivo del rifiuto (obbligatorio)</label>
+            <label className="text-sm text-muted-foreground mb-2 block">Rejection reason (required)</label>
             <Textarea
               value={rejectReason}
               onChange={e => setRejectReason(e.target.value)}
-              placeholder="Inserisci il motivo del rifiuto..."
+              placeholder="Enter rejection reason..."
               rows={3}
               className="resize-none"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>Annulla</Button>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleRejectOrder} disabled={rejecting || !rejectReason.trim()}>
-              {rejecting ? "Rifiuto in corso..." : "Conferma Rifiuto"}
+              {rejecting ? "Rejecting..." : "Confirm Rejection"}
             </Button>
           </DialogFooter>
         </DialogContent>

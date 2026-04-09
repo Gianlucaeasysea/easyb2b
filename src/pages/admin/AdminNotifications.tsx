@@ -20,8 +20,8 @@ const typeIcons: Record<string, React.ReactNode> = {
 
 const formatDateGroup = (dateStr: string) => {
   const d = new Date(dateStr);
-  if (isToday(d)) return "Oggi";
-  if (isYesterday(d)) return "Ieri";
+  if (isToday(d)) return "Today";
+  if (isYesterday(d)) return "Yesterday";
   return format(d, "dd MMM yyyy");
 };
 
@@ -80,24 +80,24 @@ const AdminNotifications = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Bell size={20} className="text-primary" />
-          <h1 className="text-xl font-heading font-bold text-foreground">Notifiche</h1>
+          <h1 className="text-xl font-heading font-bold text-foreground">Notifications</h1>
           {unreadCount > 0 && (
-            <Badge className="bg-primary text-primary-foreground text-xs">{unreadCount} nuove</Badge>
+            <Badge className="bg-primary text-primary-foreground text-xs">{unreadCount} new</Badge>
           )}
         </div>
         {unreadCount > 0 && (
           <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => markAllRead.mutate()}>
-            <CheckCheck size={14} /> Segna tutto come letto
+            <CheckCheck size={14} /> Mark all as read
           </Button>
         )}
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Caricamento...</p>
+        <p className="text-sm text-muted-foreground">Loading...</p>
       ) : !notifications?.length ? (
         <div className="text-center py-16 text-muted-foreground">
           <Bell size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm">Nessuna notifica.</p>
+          <p className="text-sm">No notifications.</p>
         </div>
       ) : (
         <div className="space-y-6">

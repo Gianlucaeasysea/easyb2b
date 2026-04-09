@@ -620,7 +620,7 @@ const DealerOrders = () => {
                       </h4>
                       {docs.length === 0 ? (
                         <p className="text-xs text-muted-foreground italic">
-                          Nessun documento disponibile. I documenti saranno caricati dopo la conferma dell'ordine.
+                          No documents available. Documents will be uploaded after order confirmation.
                         </p>
                       ) : (
                         <div className="space-y-2">
@@ -735,9 +735,9 @@ const DealerOrders = () => {
                 </span>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setPriceCheckData(null)}>Annulla</Button>
+                <Button variant="outline" onClick={() => setPriceCheckData(null)}>Cancel</Button>
                 <Button onClick={() => executeDuplicate(priceCheckData.order, priceCheckData.items)} disabled={!!duplicatingId}>
-                  {duplicatingId ? "Duplicazione..." : "Duplica con prezzi attuali"}
+                  {duplicatingId ? "Duplicating..." : "Duplicate with current prices"}
                 </Button>
               </DialogFooter>
             </>
@@ -749,15 +749,15 @@ const DealerOrders = () => {
       <Dialog open={!!confirmCancel} onOpenChange={() => setConfirmCancel(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Annulla Ordine</DialogTitle>
+            <DialogTitle>Cancel Order</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Sei sicuro di voler annullare questo ordine? Questa azione non può essere annullata.
+            Are you sure you want to cancel this order? This action cannot be undone.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmCancel(null)}>Indietro</Button>
+            <Button variant="outline" onClick={() => setConfirmCancel(null)}>Back</Button>
             <Button variant="destructive" onClick={() => handleCancelOrder(confirmCancel)} disabled={!!cancellingId}>
-              {cancellingId ? "Annullamento..." : "Annulla Ordine"}
+              {cancellingId ? "Cancelling..." : "Cancel Order"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -767,15 +767,15 @@ const DealerOrders = () => {
       <Dialog open={!!confirmDeleteDraft} onOpenChange={() => setConfirmDeleteDraft(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Elimina Bozza</DialogTitle>
+            <DialogTitle>Delete Draft</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Sei sicuro di voler eliminare questa bozza? Questa azione non può essere annullata.
+            Are you sure you want to delete this draft? This action cannot be undone.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDeleteDraft(null)}>Indietro</Button>
+            <Button variant="outline" onClick={() => setConfirmDeleteDraft(null)}>Back</Button>
             <Button variant="destructive" onClick={() => handleDeleteDraft(confirmDeleteDraft)} disabled={!!deletingDraftId}>
-              {deletingDraftId ? "Eliminazione..." : "Elimina Bozza"}
+              {deletingDraftId ? "Deleting..." : "Delete Draft"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -792,7 +792,7 @@ const DealerOrders = () => {
           {editingDraft && (
             <div className="space-y-4">
               {draftItems.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6">Nessun prodotto nella bozza. Aggiungi prodotti dal catalogo.</p>
+                <p className="text-center text-muted-foreground py-6">No products in this draft. Add products from the catalog.</p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -851,9 +851,9 @@ const DealerOrders = () => {
                 />
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setEditingDraft(null)}>Chiudi</Button>
+                <Button variant="outline" onClick={() => setEditingDraft(null)}>Close</Button>
                 <Button onClick={submitDraft} disabled={submittingDraft || draftItems.length === 0}>
-                  {submittingDraft ? "Invio in corso..." : "Invia Ordine"}
+                  {submittingDraft ? "Submitting..." : "Submit Order"}
                 </Button>
               </DialogFooter>
             </div>

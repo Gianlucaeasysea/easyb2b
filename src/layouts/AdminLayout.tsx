@@ -8,20 +8,20 @@ import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import logo from "@/assets/easysea-logo.png";
 
 const adminRouteNames: Record<string, string> = {
-  "orders": "Ordini",
-  "clients": "Clienti",
-  "products": "Prodotti",
-  "requests": "Richieste",
-  "price-lists": "Listini Prezzi",
-  "settings": "Impostazioni",
+  "orders": "Orders",
+  "clients": "Clients",
+  "products": "Products",
+  "requests": "Requests",
+  "price-lists": "Price Lists",
+  "settings": "Settings",
   "marketing": "Marketing",
   "changelog": "Changelog",
-  "import": "Importa",
+  "import": "Import",
   "cms": "CMS",
-  "new-orders": "Nuovi Ordini",
-  "system-map": "Mappa Sistema",
-  "notifications": "Notifiche",
-  "audit-log": "Log Attività",
+  "new-orders": "New Orders",
+  "system-map": "System Map",
+  "notifications": "Notifications",
+  "audit-log": "Audit Log",
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,7 +41,7 @@ function AdminBreadcrumbs() {
     if (label) {
       crumbs.push({ label, path: currentPath });
     } else if (UUID_RE.test(part) || /^\d+$/.test(part)) {
-      crumbs.push({ label: `Dettaglio #${part.substring(0, 8)}…`, path: currentPath });
+      crumbs.push({ label: `Detail #${part.substring(0, 8)}…`, path: currentPath });
     } else {
       crumbs.push({ label: part, path: currentPath });
     }

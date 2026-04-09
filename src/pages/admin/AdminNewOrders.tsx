@@ -34,14 +34,14 @@ const AdminNewOrders = () => {
       await supabase.from("order_events").insert({
         order_id: id,
         event_type: "status_change",
-        title: "Ordine confermato",
-        description: "L'ordine è stato confermato e il cliente è stato notificato.",
+        title: "Order confirmed",
+        description: "The order has been confirmed and the client has been notified.",
       });
       await supabase.from("order_events").insert({
         order_id: id,
         event_type: "email_sent",
-        title: "Email di conferma inviata",
-        description: "Notifica di conferma ordine inviata al cliente.",
+        title: "Confirmation email sent",
+        description: "Order confirmation notification sent to the client.",
       });
       try {
         await supabase.functions.invoke('send-order-notification', {
@@ -54,7 +54,7 @@ const AdminNewOrders = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-new-orders"] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-      toast.success("Ordine confermato e cliente notificato");
+      toast.success("Order confirmed and client notified");
     },
   });
 
@@ -65,8 +65,8 @@ const AdminNewOrders = () => {
       await supabase.from("order_events").insert({
         order_id: id,
         event_type: "order_rejected",
-        title: "Ordine rifiutato",
-        description: "L'ordine è stato rifiutato dall'amministratore.",
+        title: "Order rejected",
+        description: "The order has been rejected by the administrator.",
       });
       try {
         await supabase.functions.invoke('send-order-notification', {
@@ -79,7 +79,7 @@ const AdminNewOrders = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-new-orders"] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-      toast.success("Ordine rifiutato");
+      toast.success("Order rejected");
     },
   });
 
@@ -94,9 +94,9 @@ const AdminNewOrders = () => {
 
   return (
     <div>
-      <h1 className="font-heading text-2xl font-bold text-foreground mb-2">Nuovi Ordini</h1>
+      <h1 className="font-heading text-2xl font-bold text-foreground mb-2">New Orders</h1>
       <p className="text-sm text-muted-foreground mb-8">
-        Ordini appena ricevuti dai dealer — {orders?.length || 0} in attesa
+        Orders just received from dealers — {orders?.length || 0} pending
       </p>
 
       {isLoading ? (
@@ -104,7 +104,7 @@ const AdminNewOrders = () => {
       ) : !orders?.length ? (
         <div className="text-center py-20 glass-card-solid">
           <PackagePlus className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">Nessun nuovo ordine in arrivo.</p>
+          <p className="text-muted-foreground">No new orders pending.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -133,7 +133,7 @@ const AdminNewOrders = () => {
                     {o.notes && <p className="text-xs text-muted-foreground mt-1 italic">"{o.notes}"</p>}
                   </div>
                   <p className="font-heading text-xl font-bold text-foreground">
-                    €{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+                    €{Number(o.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </p>
                 </div>
 
@@ -146,11 +146,11 @@ const AdminNewOrders = () => {
                         className="text-xs gap-1.5 rounded-lg text-destructive border-destructive/30 hover:bg-destructive/10"
                         disabled={rejectOrder.isPending}
                         onClick={() => {
-                          if (confirm("Sei sicuro di voler rifiutare questo ordine?"))
+                          if (confirm("Are you sure you want to reject this order?"))
                             rejectOrder.mutate({ id: o.id, orderCode: (o as any).order_code || "" });
                         }}
                       >
-                        <XCircle size={12} /> Rifiuta
+                        <XCircle size={12} /> Reject
                       </Button>
                     )}
 
@@ -160,7 +160,7 @@ const AdminNewOrders = () => {
                       className="text-xs gap-1.5 rounded-lg"
                       onClick={() => navigate(`/admin/orders/${o.id}`)}
                     >
-                      <Eye size={12} /> Dettaglio
+                      <Eye size={12} /> Detail
                     </Button>
 
                     {o.status === "confirmed" && (
@@ -169,9 +169,9 @@ const AdminNewOrders = () => {
                         disabled={!hasDocs || confirmOrder.isPending}
                         className="text-xs gap-1.5 rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold"
                         onClick={() => confirmOrder.mutate({ id: o.id, orderCode: (o as any).order_code || "" })}
-                        title={!hasDocs ? "Carica prima un documento (Invoice o Order Confirmation)" : ""}
+                        title={!hasDocs ? "Upload a document first (Invoice or Order Confirmation)" : ""}
                       >
-                        {confirmOrder.isPending ? "..." : "Conferma & Invia"}
+                        {confirmOrder.isPending ? "..." : "Confirm & Send"}
                       </Button>
                     )}
                   </div>
@@ -179,13 +179,13 @@ const AdminNewOrders = () => {
 
                 {o.status === "confirmed" && !hasDocs && (
                   <p className="text-[11px] text-warning mt-2">
-                    ⚠ Carica un documento (Invoice o Order Confirmation) nel dettaglio ordine per poter confermare.
+                    ⚠ Upload a document (Invoice or Order Confirmation) in the order detail to proceed.
                   </p>
                 )}
 
                 {docs.length > 0 && (
                   <p className="text-[11px] text-muted-foreground mt-2">
-                    📎 {docs.length} documento{docs.length > 1 ? "i" : ""} caricato{docs.length > 1 ? "i" : ""}
+                    📎 {docs.length} document{docs.length > 1 ? "s" : ""} uploaded
                   </p>
                 )}
               </div>

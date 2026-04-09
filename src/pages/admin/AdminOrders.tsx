@@ -119,7 +119,7 @@ const AdminOrders = () => {
       setShowStatusDialog(false);
       setShowTransitionWarning(true);
     } else if (invalid.length > 0 && valid.length === 0) {
-      toast.error(`Nessuno dei ${invalid.length} ordini selezionati può passare allo stato "${getOrderStatusLabel(bulkStatus)}".`);
+      toast.error(`None of the ${invalid.length} selected orders can transition to "${getOrderStatusLabel(bulkStatus)}".`);
     } else {
       executeBulkStatus(valid);
     }
@@ -134,7 +134,7 @@ const AdminOrders = () => {
       });
       const skipped = transitionInfo.invalid.length;
       if (skipped > 0) {
-        toast.success(`Aggiornati: ${result.ok} ordini. Saltati: ${skipped} (stato non compatibile).`);
+        toast.success(`Updated: ${result.ok} orders. Skipped: ${skipped} (incompatible status).`);
       } else {
         bulkResultToast(toast.success, toast.error, result, "ordini");
       }
@@ -188,20 +188,20 @@ const AdminOrders = () => {
     }
 
     const rows = exportOrders.map(o => ({
-      "Codice Ordine": o.order_code || o.id.slice(0, 8),
-      "Organizzazione": (o as any).clients?.company_name || "",
+      "Order Code": o.order_code || o.id.slice(0, 8),
+      "Organization": (o as any).clients?.company_name || "",
       "Status": o.status || "",
-      "Totale (€)": Number(o.total_amount || 0).toFixed(2),
-      "Status Pagamento": o.payment_status || "",
-      "Data Creazione": fmtDate(o.created_at),
-      "Data Consegna": fmtDate(o.delivery_date),
+      "Total (€)": Number(o.total_amount || 0).toFixed(2),
+      "Payment Status": o.payment_status || "",
+      "Created Date": fmtDate(o.created_at),
+      "Delivery Date": fmtDate(o.delivery_date),
       "Tracking Number": o.tracking_number || "",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Ordini");
-    XLSX.writeFile(wb, `ordini_export_${format(new Date(), "yyyy-MM-dd")}.csv`, { bookType: "csv" });
-    toast.success(`${rows.length} ordini esportati`);
+    XLSX.utils.book_append_sheet(wb, ws, "Orders");
+    XLSX.writeFile(wb, `orders_export_${format(new Date(), "yyyy-MM-dd")}.csv`, { bookType: "csv" });
+    toast.success(`${rows.length} orders exported`);
   };
 
   const SkeletonRows = () => (
@@ -229,7 +229,7 @@ const AdminOrders = () => {
       <TableHead className="text-xs text-right">Total</TableHead>
       <TableHead className="text-xs text-right">Shipping</TableHead>
       <TableHead className="text-xs">Payed Date</TableHead>
-      <TableHead className="text-xs">Scadenza</TableHead>
+      <TableHead className="text-xs">Due Date</TableHead>
       <TableHead className="text-xs">Delivery Date</TableHead>
       <TableHead className="text-xs w-10"></TableHead>
     </TableRow>
@@ -240,10 +240,10 @@ const AdminOrders = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">Orders</h1>
-          <p className="text-sm text-muted-foreground">{totalCount} ordini</p>
+          <p className="text-sm text-muted-foreground">{totalCount} orders</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => exportCSV(false)} className="gap-1">
-          <Download size={14} /> Esporta CSV
+          <Download size={14} /> Export CSV
         </Button>
       </div>
 
@@ -255,7 +255,7 @@ const AdminOrders = () => {
           className={`gap-1.5 ${statusFilter === "submitted" ? "bg-blue-600 hover:bg-blue-700 text-white" : ""}`}
         >
           <CheckCircle size={14} />
-          Da confermare
+          To Confirm
         </Button>
         <Button
           variant={statusFilter === "overdue" ? "default" : "outline"}
@@ -264,14 +264,14 @@ const AdminOrders = () => {
           className={`gap-1.5 ${statusFilter === "overdue" ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground" : "text-destructive border-destructive/30"}`}
         >
           <AlertTriangle size={14} />
-          Pagamenti scaduti
+          Overdue Payments
         </Button>
       </div>
 
       <div className="flex gap-3 mb-6 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-          <Input placeholder="Cerca per codice ordine o tracking..." className="pl-10 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Search by order code or tracking..." className="pl-10 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px] bg-secondary border-border rounded-lg">
@@ -328,7 +328,7 @@ const AdminOrders = () => {
                         {getOrderStatusLabel(o.status || "draft")}
                       </Badge>
                       {["confirmed", "processing"].includes(o.status || "") && !Number(o.shipping_cost_client) && (
-                        <span title="Costo spedizione non ancora impostato">
+                        <span title="Shipping cost not set yet">
                           <AlertTriangle size={14} className="text-orange-500" />
                         </span>
                       )}
@@ -342,11 +342,11 @@ const AdminOrders = () => {
                     ) : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-right font-mono text-sm font-semibold">
-                    €{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+                    €{Number(o.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-right font-mono text-xs text-muted-foreground">
                     {Number(o.shipping_cost_client || 0) > 0
-                      ? `€${Number(o.shipping_cost_client).toLocaleString("it-IT", { minimumFractionDigits: 2 })}`
+                      ? `€${Number(o.shipping_cost_client).toLocaleString("en-US", { minimumFractionDigits: 2 })}`
                       : "—"}
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.payed_date)}</TableCell>
@@ -371,7 +371,7 @@ const AdminOrders = () => {
                       <Button
                         variant="ghost" size="sm"
                         className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                        title="Conferma Ordine"
+                        title="Confirm Order"
                         onClick={async () => {
                           try {
                             const calcDueDate = (pt: string | null) => {
@@ -388,18 +388,18 @@ const AdminOrders = () => {
                             await supabase.from("orders").update({ status: "confirmed", payment_due_date: format(dueDate, "yyyy-MM-dd") }).eq("id", o.id);
                             await supabase.from("client_notifications").insert({
                               client_id: o.client_id,
-                              title: "Ordine confermato",
-                              body: `Il tuo ordine #${o.order_code || o.id.slice(0, 8)} è stato confermato ed è in lavorazione.`,
+                              title: "Order confirmed",
+                              body: `Your order #${o.order_code || o.id.slice(0, 8)} has been confirmed and is being processed.`,
                               type: "order",
                               order_id: o.id,
                             });
                             await supabase.from("order_events").insert({
                               order_id: o.id,
                               event_type: "status_change",
-                              title: "Stato aggiornato: Confermato",
+                              title: "Status updated: Confirmed",
                             });
                             qc.invalidateQueries({ queryKey: ["admin-orders"] });
-                            toast.success("Ordine confermato");
+                            toast.success("Order confirmed");
                           } catch (error) {
                             showErrorToast(error, "AdminOrders.quickConfirm");
                           }
@@ -426,21 +426,21 @@ const AdminOrders = () => {
 
       {/* Floating Bulk Action Bar */}
       <BulkActionBar count={selected.size} onDeselect={() => setSelected(new Set())}>
-        <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => setShowStatusDialog(true)}>
-          <RefreshCw size={14} /> Aggiorna Stato
+         <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => setShowStatusDialog(true)}>
+          <RefreshCw size={14} /> Update Status
         </Button>
         <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => setShowPaidConfirm(true)}>
-          <CreditCard size={14} /> Segna come Pagato
+          <CreditCard size={14} /> Mark as Paid
         </Button>
         <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => exportCSV(true)}>
-          <Download size={14} /> Esporta CSV
+          <Download size={14} /> Export CSV
         </Button>
       </BulkActionBar>
 
       {/* Status Dialog */}
       <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Aggiorna Stato ({selected.size} ordini)</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Update Status ({selected.size} orders)</DialogTitle></DialogHeader>
           <Select value={bulkStatus} onValueChange={setBulkStatus}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -450,9 +450,9 @@ const AdminOrders = () => {
             </SelectContent>
           </Select>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStatusDialog(false)}>Annulla</Button>
+            <Button variant="outline" onClick={() => setShowStatusDialog(false)}>Cancel</Button>
             <Button onClick={handleBulkStatusCheck} disabled={bulkLoading}>
-              {bulkLoading ? "Aggiornamento..." : "Applica"}
+              {bulkLoading ? "Updating..." : "Apply"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -461,14 +461,14 @@ const AdminOrders = () => {
       {/* Paid Confirmation Dialog */}
       <Dialog open={showPaidConfirm} onOpenChange={setShowPaidConfirm}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Conferma Pagamento</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Confirm Payment</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Vuoi segnare {selected.size} ordini come pagati con data di oggi?
+            Mark {selected.size} orders as paid with today's date?
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPaidConfirm(false)}>Annulla</Button>
+            <Button variant="outline" onClick={() => setShowPaidConfirm(false)}>Cancel</Button>
             <Button onClick={handleBulkPaid} disabled={bulkLoading}>
-              {bulkLoading ? "Aggiornamento..." : "Conferma"}
+              {bulkLoading ? "Updating..." : "Confirm"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -477,18 +477,18 @@ const AdminOrders = () => {
       {/* Transition Warning Dialog */}
       <Dialog open={showTransitionWarning} onOpenChange={setShowTransitionWarning}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Attenzione</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Warning</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
-            {transitionInfo.invalid.length} di {transitionInfo.valid.length + transitionInfo.invalid.length} ordini selezionati non possono passare allo stato "{getOrderStatusLabel(transitionInfo.target)}".
-            Stato attuale non compatibile.
+            {transitionInfo.invalid.length} of {transitionInfo.valid.length + transitionInfo.invalid.length} selected orders cannot transition to "{getOrderStatusLabel(transitionInfo.target)}".
+            Current status is incompatible.
           </p>
           <p className="text-sm text-foreground font-medium">
-            Vuoi procedere con i {transitionInfo.valid.length} ordini validi?
+            Proceed with the {transitionInfo.valid.length} valid orders?
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTransitionWarning(false)}>Annulla</Button>
+            <Button variant="outline" onClick={() => setShowTransitionWarning(false)}>Cancel</Button>
             <Button onClick={() => executeBulkStatus(transitionInfo.valid)} disabled={bulkLoading}>
-              {bulkLoading ? "Aggiornamento..." : `Procedi con ${transitionInfo.valid.length} ordini`}
+              {bulkLoading ? "Updating..." : `Proceed with ${transitionInfo.valid.length} orders`}
             </Button>
           </DialogFooter>
         </DialogContent>
