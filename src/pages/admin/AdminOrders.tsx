@@ -252,6 +252,15 @@ const AdminOrders = () => {
           <CheckCircle size={14} />
           Da confermare
         </Button>
+        <Button
+          variant={statusFilter === "overdue" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter(statusFilter === "overdue" ? "all" : "overdue")}
+          className={`gap-1.5 ${statusFilter === "overdue" ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground" : "text-destructive border-destructive/30"}`}
+        >
+          <AlertTriangle size={14} />
+          Pagamenti scaduti
+        </Button>
       </div>
 
       <div className="flex gap-3 mb-6 flex-wrap">
