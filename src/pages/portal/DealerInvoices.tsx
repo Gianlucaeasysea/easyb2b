@@ -38,7 +38,7 @@ const DealerInvoices = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("orders")
-        .select("id, order_code, created_at, total_amount, payment_status, payment_terms, payed_date, status, shipping_cost_client")
+        .select("id, order_code, created_at, total_amount, payment_status, payment_terms, payment_due_date, payed_date, status, shipping_cost_client")
         .eq("client_id", client!.id)
         .neq("status", "draft")
         .neq("status", "cancelled")

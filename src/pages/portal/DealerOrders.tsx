@@ -11,7 +11,7 @@ import {
   ChevronDown, ChevronUp, FileText, Download, Bell, Loader2, Send,
   Copy, DollarSign, XCircle, Trash2, Minus, Plus, Edit3,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { useState, useMemo } from "react";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
