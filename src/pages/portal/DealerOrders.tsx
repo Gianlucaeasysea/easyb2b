@@ -320,6 +320,61 @@ const DealerOrders = () => {
 
   const draftTotal = draftItems.reduce((s, i) => s + Number(i.subtotal || 0), 0);
 
+  const handleAddProductsToDraft = async () => {
+    if (!editingDraft) return;
+    setSavingDraftItems(true);
+    try {
+      const selectedProducts = Object.entries(addProductQtys).filter(([, qty]) => qty > 0);
+      if (!selectedProducts.length) { toast.error("Select at least one product"); setSavingDraftItems(false); return; }
+
+      for (const [productId, qty] of selectedProducts) {
+        // Check if already in draft
+        const existing = draftItems.find(i => i.product_id === productId);
+        if (existing) {
+          // Update quantity
+          const newQty = existing.quantity + qty;
+          const newSubtotal = newQty * Number(existing.unit_price);
+          await supabase.from("order_items").update({ quantity: newQty, subtotal: newSubtotal }).eq("id", existing.id);
+          setDraftItems(prev => prev.map(i => i.id === existing.id ? { ...i, quantity: newQty, subtotal: newSubtotal } : i));
+        } else {
+          // Find price from price list
+          const plItem = priceListProducts?.find((p: any) => p.product_id === productId);
+          if (!plItem) continue;
+          const product = (plItem as any).products;
+          const unitPrice = plItem.custom_price;
+          const subtotal = unitPrice * qty;
+          const { data: newItem, error } = await supabase.from("order_items").insert({
+            order_id: editingDraft.id,
+            product_id: productId,
+            quantity: qty,
+            unit_price: unitPrice,
+            discount_pct: 0,
+            subtotal,
+          }).select("*").single();
+          if (error) throw error;
+          setDraftItems(prev => [...prev, { ...newItem, name: product.name, sku: product.sku }]);
+        }
+      }
+
+      // Recalculate total
+      const newTotal = draftItems.reduce((s, i) => s + Number(i.subtotal || 0), 0) + selectedProducts.reduce((s, [productId, qty]) => {
+        const plItem = priceListProducts?.find((p: any) => p.product_id === productId);
+        return s + (plItem ? plItem.custom_price * qty : 0);
+      }, 0);
+      await supabase.from("orders").update({ total_amount: newTotal }).eq("id", editingDraft.id);
+
+      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+      setAddProductQtys({});
+      setAddProductSearch("");
+      setShowAddProductsToDraft(false);
+      toast.success("Products added to draft");
+    } catch (error) {
+      showErrorToast(error, "DealerOrders.addProductsToDraft");
+    } finally {
+      setSavingDraftItems(false);
+    }
+  };
+
   const submitDraft = async () => {
     if (!editingDraft || draftItems.length === 0) return;
     setSubmittingDraft(true);
