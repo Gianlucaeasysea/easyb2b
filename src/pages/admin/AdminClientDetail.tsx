@@ -1191,7 +1191,8 @@ const AdminClientDetail = () => {
                 </Button>
               </div>
               {accountPassword.length < 10 && <p className="text-[11px] text-destructive">Min 10 characters</p>}
-            <Button onClick={createDealerAccount} disabled={creatingAccount} className="w-full gap-1">
+            </div>
+            <Button onClick={createDealerAccount} disabled={creatingAccount || accountPassword.length < 10} className="w-full gap-1">
               <UserPlus size={14} /> {creatingAccount ? "Creazione..." : "Crea Account"}
             </Button>
           </div>
