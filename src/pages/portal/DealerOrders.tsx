@@ -572,7 +572,7 @@ const DealerOrders = () => {
                         {order.tracking_url && (
                           <a href={order.tracking_url} target="_blank" rel="noopener noreferrer">
                             <Button variant="ghost" size="sm" className="text-primary text-xs gap-1">
-                              Traccia spedizione <ExternalLink size={12} />
+                              Track shipment <ExternalLink size={12} />
                             </Button>
                           </a>
                         )}
@@ -582,7 +582,7 @@ const DealerOrders = () => {
                     {/* Notes */}
                     {order.notes && (
                       <div className="px-5 py-2 bg-secondary/20 border-b border-border">
-                        <p className="text-xs text-muted-foreground"><span className="font-semibold">Le tue note:</span> {order.notes}</p>
+                        <p className="text-xs text-muted-foreground"><span className="font-semibold">Your notes:</span> {order.notes}</p>
                       </div>
                     )}
 
@@ -590,11 +590,11 @@ const DealerOrders = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="text-xs">Prodotto</TableHead>
-                          <TableHead className="text-xs text-right">Qtà</TableHead>
-                          <TableHead className="text-xs text-right">Prezzo</TableHead>
-                          <TableHead className="text-xs text-right">Sconto</TableHead>
-                          <TableHead className="text-xs text-right">Subtotale</TableHead>
+                         <TableHead className="text-xs">Product</TableHead>
+                          <TableHead className="text-xs text-right">Qty</TableHead>
+                          <TableHead className="text-xs text-right">Price</TableHead>
+                          <TableHead className="text-xs text-right">Discount</TableHead>
+                          <TableHead className="text-xs text-right">Subtotal</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -616,27 +616,27 @@ const DealerOrders = () => {
                     {/* Totals */}
                     <div className="px-5 py-3 border-t border-border space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Prodotti</span>
-                        <span className="font-semibold text-foreground">€{Number(order.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Spedizione</span>
-                        <span className={shippingCost > 0 ? "font-semibold text-foreground" : "text-muted-foreground italic text-xs"}>
-                          {shippingCost > 0 ? `€${shippingCost.toLocaleString("it-IT", { minimumFractionDigits: 2 })}` : "In fase di calcolo"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between pt-2 border-t border-border">
-                        <span className="font-heading font-bold text-foreground">Totale</span>
-                        <span className="font-heading text-xl font-bold text-foreground">
-                          €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
+                        <span className="text-muted-foreground">Products</span>
+                         <span className="font-semibold text-foreground">€{Number(order.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                       </div>
+                       <div className="flex justify-between text-sm">
+                         <span className="text-muted-foreground">Shipping</span>
+                         <span className={shippingCost > 0 ? "font-semibold text-foreground" : "text-muted-foreground italic text-xs"}>
+                           {shippingCost > 0 ? `€${shippingCost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "Being calculated"}
+                         </span>
+                       </div>
+                       <div className="flex justify-between pt-2 border-t border-border">
+                         <span className="font-heading font-bold text-foreground">Total</span>
+                         <span className="font-heading text-xl font-bold text-foreground">
+                           €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                         </span>
+                       </div>
                     </div>
 
                     {/* Documents */}
                     <div className="px-5 py-4 border-t border-border bg-secondary/20">
                       <h4 className="font-heading text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                        <FileText size={14} /> Documenti
+                        <FileText size={14} /> Documents
                       </h4>
                       {docs.length === 0 ? (
                         <p className="text-xs text-muted-foreground italic">
@@ -675,7 +675,7 @@ const DealerOrders = () => {
                     {/* Notification History */}
                     <div className="px-5 py-4 border-t border-border bg-secondary/10">
                       <h4 className="font-heading text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                        <Bell size={14} /> Storico Notifiche
+                        <Bell size={14} /> Notification History
                       </h4>
                       <OrderEventsTimeline orderId={order.id} />
                     </div>
@@ -700,7 +700,7 @@ const DealerOrders = () => {
       <Dialog open={!!priceCheckData} onOpenChange={() => setPriceCheckData(null)}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Verifica prezzi prima di duplicare</DialogTitle>
+            <DialogTitle>Price check before duplicating</DialogTitle>
           </DialogHeader>
           {priceCheckData && (
             <>
@@ -708,10 +708,10 @@ const DealerOrders = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs">Prodotto</TableHead>
-                      <TableHead className="text-xs text-right">Prezzo Orig.</TableHead>
-                      <TableHead className="text-xs text-right">Prezzo Attuale</TableHead>
-                      <TableHead className="text-xs text-right">Variazione</TableHead>
+                      <TableHead className="text-xs">Product</TableHead>
+                      <TableHead className="text-xs text-right">Orig. Price</TableHead>
+                      <TableHead className="text-xs text-right">Current Price</TableHead>
+                      <TableHead className="text-xs text-right">Change</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -726,14 +726,14 @@ const DealerOrders = () => {
                           <TableCell className="text-xs text-right font-mono">€{item.originalPrice.toFixed(2)}</TableCell>
                           <TableCell className="text-xs text-right font-mono">
                             {!item.available || item.currentPrice === null
-                              ? <span className="text-destructive font-medium">Non disponibile</span>
+                              ? <span className="text-destructive font-medium">Unavailable</span>
                               : `€${item.currentPrice.toFixed(2)}`}
                           </TableCell>
                           <TableCell className="text-xs text-right font-medium">
                             {!item.available || item.currentPrice === null ? (
-                              <span className="text-destructive">Rimosso</span>
+                              <span className="text-destructive">Removed</span>
                             ) : diff === 0 ? (
-                              <span className="text-success">Invariato</span>
+                              <span className="text-success">Unchanged</span>
                             ) : diff! > 0 ? (
                               <span className="text-destructive">+€{diff!.toFixed(2)} ↑</span>
                             ) : (
@@ -748,10 +748,10 @@ const DealerOrders = () => {
               </div>
               <div className="flex justify-between text-sm mt-2 p-3 bg-secondary/50 rounded-lg">
                 <span className="text-muted-foreground">
-                  Totale originale: <span className="font-mono font-semibold text-foreground">€{priceCheckData.originalTotal.toFixed(2)}</span>
+                  Original total: <span className="font-mono font-semibold text-foreground">€{priceCheckData.originalTotal.toFixed(2)}</span>
                 </span>
                 <span className="text-muted-foreground">
-                  Nuovo totale: <span className="font-mono font-semibold text-primary">€{priceCheckData.newTotal.toFixed(2)}</span>
+                  New total: <span className="font-mono font-semibold text-primary">€{priceCheckData.newTotal.toFixed(2)}</span>
                 </span>
               </div>
               <DialogFooter>
@@ -806,7 +806,7 @@ const DealerOrders = () => {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Completa Ordine — {editingDraft?.order_code || `#${editingDraft?.id?.slice(0, 8).toUpperCase()}`}
+              Complete Order — {editingDraft?.order_code || `#${editingDraft?.id?.slice(0, 8).toUpperCase()}`}
             </DialogTitle>
           </DialogHeader>
           {editingDraft && (
@@ -817,10 +817,10 @@ const DealerOrders = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs">Prodotto</TableHead>
-                      <TableHead className="text-xs text-right">Prezzo</TableHead>
-                      <TableHead className="text-xs text-center w-[130px]">Quantità</TableHead>
-                      <TableHead className="text-xs text-right">Subtotale</TableHead>
+                      <TableHead className="text-xs">Product</TableHead>
+                      <TableHead className="text-xs text-right">Price</TableHead>
+                      <TableHead className="text-xs text-center w-[130px]">Quantity</TableHead>
+                      <TableHead className="text-xs text-right">Subtotal</TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
@@ -860,11 +860,11 @@ const DealerOrders = () => {
                   </TableBody>
                 </Table>
               )}
-              <div className="flex justify-end text-lg font-bold">Totale: €{draftTotal.toFixed(2)}</div>
+               <div className="flex justify-end text-lg font-bold">Total: €{draftTotal.toFixed(2)}</div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Note (opzionale)</label>
+                <label className="text-sm font-medium mb-1 block">Notes (optional)</label>
                 <Textarea
-                  placeholder="Aggiungi note all'ordine..."
+                  placeholder="Add notes to your order..."
                   value={draftNotes}
                   onChange={(e) => setDraftNotes(e.target.value)}
                   rows={3}

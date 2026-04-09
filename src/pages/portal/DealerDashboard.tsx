@@ -47,12 +47,7 @@ const DealerDashboard = () => {
         .limit(1)
         .maybeSingle();
       if (plcData?.price_lists) return plcData.price_lists as any;
-      const { data } = await supabase
-        .from("price_lists")
-        .select("*, discount_tiers(label, discount_pct)")
-        .eq("client_id", client!.id)
-        .maybeSingle();
-      return data;
+      return null;
     },
     enabled: !!client,
   });
