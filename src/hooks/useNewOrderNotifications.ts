@@ -2,14 +2,17 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function useNewOrderNotifications() {
   const [newOrderCount, setNewOrderCount] = useState(0);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   useEffect(() => {
+    if (!user?.id) return;
     const channel = supabase
-      .channel("admin-new-orders")
+      .channel(`admin-new-orders-${user.id}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "orders" },
@@ -37,7 +40,7 @@ export function useNewOrderNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, user?.id]);
 
   const resetCount = () => setNewOrderCount(0);
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useId } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,7 +59,7 @@ const CRMOrders = () => {
   // Realtime subscription
   useEffect(() => {
     const channel = supabase
-      .channel("crm-orders-realtime")
+      .channel(`crm-orders-${user?.id || "anon"}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, (payload) => {
         queryClient.invalidateQueries({ queryKey: ["crm-orders"] });
         const newOrder = payload.new as any;

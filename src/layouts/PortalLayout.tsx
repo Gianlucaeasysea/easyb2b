@@ -12,6 +12,7 @@ import { ClientModeProvider } from "@/contexts/ClientModeContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import logo from "@/assets/white_logo.png";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const PortalHeader = () => {
   const { signOut, user } = useAuth();
@@ -169,7 +170,9 @@ const PortalLayout = () => {
               <PortalHeader />
               <main className="flex-1 p-6 overflow-auto">
                 <PortalBreadcrumbs />
-                <Outlet />
+                <ErrorBoundary section="dealer portal">
+                  <Outlet />
+                </ErrorBoundary>
               </main>
             </div>
           </div>

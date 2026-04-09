@@ -52,6 +52,7 @@ const regionCountries: Record<string, string[]> = {
 const BecomeADealer = () => {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState<number>(0);
   const { toast } = useToast();
   const [form, setForm] = useState({
     companyName: "", contactName: "", email: "", phone: "",
@@ -67,6 +68,10 @@ const BecomeADealer = () => {
     }
     if (!form.privacy) {
       toast({ title: "Errore", description: "Devi accettare la Privacy Policy per procedere.", variant: "destructive" });
+      return;
+    }
+    if (Date.now() < cooldownUntil) {
+      toast({ title: "Attendere", description: "Hai già inviato una richiesta. Riprova tra qualche secondo.", variant: "destructive" });
       return;
     }
     setLoading(true);

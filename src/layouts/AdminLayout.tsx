@@ -6,6 +6,7 @@ import { LogOut, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import logo from "@/assets/easysea-logo.png";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const adminRouteNames: Record<string, string> = {
   "orders": "Orders",
@@ -88,7 +89,9 @@ const AdminLayout = () => {
           </header>
           <main className="flex-1 p-6 overflow-auto">
             <AdminBreadcrumbs />
-            <Outlet />
+            <ErrorBoundary section="admin panel">
+              <Outlet />
+            </ErrorBoundary>
           </main>
         </div>
       </div>
