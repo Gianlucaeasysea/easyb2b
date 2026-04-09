@@ -95,10 +95,9 @@ const DealerOrders = () => {
     enabled: !!client,
   });
 
-  const allOrders = orders || [];
-  const totalPages = Math.max(1, Math.ceil(allOrders.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(nonDraftOrders.length / pageSize));
   const sliceFrom = (page - 1) * pageSize;
-  const pageData = allOrders.slice(sliceFrom, sliceFrom + pageSize);
+  const pageData = nonDraftOrders.slice(sliceFrom, sliceFrom + pageSize);
 
   const getDownloadUrl = (filePath: string) => {
     const { data } = supabase.storage.from("order-documents").getPublicUrl(filePath);
