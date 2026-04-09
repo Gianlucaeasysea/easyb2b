@@ -49,8 +49,8 @@ export function bulkResultToast(
   label: string,
 ) {
   if (result.errors === 0) {
-    toast(`${result.ok} ${label} aggiornati`);
+    toast(`${result.ok} ${label} updated`);
   } else {
-    toastError(`Completati: ${result.ok}, Errori: ${result.errors}`);
+    toastError(`Completed: ${result.ok}, Errors: ${result.errors}`);
   }
 }

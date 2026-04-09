@@ -92,9 +92,9 @@ const AdminProductDetail = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-detail", family] });
       queryClient.invalidateQueries({ queryKey: ["product-details"] });
-      toast.success("Dettagli prodotto salvati con successo");
+      toast.success("Product details saved successfully");
     },
-    onError: (err: any) => toast.error("Errore: " + err.message),
+    onError: (err: any) => toast.error("Error: " + err.message),
   });
 
   if (isLoading) return <p className="text-muted-foreground p-4">Loading...</p>;

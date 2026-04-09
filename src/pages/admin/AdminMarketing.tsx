@@ -125,9 +125,9 @@ const AdminMarketing = () => {
       if (dbError) throw dbError;
       setTitle("");
       queryClient.invalidateQueries({ queryKey: ["admin-marketing-materials"] });
-      toast.success("File caricato con successo");
+      toast.success("File uploaded successfully");
     } catch (err: any) {
-      toast.error("Upload fallito: " + err.message);
+      toast.error("Upload failed: " + err.message);
     } finally {
       setUploading(false);
       e.target.value = "";

@@ -60,7 +60,7 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
       role: form.role.trim() || null,
       notes: form.notes.trim() || null,
     } as any);
-    if (error) { toast.error("Errore nel salvataggio"); return; }
+    if (error) { toast.error("Error saving contact"); return; }
 
     if (form.email.trim()) {
       const { data: client } = await supabase.from("clients").select("email, contact_name").eq("id", clientId).maybeSingle();
@@ -86,8 +86,8 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
       role: form.role.trim() || null,
       notes: form.notes.trim() || null,
     } as any).eq("id", contactId);
-    if (error) { toast.error("Errore nell'aggiornamento"); return; }
-    toast.success("Contatto aggiornato");
+    if (error) { toast.error("Error updating contact"); return; }
+    toast.success("Contact updated");
     setEditingId(null);
     setForm(emptyForm);
     invalidateAll();
@@ -99,7 +99,7 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
       toast.success("Contatto rimosso");
       invalidateAll();
     } catch (err: any) {
-      toast.error(err.message || "Errore nella cancellazione");
+      toast.error(err.message || "Error deleting contact");
     }
   };
 
@@ -134,8 +134,8 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
         className="text-xs min-h-[60px] resize-none"
       />
       <div className="flex gap-2 justify-end">
-        <Button size="sm" variant="ghost" onClick={cancelEdit} className="h-7 text-xs gap-1"><X size={12} /> Annulla</Button>
-        <Button size="sm" onClick={onSave} className="h-7 text-xs gap-1"><Check size={12} /> Salva</Button>
+        <Button size="sm" variant="ghost" onClick={cancelEdit} className="h-7 text-xs gap-1"><X size={12} /> Cancel</Button>
+        <Button size="sm" onClick={onSave} className="h-7 text-xs gap-1"><Check size={12} /> Save</Button>
       </div>
     </div>
   );
@@ -148,7 +148,7 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
         </h3>
         {!adding && !editingId && (
           <Button size="sm" variant="outline" onClick={() => { setAdding(true); setForm(emptyForm); }} className="h-7 text-xs gap-1">
-            <Plus size={12} /> Aggiungi
+            <Plus size={12} /> Add
           </Button>
         )}
       </div>
@@ -202,7 +202,7 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
       {adding && renderForm(handleAdd)}
 
       {!contacts?.length && !clientMainContactName && !adding && (
-        <p className="text-xs text-muted-foreground">Nessun contatto registrato</p>
+        <p className="text-xs text-muted-foreground">No contacts registered</p>
       )}
     </div>
   );

@@ -51,8 +51,8 @@ const CRMRequests = () => {
       setSelectedRequest(null);
     },
     onError: (e: unknown) => {
-      const message = e instanceof Error ? e.message : "Errore sconosciuto";
-      toast({ title: "Errore", description: message, variant: "destructive" });
+      const message = e instanceof Error ? e.message : "Unknown error";
+      toast({ title: "Error", description: message, variant: "destructive" });
     },
   });
 
