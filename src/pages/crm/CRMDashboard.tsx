@@ -226,7 +226,7 @@ const CRMDashboard = () => {
       if (error) throw error;
       await supabase.from("order_events").insert({
         order_id: id, event_type: "status_change",
-        title: "Ordine confermato", description: "L'ordine è stato confermato e il cliente è stato notificato.",
+        title: "Order confirmed", description: "The order has been confirmed and the client has been notified.",
       });
       try {
         await supabase.functions.invoke('send-order-notification', {
@@ -236,7 +236,7 @@ const CRMDashboard = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-orders-dash"] });
-      toast.success("Ordine confermato e cliente notificato");
+      toast.success("Order confirmed and client notified");
     },
   });
 
@@ -246,7 +246,7 @@ const CRMDashboard = () => {
       if (error) throw error;
       await supabase.from("order_events").insert({
         order_id: id, event_type: "order_rejected",
-        title: "Ordine rifiutato", description: "L'ordine è stato rifiutato.",
+        title: "Order rejected", description: "The order has been rejected.",
       });
       try {
         await supabase.functions.invoke('send-order-notification', {
@@ -256,7 +256,7 @@ const CRMDashboard = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-orders-dash"] });
-      toast.success("Ordine rifiutato");
+      toast.success("Order rejected");
     },
   });
 
@@ -279,7 +279,7 @@ const CRMDashboard = () => {
     <div>
       <div className="mb-8">
         <h1 className="font-heading text-2xl font-bold text-foreground">Sales CRM</h1>
-        <p className="text-sm text-muted-foreground">Overview pipeline, KPI e nuovi ordini</p>
+        <p className="text-sm text-muted-foreground">Pipeline overview, KPIs and new orders</p>
       </div>
 
       {/* TODAY'S ACTIONS */}
@@ -353,46 +353,46 @@ const CRMDashboard = () => {
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-3">
             <Euro size={16} className="text-primary" />
-            <h3 className="font-heading font-bold text-foreground text-sm">Totale Ordini Raccolti</h3>
+            <h3 className="font-heading font-bold text-foreground text-sm">Total Orders Collected</h3>
           </div>
           <p className="font-heading text-2xl font-bold text-foreground mb-3">
-            €{totalOrdered.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+            €{totalOrdered.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
           <div className="flex gap-2">
             <Input type="date" value={orderDateFrom} onChange={e => setOrderDateFrom(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
             <Input type="date" value={orderDateTo} onChange={e => setOrderDateTo(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Filtro per Order Date</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Filter by Order Date</p>
         </div>
 
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-3">
             <CreditCard size={16} className="text-success" />
-            <h3 className="font-heading font-bold text-foreground text-sm">Totale Ordini Incassati</h3>
+            <h3 className="font-heading font-bold text-foreground text-sm">Total Orders Collected (Paid)</h3>
           </div>
           <p className="font-heading text-2xl font-bold text-success mb-3">
-            €{totalPayed.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+            €{totalPayed.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
           <div className="flex gap-2">
             <Input type="date" value={payedDateFrom} onChange={e => setPayedDateFrom(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
             <Input type="date" value={payedDateTo} onChange={e => setPayedDateTo(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Filtro per Payed Date</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Filter by Paid Date</p>
         </div>
 
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-3">
             <Truck size={16} className="text-chart-4" />
-            <h3 className="font-heading font-bold text-foreground text-sm">Totale Ordini Consegnati</h3>
+            <h3 className="font-heading font-bold text-foreground text-sm">Total Orders Delivered</h3>
           </div>
           <p className="font-heading text-2xl font-bold text-chart-4 mb-3">
-            €{totalDelivered.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+            €{totalDelivered.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
           <div className="flex gap-2">
             <Input type="date" value={deliveryDateFrom} onChange={e => setDeliveryDateFrom(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
             <Input type="date" value={deliveryDateTo} onChange={e => setDeliveryDateTo(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Filtro per Delivery Date</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Filter by Delivery Date</p>
         </div>
       </div>
 
@@ -400,13 +400,13 @@ const CRMDashboard = () => {
       <div className="glass-card-solid p-6 mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-heading font-bold text-foreground flex items-center gap-2">
-            <PackagePlus size={16} /> Nuovi Ordini ({newOrders.length})
+            <PackagePlus size={16} /> New Orders ({newOrders.length})
           </h2>
         </div>
         {!newOrders.length ? (
           <div className="text-center py-10 text-muted-foreground">
             <PackagePlus className="mx-auto mb-3 opacity-30" size={36} />
-            <p className="text-sm">Nessun nuovo ordine in attesa</p>
+            <p className="text-sm">No new orders pending</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -434,7 +434,7 @@ const CRMDashboard = () => {
                       {o.notes && <p className="text-xs text-muted-foreground mt-1 italic">"{o.notes}"</p>}
                     </div>
                     <p className="font-heading text-lg font-bold text-foreground">
-                      €{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+                      €{Number(o.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 justify-end">
@@ -444,15 +444,15 @@ const CRMDashboard = () => {
                         className="text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10"
                         disabled={rejectOrder.isPending}
                         onClick={() => {
-                          if (confirm("Sei sicuro di voler rifiutare questo ordine?"))
+                        if (confirm("Are you sure you want to reject this order?"))
                             rejectOrder.mutate({ id: o.id, orderCode: (o as any).order_code || "" });
                         }}
                       >
-                        <XCircle size={12} /> Rifiuta
+                        <XCircle size={12} /> Reject
                       </Button>
                     )}
                     <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => navigate(`/admin/orders/${o.id}`)}>
-                      <Eye size={12} /> Dettaglio
+                      <Eye size={12} /> Detail
                     </Button>
                     {o.status === "confirmed" && (
                       <Button
@@ -460,20 +460,20 @@ const CRMDashboard = () => {
                         disabled={!hasDocs || confirmOrder.isPending}
                         className="text-xs gap-1 bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold"
                         onClick={() => confirmOrder.mutate({ id: o.id, orderCode: (o as any).order_code || "" })}
-                        title={!hasDocs ? "Carica prima un documento (Invoice o Order Confirmation)" : ""}
+                        title={!hasDocs ? "Upload a document (Invoice or Order Confirmation) first" : ""}
                       >
-                        {confirmOrder.isPending ? "..." : "Conferma & Invia"}
+                        {confirmOrder.isPending ? "..." : "Confirm & Send"}
                       </Button>
                     )}
                   </div>
                   {o.status === "confirmed" && !hasDocs && (
                     <p className="text-[10px] text-warning mt-2">
-                      ⚠ Carica un documento nel dettaglio ordine per poter confermare.
+                      ⚠ Upload a document in order detail to confirm.
                     </p>
                   )}
                   {docs.length > 0 && (
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      📎 {docs.length} documento{docs.length > 1 ? "i" : ""} caricato{docs.length > 1 ? "i" : ""}
+                      📎 {docs.length} document{docs.length > 1 ? "s" : ""} uploaded
                     </p>
                   )}
                 </div>
@@ -549,13 +549,13 @@ const CRMDashboard = () => {
         <div className="glass-card-solid p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-heading font-bold text-foreground flex items-center gap-2">
-              <CheckSquare size={16} /> I miei Task
+              <CheckSquare size={16} /> My Tasks
             </h2>
-            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => navigate("/crm/tasks")}>Vedi tutti →</Button>
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => navigate("/crm/tasks")}>View all →</Button>
           </div>
           <div className="space-y-2">
             {!myTasks?.length ? (
-              <p className="text-sm text-muted-foreground">Nessun task in scadenza.</p>
+              <p className="text-sm text-muted-foreground">No tasks due.</p>
             ) : myTasks.map(t => {
               const taskTypeIcons: Record<string, any> = { task: ListTodo, call: Phone, meeting: Video, follow_up: MailOpen, deadline: AlertTriangle };
               const Icon = taskTypeIcons[t.type || "task"] || ListTodo;
@@ -586,7 +586,7 @@ const CRMDashboard = () => {
 
       {/* Live Order Details */}
       <div className="mt-8">
-        <OrderDetailsTable title="Dettaglio Ordini (Live Sync)" />
+        <OrderDetailsTable title="Order Details (Live Sync)" />
       </div>
     </div>
   );
