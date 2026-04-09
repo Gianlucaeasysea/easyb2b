@@ -192,17 +192,13 @@ const CRMCreateOrder = () => {
         p_payment_terms: selectedClient?.payment_terms || null,
         p_order_type: "sales_manual",
         p_items: orderItems as any,
+        p_internal_notes: internalNotes.trim() || null,
       });
 
       if (error) throw error;
 
       const orderId = (data as any)?.id;
       const orderCode = (data as any)?.order_code;
-
-      // Save internal notes if provided
-      if (internalNotes.trim() && orderId) {
-        await supabase.from("orders").update({ internal_notes: internalNotes.trim() }).eq("id", orderId);
-      }
 
       // If submitted, send notifications
       if (status === "submitted" && orderId) {

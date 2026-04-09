@@ -60,6 +60,15 @@ const BecomeADealer = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Validate Select fields (Radix Select doesn't support native required)
+    if (!form.zone || !form.country || !form.businessType) {
+      toast({ title: "Errore", description: "Compila tutti i campi obbligatori: regione, paese e tipo di attività.", variant: "destructive" });
+      return;
+    }
+    if (!form.privacy) {
+      toast({ title: "Errore", description: "Devi accettare la Privacy Policy per procedere.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
 
     // Normalize website

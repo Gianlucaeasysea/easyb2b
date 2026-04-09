@@ -396,6 +396,7 @@ const DealerOrders = () => {
             const isExpanded = expandedOrder === order.id;
             const docs = (order as any).order_documents || [];
             const items = (order.order_items || []) as any[];
+            const isSalesOrder = (order as any).order_type === "sales_manual";
             const shippingCost = Number((order as any).shipping_cost_client || 0);
             const phaseIdx = getPhaseIndex(status);
             const isPaid = (order as any).payment_status === "paid";
@@ -471,10 +472,15 @@ const DealerOrders = () => {
                 {isExpanded && (
                   <div className="border-t border-border">
                     {/* Status message */}
-                    {statusMessage && (
+                     {statusMessage && (
                       <div className="px-5 py-3 bg-primary/5 border-b border-border flex items-start gap-3">
                         <Bell size={14} className="text-primary mt-0.5 shrink-0" />
                         <p className="text-sm text-foreground">{statusMessage}</p>
+                      </div>
+                    )}
+                    {isSalesOrder && (
+                      <div className="px-5 py-2 bg-muted/50 border-b border-border">
+                        <p className="text-xs text-muted-foreground italic">📋 Ordine creato dal referente commerciale</p>
                       </div>
                     )}
 
