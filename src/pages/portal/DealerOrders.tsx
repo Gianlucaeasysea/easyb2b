@@ -57,6 +57,14 @@ const DealerOrders = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<any>(null);
+  const [confirmDeleteDraft, setConfirmDeleteDraft] = useState<any>(null);
+  const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
+  const [editingDraft, setEditingDraft] = useState<any>(null);
+  const [draftItems, setDraftItems] = useState<any[]>([]);
+  const [draftNotes, setDraftNotes] = useState("");
+  const [submittingDraft, setSubmittingDraft] = useState(false);
   const [priceCheckData, setPriceCheckData] = useState<{
     order: any;
     items: { product_id: string; name: string; sku: string; quantity: number; originalPrice: number; currentPrice: number | null; available: boolean }[];
@@ -64,8 +72,6 @@ const DealerOrders = () => {
     newTotal: number;
     hasChanges: boolean;
   } | null>(null);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState<any>(null);
   const { data: client } = useQuery({
     queryKey: ["my-client"],
     queryFn: async () => {
