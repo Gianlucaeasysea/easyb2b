@@ -404,12 +404,10 @@ const DealerProfile = () => {
             ) : (
               <div className="space-y-2">
                 {clientDocs.map((doc: any) => (
-                  <a
+                  <button
                     key={doc.id}
-                    href={getDocUrl(doc.file_path)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between bg-secondary/50 rounded-lg px-4 py-3 hover:bg-secondary/80 transition-colors group"
+                    onClick={() => handleDocDownload(doc.file_path)}
+                    className="flex items-center justify-between bg-secondary/50 rounded-lg px-4 py-3 hover:bg-secondary/80 transition-colors group w-full text-left"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -428,7 +426,7 @@ const DealerProfile = () => {
                       </div>
                     </div>
                     <Download size={14} className="text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-                  </a>
+                  </button>
                 ))}
               </div>
             )}
