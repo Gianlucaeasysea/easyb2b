@@ -374,7 +374,18 @@ const AdminOrders = () => {
                         title="Conferma Ordine"
                         onClick={async () => {
                           try {
-                            await supabase.from("orders").update({ status: "confirmed" }).eq("id", o.id);
+                            const calcDueDate = (pt: string | null) => {
+                              const now = new Date();
+                              switch (pt) {
+                                case "prepaid": return now;
+                                case "60_days": return addDays(now, 60);
+                                case "90_days": return addDays(now, 90);
+                                case "end_of_month": return lastDayOfMonth(addMonths(now, 1));
+                                default: return addDays(now, 30);
+                              }
+                            };
+                            const dueDate = calcDueDate(o.payment_terms);
+                            await supabase.from("orders").update({ status: "confirmed", payment_due_date: format(dueDate, "yyyy-MM-dd") }).eq("id", o.id);
                             await supabase.from("client_notifications").insert({
                               client_id: o.client_id,
                               title: "Ordine confermato",
