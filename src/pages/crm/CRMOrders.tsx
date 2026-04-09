@@ -64,7 +64,7 @@ const CRMOrders = () => {
         queryClient.invalidateQueries({ queryKey: ["crm-orders"] });
         const newOrder = payload.new as any;
         if (newOrder.status === "submitted") {
-          toast.info(`Nuovo ordine ${newOrder.order_code || "#" + newOrder.id?.slice(0, 8)} ricevuto`);
+          toast.info(`New order ${newOrder.order_code || "#" + newOrder.id?.slice(0, 8)} received`);
         }
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, () => {
