@@ -1,3 +1,4 @@
+// TODO: ClientMode feature is disabled in the UI. Re-enable when fully implemented.
 import { createContext, useContext, useState, ReactNode } from "react";
 
 interface ClientModeContextType {
