@@ -259,18 +259,18 @@ const CRMOrganizationDetail = () => {
   const assignPriceList = async (priceListId: string) => {
     const { error } = await supabase.from("price_list_clients").insert({ price_list_id: priceListId, client_id: id! } as any);
     if (error) {
-      if (error.code === "23505") toast.info("Listino già assegnato");
+      if (error.code === "23505") toast.info("Price list already assigned");
       else toast.error(error.message);
     } else {
-      const plName = allPriceLists?.find(pl => pl.id === priceListId)?.name || "Listino";
-      toast.success(`Listino "${plName}" assegnato a ${client?.company_name}`);
+      const plName = allPriceLists?.find(pl => pl.id === priceListId)?.name || "Price list";
+      toast.success(`Price list "${plName}" assigned to ${client?.company_name}`);
       refetchAssignedLists();
       // Notify dealer
       if (client?.id) {
         await supabase.from("client_notifications").insert({
           client_id: client.id,
-          title: "Listino prezzi aggiornato",
-          body: "Il tuo listino prezzi è stato aggiornato. Visita il catalogo per vedere i nuovi prezzi.",
+          title: "Price list updated",
+          body: "Your price list has been updated. Visit the catalog to see the new prices.",
           type: "info",
           target_role: "dealer",
         } as any);
@@ -281,7 +281,7 @@ const CRMOrganizationDetail = () => {
   const removePriceList = async (plcId: string) => {
     const { error } = await supabase.from("price_list_clients").delete().eq("id", plcId);
     if (error) toast.error(error.message);
-    else { toast.success("Listino rimosso"); refetchAssignedLists(); }
+    else { toast.success("Price list removed"); refetchAssignedLists(); }
   };
 
   // discount_class deprecated - use price lists instead
@@ -310,12 +310,12 @@ const CRMOrganizationDetail = () => {
 
     if (editContactId) {
       const { error } = await supabase.from("client_contacts").update(payload).eq("id", editContactId);
-      if (error) { toast.error("Errore aggiornamento"); return; }
-      toast.success("Contatto aggiornato");
+      if (error) { toast.error("Failed to update contact"); return; }
+      toast.success("Contact updated");
     } else {
       const { error } = await supabase.from("client_contacts").insert(payload);
-      if (error) { toast.error("Errore salvataggio"); return; }
-      toast.success("Contatto aggiunto");
+      if (error) { toast.error("Failed to save contact"); return; }
+      toast.success("Contact added");
     }
     setAddContactOpen(false);
     setEditContactId(null);
@@ -327,10 +327,10 @@ const CRMOrganizationDetail = () => {
   const deleteContact = async (contactId: string) => {
     try {
       await deleteContactsCascade([contactId]);
-      toast.success("Contatto rimosso");
+      toast.success("Contact removed");
       refetchContacts();
     } catch (err: any) {
-      toast.error(err.message || "Errore eliminazione");
+      toast.error(err.message || "Failed to delete contact");
     }
   };
 
@@ -375,8 +375,8 @@ const CRMOrganizationDetail = () => {
       contact_id: actForm.contact_id || null,
       created_by: user?.id,
     } as any);
-    if (error) { toast.error("Errore"); return; }
-    toast.success("Attività aggiunta");
+    if (error) { toast.error("Error"); return; }
+    toast.success("Activity added");
     setAddActivityOpen(false);
     setActForm({ title: "", type: "call", body: "", contact_id: "" });
     queryClient.invalidateQueries({ queryKey: ["crm-org-activities", id] });
@@ -384,11 +384,11 @@ const CRMOrganizationDetail = () => {
 
   const openWhatsApp = (phone: string, name: string) => {
     const clean = phone.replace(/[^+\d]/g, "");
-    window.open(`https://wa.me/${clean.replace("+", "")}?text=${encodeURIComponent(`Buongiorno ${name}, sono il team commerciale EasySea.`)}`, "_blank");
+    window.open(`https://wa.me/${clean.replace("+", "")}?text=${encodeURIComponent(`Hello ${name}, this is the EasySea commercial team.`)}`, "_blank");
   };
 
-  if (isLoading) return <div className="text-muted-foreground p-6">Caricamento...</div>;
-  if (!client) return <div className="text-muted-foreground p-6">Organizzazione non trovata</div>;
+  if (isLoading) return <div className="text-muted-foreground p-6">Loading...</div>;
+  if (!client) return <div className="text-muted-foreground p-6">Organization not found</div>;
 
   const lastOrderDate = client.last_order_date;
   const daysSinceLastOrder = client.days_since_last_order;
