@@ -36,6 +36,7 @@ const quickFilterConfig: { key: QuickFilter; label: string; statuses: string[] }
 
 const CRMOrders = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
