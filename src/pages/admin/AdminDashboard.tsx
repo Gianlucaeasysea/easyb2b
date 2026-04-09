@@ -47,7 +47,7 @@ const AdminDashboard = () => {
     try {
       const { data, error } = await supabase.functions.invoke("gsheet-sync");
       if (error) throw error;
-      toast.success(`Sync completata: ${data.newOrders} nuovi ordini, ${data.updatedOrders} aggiornati`);
+      toast.success(`Sync complete: ${data.newOrders} new orders, ${data.updatedOrders} updated`);
       queryClient.invalidateQueries({ queryKey: ["admin-orders-dash"] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
     } catch (error) {
@@ -229,46 +229,46 @@ const AdminDashboard = () => {
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-3">
             <Euro size={16} className="text-primary" />
-            <h3 className="font-heading font-bold text-foreground text-sm">Totale Ordinato</h3>
+            <h3 className="font-heading font-bold text-foreground text-sm">Total Ordered</h3>
           </div>
           <p className="font-heading text-2xl font-bold text-foreground mb-3">
-            €{totalOrdered.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+            €{totalOrdered.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
           <div className="flex gap-2">
             <Input type="date" value={orderDateFrom} onChange={e => setOrderDateFrom(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
             <Input type="date" value={orderDateTo} onChange={e => setOrderDateTo(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Filtro per Order Date</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Filter by Order Date</p>
         </div>
 
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-3">
             <CreditCard size={16} className="text-success" />
-            <h3 className="font-heading font-bold text-foreground text-sm">Totale Pagato</h3>
+            <h3 className="font-heading font-bold text-foreground text-sm">Total Paid</h3>
           </div>
           <p className="font-heading text-2xl font-bold text-success mb-3">
-            €{totalPayed.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+            €{totalPayed.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
           <div className="flex gap-2">
             <Input type="date" value={payedDateFrom} onChange={e => setPayedDateFrom(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
             <Input type="date" value={payedDateTo} onChange={e => setPayedDateTo(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Filtro per Data Pagamento</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Filter by Payment Date</p>
         </div>
 
         <div className="glass-card-solid p-5">
           <div className="flex items-center gap-2 mb-3">
             <Truck size={16} className="text-chart-4" />
-            <h3 className="font-heading font-bold text-foreground text-sm">Totale Consegnato</h3>
+            <h3 className="font-heading font-bold text-foreground text-sm">Total Delivered</h3>
           </div>
           <p className="font-heading text-2xl font-bold text-chart-4 mb-3">
-            €{totalDelivered.toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+            €{totalDelivered.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
           <div className="flex gap-2">
             <Input type="date" value={deliveryDateFrom} onChange={e => setDeliveryDateFrom(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
             <Input type="date" value={deliveryDateTo} onChange={e => setDeliveryDateTo(e.target.value)} className="text-xs bg-secondary border-border rounded-lg h-8" />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">Filtro per Delivery Date</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Filter by Delivery Date</p>
         </div>
       </div>
 
@@ -276,29 +276,29 @@ const AdminDashboard = () => {
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
         {/* 1. Monthly Revenue (full width) */}
         <div className="glass-card-solid p-5 lg:col-span-2">
-          <h2 className="font-heading font-bold text-foreground mb-4">📈 Revenue Mensile (ultimi 12 mesi)</h2>
+          <h2 className="font-heading font-bold text-foreground mb-4">📈 Monthly Revenue (last 12 months)</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyRevenue}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
               <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => [`€${v.toLocaleString("it-IT", { minimumFractionDigits: 2 })}`, ""]} />
+              <Tooltip formatter={(v: number) => [`€${v.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, ""]} />
               <Legend />
-              <Line type="monotone" dataKey="current" name="Anno corrente" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="previous" name="Anno precedente" stroke="#9ca3af" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
+              <Line type="monotone" dataKey="current" name="Current Year" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="previous" name="Previous Year" stroke="#9ca3af" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* 2. Top 10 Products */}
         <div className="glass-card-solid p-5">
-          <h2 className="font-heading font-bold text-foreground mb-4">🏆 Top 10 Prodotti Venduti</h2>
+          <h2 className="font-heading font-bold text-foreground mb-4">🏆 Top 10 Products Sold</h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={topProducts || []} layout="vertical" margin={{ left: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
               <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={80} stroke="hsl(var(--muted-foreground))" />
-              <Tooltip formatter={(v: number) => [v, "Quantità"]} />
+              <Tooltip formatter={(v: number) => [v, "Quantity"]} />
               <Bar dataKey="qty" fill="#3b82f6" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -306,7 +306,7 @@ const AdminDashboard = () => {
 
         {/* 3. Client Distribution by Discount Class */}
         <div className="glass-card-solid p-5">
-          <h2 className="font-heading font-bold text-foreground mb-4">👥 Distribuzione Clienti per Classe Sconto</h2>
+          <h2 className="font-heading font-bold text-foreground mb-4">👥 Client Distribution by Discount Class</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie data={discountDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
@@ -314,14 +314,14 @@ const AdminDashboard = () => {
                   <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v: number) => [v, "Clienti"]} />
+              <Tooltip formatter={(v: number) => [v, "Clients"]} />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
         {/* 4. Orders by Status */}
         <div className="glass-card-solid p-5">
-          <h2 className="font-heading font-bold text-foreground mb-4">📦 Ordini per Status</h2>
+          <h2 className="font-heading font-bold text-foreground mb-4">📦 Orders by Status</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie data={ordersByStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} label={({ name, value }) => `${name}: ${value}`}>
@@ -329,7 +329,7 @@ const AdminDashboard = () => {
                   <Cell key={i} fill={entry.fill} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v: number) => [v, "Ordini"]} />
+              <Tooltip formatter={(v: number) => [v, "Orders"]} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -338,11 +338,11 @@ const AdminDashboard = () => {
         <div className={`glass-card-solid p-5 ${latePayments.length > 0 ? "border-destructive/30 bg-destructive/5" : ""}`}>
           <h2 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2">
             <AlertTriangle size={16} className={latePayments.length > 0 ? "text-destructive" : "text-success"} />
-            Pagamenti in Ritardo ({">"}30gg)
+            Late Payments ({">"}30 days)
           </h2>
           {latePayments.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-success font-medium">✓ Nessun pagamento in ritardo</p>
+              <p className="text-success font-medium">✓ No late payments</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-[250px] overflow-y-auto">
@@ -357,8 +357,8 @@ const AdminDashboard = () => {
                     <p className="text-xs text-muted-foreground font-mono">{o.order_code || o.id.slice(0, 8)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-mono text-sm font-semibold text-destructive">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</p>
-                    <p className="text-xs text-destructive/70">{o.daysLate} giorni</p>
+                    <p className="font-mono text-sm font-semibold text-destructive">€{Number(o.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</p>
+                    <p className="text-xs text-destructive/70">{o.daysLate} days</p>
                   </div>
                 </Link>
               ))}
