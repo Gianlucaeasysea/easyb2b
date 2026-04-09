@@ -53,7 +53,12 @@ const AdminOrders = () => {
         .not("order_type", "in", '("MANUAL B2C","B2C","CUSTOM")')
         .order("created_at", { ascending: false });
 
-      if (statusFilter !== "all") query = query.eq("status", statusFilter);
+      if (statusFilter === "overdue") {
+        const today = new Date().toISOString().split("T")[0];
+        query = query.lt("payment_due_date", today).neq("payment_status", "paid");
+      } else if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
       if (dateFrom) query = query.gte("created_at", `${dateFrom}T00:00:00`);
       if (dateTo) query = query.lte("created_at", `${dateTo}T23:59:59`);
       if (search) query = query.or(`order_code.ilike.%${search}%,tracking_number.ilike.%${search}%`);
