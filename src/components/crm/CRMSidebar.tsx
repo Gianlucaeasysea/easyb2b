@@ -20,19 +20,19 @@ type SidebarItem = {
 
 const items: SidebarItem[] = [
   { title: "Dashboard", url: "/crm", icon: LayoutDashboard },
-  { title: "Richieste Dealer", url: "/crm/requests", icon: Inbox, badgeKey: "requests" },
+  { title: "Dealer Requests", url: "/crm/requests", icon: Inbox, badgeKey: "requests" },
   { title: "Leads", url: "/crm/leads", icon: UserPlus },
   { title: "Deals", url: "/crm/deals", icon: Handshake, badgeKey: "expiring_deals" },
-  { title: "Pipeline Deals", url: "/crm/deals/pipeline", icon: KanbanSquare, indent: true },
-  { title: "Organizzazioni", url: "/crm/organizations", icon: Building2 },
-  { title: "Contatti", url: "/crm/contacts", icon: Users },
-  { title: "Attività", url: "/crm/activities", icon: Activity },
-  { title: "Ordini", url: "/crm/orders", icon: Package, badgeKey: "submitted_orders" },
-  { title: "Task", url: "/crm/tasks", icon: CheckSquare, badgeKey: "overdue_tasks" },
+  { title: "Deals Pipeline", url: "/crm/deals/pipeline", icon: KanbanSquare, indent: true },
+  { title: "Organizations", url: "/crm/organizations", icon: Building2 },
+  { title: "Contacts", url: "/crm/contacts", icon: Users },
+  { title: "Activities", url: "/crm/activities", icon: Activity },
+  { title: "Orders", url: "/crm/orders", icon: Package, badgeKey: "submitted_orders" },
+  { title: "Tasks", url: "/crm/tasks", icon: CheckSquare, badgeKey: "overdue_tasks" },
   { title: "Analytics", url: "/crm/analytics", icon: BarChart3 },
-  { title: "Template Email", url: "/crm/email-templates", icon: MailPlus },
-  { title: "Automazioni", url: "/crm/automations", icon: Zap, adminOnly: true },
-  { title: "Aiuto", url: "/crm/help", icon: HelpCircle },
+  { title: "Email Templates", url: "/crm/email-templates", icon: MailPlus },
+  { title: "Automations", url: "/crm/automations", icon: Zap, adminOnly: true },
+  { title: "Help", url: "/crm/help", icon: HelpCircle },
 ];
 
 export function CRMSidebar() {
