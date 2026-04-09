@@ -606,7 +606,6 @@ export type Database = {
           payment_terms_notes: string | null
           phone: string | null
           platform_client_id: string | null
-          portal_password: string | null
           show_discount_tiers: boolean
           show_goals: boolean
           status: string | null
@@ -641,7 +640,6 @@ export type Database = {
           payment_terms_notes?: string | null
           phone?: string | null
           platform_client_id?: string | null
-          portal_password?: string | null
           show_discount_tiers?: boolean
           show_goals?: boolean
           status?: string | null
@@ -676,7 +674,6 @@ export type Database = {
           payment_terms_notes?: string | null
           phone?: string | null
           platform_client_id?: string | null
-          portal_password?: string | null
           show_discount_tiers?: boolean
           show_goals?: boolean
           status?: string | null
