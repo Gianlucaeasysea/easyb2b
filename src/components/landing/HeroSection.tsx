@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
-import Aurora from "@/components/ui/Aurora";
+import DarkVeil from "@/components/ui/DarkVeil";
 
 const HeroSection = () => {
   const ref = useRef<HTMLElement>(null);
@@ -13,13 +13,15 @@ const HeroSection = () => {
 
   return (
     <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
-      {/* Aurora background */}
-      <div className="absolute inset-0 pointer-events-none opacity-40">
-        <Aurora
-          colorStops={['#1e3a5f', '#3b82f6', '#06b6d4']}
-          amplitude={1.2}
-          blend={0.6}
-          speed={0.8}
+      {/* Dark Veil background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <DarkVeil
+          hueShift={0}
+          noiseIntensity={0.03}
+          scanlineIntensity={0}
+          speed={0.4}
+          warpAmount={0.04}
+          resolutionScale={0.75}
         />
       </div>
       {/* Fade to background at bottom */}
