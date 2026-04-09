@@ -22,32 +22,32 @@ import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
 
 const ORDER_PHASES = [
-  { key: "submitted", label: "Inviato", icon: Send },
-  { key: "confirmed", label: "Confermato", icon: CheckCircle },
-  { key: "processing", label: "In Lavorazione", icon: Package },
-  { key: "ready_to_ship", label: "In Preparazione", icon: Clock },
-  { key: "shipped", label: "Spedito", icon: Truck },
-  { key: "delivered", label: "Consegnato", icon: Package },
+  { key: "submitted", label: "Submitted", icon: Send },
+  { key: "confirmed", label: "Confirmed", icon: CheckCircle },
+  { key: "processing", label: "Processing", icon: Package },
+  { key: "ready_to_ship", label: "Ready to Ship", icon: Clock },
+  { key: "shipped", label: "Shipped", icon: Truck },
+  { key: "delivered", label: "Delivered", icon: Package },
 ];
 
 const STATUS_MESSAGES: Record<string, string> = {
-  submitted: "Il tuo ordine è stato inviato ed è in attesa di conferma dal nostro team.",
-  confirmed: "Il tuo ordine è stato confermato ed è in fase di revisione. Riceverai una conferma con la fattura a breve.",
-  processing: "Il tuo ordine è stato confermato e la fattura è disponibile nei documenti. Stiamo preparando la spedizione.",
-  ready_to_ship: "Il tuo ordine è pronto e sarà spedito a breve. Riceverai il tracking non appena disponibile.",
-  shipped: "Il tuo ordine è stato spedito! Usa il link di tracking per seguire la consegna.",
-  delivered: "Il tuo ordine è stato consegnato con successo.",
+  submitted: "Your order has been submitted and is awaiting confirmation from our team.",
+  confirmed: "Your order has been confirmed and is under review. You will receive an invoice shortly.",
+  processing: "Your order has been confirmed and the invoice is available in the documents section. We are preparing shipment.",
+  ready_to_ship: "Your order is ready and will be shipped shortly. You will receive tracking information as soon as available.",
+  shipped: "Your order has been shipped! Use the tracking link to follow the delivery.",
+  delivered: "Your order has been delivered successfully.",
 };
 
 const DOC_TYPE_LABELS: Record<string, string> = {
-  order_confirmation: "Conferma Ordine",
-  invoice: "Fattura",
-  delivery_note: "DDT / Bolla di Spedizione",
+  order_confirmation: "Order Confirmation",
+  invoice: "Invoice",
+  delivery_note: "Delivery Note",
   ddt: "DDT",
-  credit_note: "Nota di Credito",
+  credit_note: "Credit Note",
   proforma: "Proforma",
-  warranty: "Certificato di Garanzia",
-  other: "Altro",
+  warranty: "Warranty Certificate",
+  other: "Other",
 };
 
 const DealerOrders = () => {
@@ -119,7 +119,7 @@ const DealerOrders = () => {
     setDuplicatingId(order.id);
     try {
       const items = (order.order_items || []) as any[];
-      if (!items.length) { toast.error("L'ordine non ha prodotti da duplicare"); return; }
+      if (!items.length) { toast.error("This order has no items to duplicate"); return; }
 
       // Fetch current prices from client's price list
       const { data: priceListClients } = await supabase.from("price_list_clients").select("price_list_id").eq("client_id", client.id);
@@ -141,7 +141,7 @@ const DealerOrders = () => {
         const currentPrice = available ? (priceMap[item.product_id] ?? (product?.price ? Number(product.price) : null)) : null;
         return {
           product_id: item.product_id,
-          name: item.products?.name || "Prodotto sconosciuto",
+          name: item.products?.name || "Unknown product",
           sku: item.products?.sku || "—",
           quantity: item.quantity,
           originalPrice: Number(item.unit_price || 0),
@@ -186,14 +186,14 @@ const DealerOrders = () => {
           subtotal: i.currentPrice! * i.quantity,
         }));
 
-      if (!validItems.length) { toast.error("Nessun prodotto disponibile per la duplicazione"); return; }
+      if (!validItems.length) { toast.error("No available products to duplicate"); return; }
 
       const excludedCount = itemsToUse.length - validItems.length;
 
       const { data: newOrder, error: orderErr } = await supabase.rpc("create_order_with_items", {
         p_client_id: client.id,
         p_status: "draft",
-        p_notes: `Duplicato da ordine ${(order as any).order_code || order.id.slice(0, 8)}`,
+        p_notes: `Duplicated from order ${(order as any).order_code || order.id.slice(0, 8)}`,
         p_payment_terms: (client as any).payment_terms || null,
         p_items: validItems,
       });
@@ -202,9 +202,9 @@ const DealerOrders = () => {
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
       const newCode = (newOrder as any)?.order_code || (newOrder as any)?.id?.slice(0, 8);
       if (excludedCount > 0) {
-        toast.warning(`Ordine duplicato come bozza #${newCode}. ${excludedCount} prodotti non disponibili esclusi. Verificalo prima di inviarlo.`);
+        toast.warning(`Order duplicated as draft #${newCode}. ${excludedCount} unavailable products excluded. Review before submitting.`);
       } else {
-        toast.success(`Ordine duplicato come bozza #${newCode}. Verificalo prima di inviarlo.`);
+        toast.success(`Order duplicated as draft #${newCode}. Review before submitting.`);
       }
     } catch (error) {
       showErrorToast(error, "DealerOrders.duplicate");
@@ -221,7 +221,7 @@ const DealerOrders = () => {
       const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", order.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      toast.success("Ordine annullato con successo");
+      toast.success("Order cancelled successfully");
     } catch (error) {
       showErrorToast(error, "DealerOrders.cancel");
     } finally {
@@ -236,13 +236,13 @@ const DealerOrders = () => {
     setDeletingDraftId(order.id);
     try {
       // Mark linked deal as lost
-      await supabase.from("deals").update({ stage: "closed_lost", lost_reason: "Bozza eliminata dal dealer", closed_at: new Date().toISOString() }).eq("order_id", order.id).eq("source", "dealer_draft");
+      await supabase.from("deals").update({ stage: "closed_lost", lost_reason: "Draft deleted by dealer", closed_at: new Date().toISOString() }).eq("order_id", order.id).eq("source", "dealer_draft");
       // Delete order items then order
       await supabase.from("order_items").delete().eq("order_id", order.id);
       const { error } = await supabase.from("orders").delete().eq("id", order.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      toast.success("Bozza eliminata");
+      toast.success("Draft deleted");
     } catch (error) {
       showErrorToast(error, "DealerOrders.deleteDraft");
     } finally {
@@ -308,7 +308,7 @@ const DealerOrders = () => {
       } catch {}
 
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      toast.success("Ordine inviato con successo!");
+      toast.success("Order submitted successfully!");
       setEditingDraft(null);
     } catch (error) {
       showErrorToast(error, "DealerOrders.submitDraft");
