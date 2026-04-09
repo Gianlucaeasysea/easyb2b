@@ -167,13 +167,13 @@ const AdminSettings = () => {
         <div className="glass-card-solid p-6">
           <div className="flex items-center gap-2 mb-4">
             <Mail size={18} className="text-primary" />
-            <h3 className="font-heading font-bold text-foreground">Notifiche Email</h3>
+            <h3 className="font-heading font-bold text-foreground">Email Notifications</h3>
           </div>
-          <p className="text-sm text-muted-foreground mb-4">Destinatari delle notifiche email per nuovi ordini e aggiornamenti.</p>
+          <p className="text-sm text-muted-foreground mb-4">Recipients for email notifications on new orders and updates.</p>
 
           {/* TO recipients */}
           <div className="mb-4">
-            <p className="text-xs font-semibold text-foreground mb-2">Destinatari (TO)</p>
+            <p className="text-xs font-semibold text-foreground mb-2">Recipients (TO)</p>
             <div className="flex flex-wrap gap-2 mb-2">
               {notifEmails?.to?.map(email => (
                 <Badge key={email} variant="secondary" className="gap-1 text-xs py-1 px-2">
@@ -181,26 +181,26 @@ const AdminSettings = () => {
                   <button onClick={() => removeEmail("to", email)} className="ml-1 hover:text-destructive"><X size={12} /></button>
                 </Badge>
               ))}
-              {!notifEmails?.to?.length && <span className="text-xs text-muted-foreground italic">Nessun destinatario</span>}
+              {!notifEmails?.to?.length && <span className="text-xs text-muted-foreground italic">No recipients</span>}
             </div>
             <div className="flex gap-2">
               <Input
                 type="email"
-                placeholder="Aggiungi email..."
+                placeholder="Add email..."
                 value={newToEmail}
                 onChange={e => setNewToEmail(e.target.value)}
                 className="h-8 text-xs max-w-xs"
                 onKeyDown={e => e.key === "Enter" && newToEmail && addEmail("to", newToEmail)}
               />
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => addEmail("to", newToEmail)} disabled={!newToEmail}>
-                <Plus size={12} /> Aggiungi
+                <Plus size={12} /> Add
               </Button>
             </div>
           </div>
 
           {/* BCC recipients */}
           <div>
-            <p className="text-xs font-semibold text-foreground mb-2">Copia nascosta (BCC)</p>
+            <p className="text-xs font-semibold text-foreground mb-2">Blind Carbon Copy (BCC)</p>
             <div className="flex flex-wrap gap-2 mb-2">
               {notifEmails?.bcc?.map(email => (
                 <Badge key={email} variant="outline" className="gap-1 text-xs py-1 px-2">
@@ -208,19 +208,19 @@ const AdminSettings = () => {
                   <button onClick={() => removeEmail("bcc", email)} className="ml-1 hover:text-destructive"><X size={12} /></button>
                 </Badge>
               ))}
-              {!notifEmails?.bcc?.length && <span className="text-xs text-muted-foreground italic">Nessun destinatario BCC</span>}
+              {!notifEmails?.bcc?.length && <span className="text-xs text-muted-foreground italic">No BCC recipients</span>}
             </div>
             <div className="flex gap-2">
               <Input
                 type="email"
-                placeholder="Aggiungi email BCC..."
+                placeholder="Add BCC email..."
                 value={newBccEmail}
                 onChange={e => setNewBccEmail(e.target.value)}
                 className="h-8 text-xs max-w-xs"
                 onKeyDown={e => e.key === "Enter" && newBccEmail && addEmail("bcc", newBccEmail)}
               />
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => addEmail("bcc", newBccEmail)} disabled={!newBccEmail}>
-                <Plus size={12} /> Aggiungi
+                <Plus size={12} /> Add
               </Button>
             </div>
           </div>
@@ -229,16 +229,16 @@ const AdminSettings = () => {
         <div className="glass-card-solid p-6">
           <div className="flex items-center gap-2 mb-4">
             <Shield size={18} className="text-primary" />
-            <h3 className="font-heading font-bold text-foreground">Gestione Ruoli Utente</h3>
+            <h3 className="font-heading font-bold text-foreground">User Role Management</h3>
           </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Email</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Ruolo</TableHead>
-                  <TableHead>Azioni</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -256,7 +256,7 @@ const AdminSettings = () => {
                           value={ur.role}
                           onValueChange={(v) => {
                             if (isCurrentUser && ur.role === "admin" && v !== "admin") {
-                              toast.error("Non puoi rimuovere il ruolo admin dal tuo account");
+                              toast.error("You cannot remove the admin role from your own account");
                               return;
                             }
                             setConfirmRole({ userId: ur.user_id, email: ur.email, oldRole: ur.role, newRole: v });
@@ -286,22 +286,22 @@ const AdminSettings = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <MailX size={18} className="text-destructive" />
-              <h3 className="font-heading font-bold text-foreground">Email Soppresse</h3>
+              <h3 className="font-heading font-bold text-foreground">Suppressed Emails</h3>
             </div>
             <Button size="sm" variant="outline" onClick={() => setShowAddSuppress(true)} className="gap-1">
-              <Plus size={14} /> Aggiungi
+              <Plus size={14} /> Add
             </Button>
           </div>
           {!suppressedEmails?.length ? (
-            <p className="text-sm text-muted-foreground py-4">Nessuna email soppressa.</p>
+            <p className="text-sm text-muted-foreground py-4">No suppressed emails.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Email</TableHead>
-                    <TableHead>Motivo</TableHead>
-                    <TableHead>Data</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead>Date</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -332,16 +332,16 @@ const AdminSettings = () => {
       {/* Confirm Role Change Dialog */}
       <Dialog open={!!confirmRole} onOpenChange={() => setConfirmRole(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Conferma Cambio Ruolo</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Confirm Role Change</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Sei sicuro di voler cambiare il ruolo di <strong>{confirmRole?.email}</strong> da{" "}
-            <Badge variant="outline" className="text-xs">{roleLabels[confirmRole?.oldRole || ""]}</Badge> a{" "}
+            Are you sure you want to change the role of <strong>{confirmRole?.email}</strong> from{" "}
+            <Badge variant="outline" className="text-xs">{roleLabels[confirmRole?.oldRole || ""]}</Badge> to{" "}
             <Badge variant="outline" className="text-xs">{roleLabels[confirmRole?.newRole || ""]}</Badge>?
           </p>
           <div className="flex gap-2 justify-end mt-4">
-            <Button variant="outline" onClick={() => setConfirmRole(null)}>Annulla</Button>
+            <Button variant="outline" onClick={() => setConfirmRole(null)}>Cancel</Button>
             <Button onClick={() => confirmRole && changeRole.mutate({ userId: confirmRole.userId, newRole: confirmRole.newRole })} disabled={changeRole.isPending}>
-              Conferma
+              Confirm
             </Button>
           </div>
         </DialogContent>
@@ -350,17 +350,17 @@ const AdminSettings = () => {
       {/* Add Suppress Email Dialog */}
       <Dialog open={showAddSuppress} onOpenChange={setShowAddSuppress}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Aggiungi Email Soppressa</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Add Suppressed Email</DialogTitle></DialogHeader>
           <Input
             type="email"
-            placeholder="email@esempio.com"
+            placeholder="email@example.com"
             value={newSuppressEmail}
             onChange={e => setNewSuppressEmail(e.target.value)}
           />
           <div className="flex gap-2 justify-end mt-2">
-            <Button variant="outline" onClick={() => setShowAddSuppress(false)}>Annulla</Button>
+            <Button variant="outline" onClick={() => setShowAddSuppress(false)}>Cancel</Button>
             <Button onClick={() => addSuppress.mutate()} disabled={!newSuppressEmail || addSuppress.isPending}>
-              Aggiungi
+              Add
             </Button>
           </div>
         </DialogContent>

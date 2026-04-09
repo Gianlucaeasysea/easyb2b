@@ -9,14 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { FileText, Upload, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
 
 const DOC_TYPES = [
-  { value: "invoice", label: "Fattura" },
+  { value: "invoice", label: "Invoice" },
   { value: "ddt", label: "DDT" },
-  { value: "credit_note", label: "Nota di Credito" },
+  { value: "credit_note", label: "Credit Note" },
   { value: "proforma", label: "Proforma" },
-  { value: "other", label: "Altro" },
+  { value: "other", label: "Other" },
 ];
 
 interface OrderDocumentsProps {
@@ -51,7 +50,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
     if (!file || !user) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("Il file non può superare i 10MB");
+      toast.error("File size cannot exceed 10MB");
       return;
     }
 
@@ -81,13 +80,13 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
       await supabase.from("order_events").insert({
         order_id: orderId,
         event_type: "document_uploaded",
-        title: `Documento caricato: ${docLabel}`,
+        title: `Document uploaded: ${docLabel}`,
         description: file.name,
       });
 
       queryClient.invalidateQueries({ queryKey: ["order-documents", orderId] });
       queryClient.invalidateQueries({ queryKey: ["order-events", orderId] });
-      toast.success("Documento caricato");
+      toast.success("Document uploaded");
 
       // Send email notification
       try {
@@ -104,8 +103,8 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
         if (order?.client_id) {
           await supabase.from("client_notifications").insert({
             client_id: order.client_id,
-            title: `Nuovo documento disponibile`,
-            body: `${docLabel} caricata per l'ordine #${order.order_code || orderId.slice(0, 8)}`,
+            title: `New document available`,
+            body: `${docLabel} uploaded for order #${order.order_code || orderId.slice(0, 8)}`,
             type: "document",
             order_id: orderId,
           });
@@ -116,7 +115,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
 
       setUploadNote("");
     } catch (err: any) {
-      toast.error("Errore upload: " + err.message);
+      toast.error("Upload error: " + err.message);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -129,9 +128,9 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
       await supabase.storage.from("order-documents").remove([deleteDoc.file_path]);
       await supabase.from("order_documents").delete().eq("id", deleteDoc.id);
       queryClient.invalidateQueries({ queryKey: ["order-documents", orderId] });
-      toast.success("Documento eliminato");
+      toast.success("Document deleted");
     } catch (err: any) {
-      toast.error("Errore eliminazione: " + err.message);
+      toast.error("Delete error: " + err.message);
     } finally {
       setDeleteDoc(null);
     }
@@ -147,7 +146,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
   return (
     <div>
       <h4 className="font-heading text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-        <FileText size={14} /> Documenti
+        <FileText size={14} /> Documents
       </h4>
 
       {/* Upload section (admin only) */}
@@ -179,13 +178,13 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
               className="text-xs gap-1.5 rounded-lg"
             >
               <Upload size={12} />
-              {uploading ? "Caricamento..." : "Carica Documento"}
+              {uploading ? "Uploading..." : "Upload Document"}
             </Button>
           </div>
           <Textarea
             value={uploadNote}
             onChange={e => setUploadNote(e.target.value)}
-            placeholder="Nota opzionale..."
+            placeholder="Optional note..."
             className="text-xs min-h-[40px] resize-none bg-secondary border-border"
           />
         </div>
@@ -193,9 +192,9 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
 
       {/* Document list */}
       {isLoading ? (
-        <p className="text-xs text-muted-foreground">Caricamento documenti...</p>
+        <p className="text-xs text-muted-foreground">Loading documents...</p>
       ) : !documents?.length ? (
-        <p className="text-xs text-muted-foreground italic">Nessun documento disponibile</p>
+        <p className="text-xs text-muted-foreground italic">No documents available</p>
       ) : (
         <div className="space-y-1.5">
           {documents.map(doc => (
@@ -205,7 +204,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-foreground truncate">{doc.file_name}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {docTypeLabel(doc.doc_type)} · {format(new Date(doc.created_at), "dd MMM yyyy", { locale: it })}
+                    {docTypeLabel(doc.doc_type)} · {format(new Date(doc.created_at), "dd MMM yyyy")}
                     {(doc as any).note && ` · ${(doc as any).note}`}
                   </p>
                 </div>
@@ -229,14 +228,14 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
       <Dialog open={!!deleteDoc} onOpenChange={(open) => { if (!open) setDeleteDoc(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-heading">Elimina Documento</DialogTitle>
+            <DialogTitle className="font-heading">Delete Document</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Sei sicuro di voler eliminare <strong>{deleteDoc?.file_name}</strong>? Questa azione non può essere annullata.
+            Are you sure you want to delete <strong>{deleteDoc?.file_name}</strong>? This action cannot be undone.
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={() => setDeleteDoc(null)}>Annulla</Button>
-            <Button variant="destructive" size="sm" onClick={handleDelete}>Elimina</Button>
+            <Button variant="outline" size="sm" onClick={() => setDeleteDoc(null)}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={handleDelete}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

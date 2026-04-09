@@ -36,7 +36,7 @@ const invokeCrmEntityAction = async <T>(payload: InvokePayload): Promise<T> => {
   }
 
   if (!response.ok) {
-    throw new Error(body?.error || body?.message || `Errore durante la chiamata al backend (${response.status}).`);
+    throw new Error(body?.error || body?.message || `Error calling backend (${response.status}).`);
   }
 
   return body as T;
