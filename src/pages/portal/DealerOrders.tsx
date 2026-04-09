@@ -572,7 +572,7 @@ const DealerOrders = () => {
                         {order.tracking_url && (
                           <a href={order.tracking_url} target="_blank" rel="noopener noreferrer">
                             <Button variant="ghost" size="sm" className="text-primary text-xs gap-1">
-                              Traccia spedizione <ExternalLink size={12} />
+                              Track shipment <ExternalLink size={12} />
                             </Button>
                           </a>
                         )}
@@ -582,7 +582,7 @@ const DealerOrders = () => {
                     {/* Notes */}
                     {order.notes && (
                       <div className="px-5 py-2 bg-secondary/20 border-b border-border">
-                        <p className="text-xs text-muted-foreground"><span className="font-semibold">Le tue note:</span> {order.notes}</p>
+                        <p className="text-xs text-muted-foreground"><span className="font-semibold">Your notes:</span> {order.notes}</p>
                       </div>
                     )}
 
@@ -590,11 +590,11 @@ const DealerOrders = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="text-xs">Prodotto</TableHead>
-                          <TableHead className="text-xs text-right">Qtà</TableHead>
-                          <TableHead className="text-xs text-right">Prezzo</TableHead>
-                          <TableHead className="text-xs text-right">Sconto</TableHead>
-                          <TableHead className="text-xs text-right">Subtotale</TableHead>
+                         <TableHead className="text-xs">Product</TableHead>
+                          <TableHead className="text-xs text-right">Qty</TableHead>
+                          <TableHead className="text-xs text-right">Price</TableHead>
+                          <TableHead className="text-xs text-right">Discount</TableHead>
+                          <TableHead className="text-xs text-right">Subtotal</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -616,27 +616,27 @@ const DealerOrders = () => {
                     {/* Totals */}
                     <div className="px-5 py-3 border-t border-border space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Prodotti</span>
-                        <span className="font-semibold text-foreground">€{Number(order.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Spedizione</span>
-                        <span className={shippingCost > 0 ? "font-semibold text-foreground" : "text-muted-foreground italic text-xs"}>
-                          {shippingCost > 0 ? `€${shippingCost.toLocaleString("it-IT", { minimumFractionDigits: 2 })}` : "In fase di calcolo"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between pt-2 border-t border-border">
-                        <span className="font-heading font-bold text-foreground">Totale</span>
-                        <span className="font-heading text-xl font-bold text-foreground">
-                          €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
+                        <span className="text-muted-foreground">Products</span>
+                         <span className="font-semibold text-foreground">€{Number(order.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                       </div>
+                       <div className="flex justify-between text-sm">
+                         <span className="text-muted-foreground">Shipping</span>
+                         <span className={shippingCost > 0 ? "font-semibold text-foreground" : "text-muted-foreground italic text-xs"}>
+                           {shippingCost > 0 ? `€${shippingCost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "Being calculated"}
+                         </span>
+                       </div>
+                       <div className="flex justify-between pt-2 border-t border-border">
+                         <span className="font-heading font-bold text-foreground">Total</span>
+                         <span className="font-heading text-xl font-bold text-foreground">
+                           €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                         </span>
+                       </div>
                     </div>
 
                     {/* Documents */}
                     <div className="px-5 py-4 border-t border-border bg-secondary/20">
                       <h4 className="font-heading text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                        <FileText size={14} /> Documenti
+                        <FileText size={14} /> Documents
                       </h4>
                       {docs.length === 0 ? (
                         <p className="text-xs text-muted-foreground italic">
@@ -675,7 +675,7 @@ const DealerOrders = () => {
                     {/* Notification History */}
                     <div className="px-5 py-4 border-t border-border bg-secondary/10">
                       <h4 className="font-heading text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                        <Bell size={14} /> Storico Notifiche
+                        <Bell size={14} /> Notification History
                       </h4>
                       <OrderEventsTimeline orderId={order.id} />
                     </div>
