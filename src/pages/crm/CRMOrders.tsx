@@ -128,7 +128,12 @@ const CRMOrders = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-bold text-foreground">Ordini</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-heading text-2xl font-bold text-foreground">Ordini</h1>
+        <Button onClick={() => navigate("/crm/orders/new")}>
+          <Plus className="h-4 w-4 mr-1" /> Crea Ordine
+        </Button>
+      </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
