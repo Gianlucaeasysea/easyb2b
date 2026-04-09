@@ -42,7 +42,7 @@ const OrderReceivedAdminEmail = ({ orderCode, companyName, clientName, clientEma
 
 export const template = {
   component: OrderReceivedAdminEmail,
-  subject: (data: Record<string, any>) => `🔔 New Order ${data.orderCode || ''} from ${data.companyName || 'client'}`,
+  subject: (data: Record<string, any>) => `New order received — ${data.companyName || 'Dealer'}`,
   displayName: 'New order (admin notification)',
   previewData: { orderCode: 'ES-0001', companyName: 'Nautica SRL', clientName: 'Mario Rossi', clientEmail: 'mario@nautica.it', totalAmount: '250.00' },
 } satisfies TemplateEntry

@@ -3,6 +3,12 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const STAFF_EMAILS = [
+  "g.scotto@easysea.org",
+  "business@easysea.org",
+  "gianluca@easysea.org",
+];
+
 function validateInput(body: any): string | null {
   const { companyName, contactName, email, phone } = body;
 
@@ -48,100 +54,20 @@ Deno.serve(async (req) => {
 
     const { companyName, contactName, email, phone, zone, country, businessType, website, message, vatNumber } = body;
 
-    const GMAIL_APP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD");
-    if (!GMAIL_APP_PASSWORD) {
-      console.warn("GMAIL_APP_PASSWORD not set, skipping email");
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: tokenData } = await supabaseAdmin.from("gmail_tokens").select("*").limit(1).single();
+
+    if (!tokenData) {
+      console.warn("No Gmail tokens found, skipping email send");
       return new Response(JSON.stringify({ success: true, skipped: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const fromEmail = "business@easysea.org";
-
-    const clientSubject = "EasySea — Application Received";
-    const clientBody = `Dear ${contactName},
-
-Thank you for your interest in becoming an EasySea dealer!
-
-We have received your application for ${companyName} and our sales team will review it within 2 business days.
-
-We will contact you at this email address or at ${phone} to discuss the next steps.
-
-Best regards,
-The EasySea Team
-business@easysea.org`;
-
-    await sendEmail(fromEmail, GMAIL_APP_PASSWORD, email, clientSubject, clientBody);
-
-    const salesSubject = `🆕 New Dealer Application: ${companyName}`;
-    const salesBody = `NEW DEALER APPLICATION
-
-Company: ${companyName}
-Contact: ${contactName}
-Email: ${email}
-Phone: ${phone}
-Region: ${zone || "—"}
-Country: ${country || "—"}
-Business Type: ${businessType || "—"}
-Website: ${website || "—"}
-VAT ID: ${vatNumber || "—"}
-
-Message:
-${message || "(no message)"}
-
----
-Review in the CRM: Dealer Requests section`;
-
-    await sendEmail(fromEmail, GMAIL_APP_PASSWORD, "business@easysea.org", salesSubject, salesBody, "g.scotto@easysea.org");
-
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    console.error("send-dealer-request-notification error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-});
-
-async function sendEmail(from: string, password: string, to: string, subject: string, body: string, cc?: string) {
-  const headers: Record<string, string> = {
-    From: `EasySea <${from}>`,
-    To: to,
-    Subject: subject,
-    "MIME-Version": "1.0",
-    "Content-Type": "text/plain; charset=UTF-8",
-  };
-  if (cc) headers["Cc"] = cc;
-
-  const raw = Object.entries(headers).map(([k, v]) => `${k}: ${v}`).join("\r\n") + "\r\n\r\n" + body;
-  const encoded = btoa(unescape(encodeURIComponent(raw))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-
-  const smtpPayload = {
-    from,
-    to: cc ? [to, cc] : [to],
-    subject,
-    text: body,
-  };
-
-  const credentials = btoa(`${from}:${password}`);
-
-  const response = await fetch("https://smtp-relay.gmail.com:587", {
-    method: "POST",
-    headers: { "Authorization": `Basic ${credentials}` },
-    body: JSON.stringify(smtpPayload),
-  }).catch(() => null);
-
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
-
-  const { data: tokenData } = await supabaseAdmin.from("gmail_tokens").select("*").limit(1).single();
-
-  if (tokenData) {
     let accessToken = tokenData.access_token;
     if (new Date(tokenData.expires_at) < new Date()) {
       const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -164,29 +90,75 @@ async function sendEmail(from: string, password: string, to: string, subject: st
       }
     }
 
-    let rawHeaders = `From: EasySea <${from}>\r\nTo: ${to}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8`;
-    if (cc) rawHeaders += `\r\nCc: ${cc}`;
-    const rawMessage = rawHeaders + "\r\n\r\n" + body;
-    const encodedMessage = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const fromEmail = "business@easysea.org";
+    const fromName = "Easysea B2B";
 
-    const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ raw: encodedMessage }),
-    });
+    // 1. Send confirmation email to customer
+    const clientSubject = "We received your dealer application — Easysea";
+    const clientBody = `Dear ${contactName},
 
-    if (!gmailRes.ok) {
-      const errText = await gmailRes.text();
-      console.error("Gmail API error:", errText);
-      throw new Error(`Gmail API error: ${gmailRes.status}`);
+Thank you for applying to become an Easysea dealer. Our team will review your application and contact you within 48 hours.
+
+Best regards,
+The Easysea Team
+business@easysea.org`;
+
+    await sendGmail(accessToken, fromEmail, fromName, email, clientSubject, clientBody);
+
+    // 2. Send notification to ALL staff
+    const staffSubject = `New dealer application — ${companyName}`;
+    const staffBody = `NEW DEALER APPLICATION
+
+Company: ${companyName}
+Contact: ${contactName}
+Email: ${email}
+Phone: ${phone}
+Region: ${zone || "—"}
+Country: ${country || "—"}
+Business Type: ${businessType || "—"}
+Website: ${website || "—"}
+VAT ID: ${vatNumber || "—"}
+
+Message:
+${message || "(no message)"}
+
+---
+Review in the CRM: Dealer Requests section`;
+
+    for (const staffEmail of STAFF_EMAILS) {
+      await sendGmail(accessToken, fromEmail, fromName, staffEmail, staffSubject, staffBody);
     }
 
-    return await gmailRes.json();
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("send-dealer-request-notification error:", e);
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
+
+async function sendGmail(accessToken: string, fromEmail: string, fromName: string, to: string, subject: string, body: string) {
+  const rawMessage = `From: ${fromName} <${fromEmail}>\r\nTo: ${to}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
+  const encodedMessage = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ raw: encodedMessage }),
+  });
+
+  if (!gmailRes.ok) {
+    const errText = await gmailRes.text();
+    console.error(`Gmail API error sending to ${to}:`, errText);
+    throw new Error(`Gmail API error: ${gmailRes.status}`);
   }
 
-  console.warn("No Gmail tokens found, email not sent");
-  return null;
+  return await gmailRes.json();
 }

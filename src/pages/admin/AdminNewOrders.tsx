@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PackagePlus, Eye, XCircle } from "lucide-react";
+import { PackagePlus, Eye, XCircle, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -19,13 +20,33 @@ const AdminNewOrders = () => {
       const { data, error } = await supabase
         .from("orders")
         .select("*, clients(company_name, country, email), order_documents(id, doc_type)")
-        .in("status", ["confirmed", "processing"])
+        .in("status", ["submitted", "confirmed", "processing"])
         .or('order_type.is.null,order_type.not.in.("MANUAL B2C","B2C","CUSTOM")')
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
+    staleTime: 0,
+    refetchInterval: 30000,
   });
+
+  // Realtime subscription for new orders
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-new-orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-new-orders"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const confirmOrder = useMutation({
     mutationFn: async ({ id, orderCode }: { id: string; orderCode: string }) => {
@@ -45,7 +66,7 @@ const AdminNewOrders = () => {
       });
       try {
         await supabase.functions.invoke('send-order-notification', {
-          body: { orderId: id, orderCode, type: 'status_update' },
+          body: { orderId: id, orderCode, type: 'order_confirmed' },
         });
       } catch (error) {
         showErrorToast(error, "AdminNewOrders.confirmEmail");
@@ -92,9 +113,18 @@ const AdminNewOrders = () => {
   const hasInvoiceOrConfirmation = (docs: any[]) =>
     docs?.some(d => d.doc_type === "invoice" || d.doc_type === "order_confirmation");
 
+  const submittedCount = orders?.filter(o => o.status === "submitted" || o.status === "confirmed").length || 0;
+
   return (
     <div>
-      <h1 className="font-heading text-2xl font-bold text-foreground mb-2">New Orders</h1>
+      <div className="flex items-center gap-3 mb-2">
+        <h1 className="font-heading text-2xl font-bold text-foreground">New Orders</h1>
+        {submittedCount > 0 && (
+          <Badge className="bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5">
+            {submittedCount}
+          </Badge>
+        )}
+      </div>
       <p className="text-sm text-muted-foreground mb-8">
         Orders just received from dealers — {orders?.length || 0} pending
       </p>
@@ -113,6 +143,7 @@ const AdminNewOrders = () => {
             const hasDocs = hasInvoiceOrConfirmation(docs);
             const phaseLabel = getOrderStatusLabel(o.status || "confirmed");
             const phaseColor = getOrderStatusColor(o.status || "confirmed");
+            const canConfirm = o.status === "submitted" || o.status === "confirmed";
 
             return (
               <div key={o.id} className="glass-card-solid p-5">
@@ -139,7 +170,7 @@ const AdminNewOrders = () => {
 
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="ml-auto flex items-center gap-2">
-                    {o.status === "confirmed" && (
+                    {canConfirm && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -163,25 +194,19 @@ const AdminNewOrders = () => {
                       <Eye size={12} /> Detail
                     </Button>
 
-                    {o.status === "confirmed" && (
+                    {canConfirm && (
                       <Button
                         size="sm"
-                        disabled={!hasDocs || confirmOrder.isPending}
+                        disabled={confirmOrder.isPending}
                         className="text-xs gap-1.5 rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold"
                         onClick={() => confirmOrder.mutate({ id: o.id, orderCode: (o as any).order_code || "" })}
-                        title={!hasDocs ? "Upload a document first (Invoice or Order Confirmation)" : ""}
                       >
-                        {confirmOrder.isPending ? "..." : "Confirm & Send"}
+                        <CheckCircle size={12} />
+                        {confirmOrder.isPending ? "..." : "Confirm"}
                       </Button>
                     )}
                   </div>
                 </div>
-
-                {o.status === "confirmed" && !hasDocs && (
-                  <p className="text-[11px] text-warning mt-2">
-                    ⚠ Upload a document (Invoice or Order Confirmation) in the order detail to proceed.
-                  </p>
-                )}
 
                 {docs.length > 0 && (
                   <p className="text-[11px] text-muted-foreground mt-2">

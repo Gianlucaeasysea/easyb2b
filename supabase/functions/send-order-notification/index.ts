@@ -6,7 +6,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Fallback values if DB lookup fails
-const FALLBACK_ADMIN_EMAILS = ["business@easysea.org", "gianluca@easysea.org"];
+const FALLBACK_ADMIN_EMAILS = ["g.scotto@easysea.org", "business@easysea.org", "gianluca@easysea.org"];
 const FALLBACK_BCC_EMAIL = "g.scotto@easysea.org";
 
 serve(async (req) => {

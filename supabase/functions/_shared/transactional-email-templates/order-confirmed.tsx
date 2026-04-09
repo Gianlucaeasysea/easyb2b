@@ -35,7 +35,7 @@ const OrderConfirmedEmail = ({ clientName, orderCode, totalAmount }: OrderConfir
 
 export const template = {
   component: OrderConfirmedEmail,
-  subject: (data: Record<string, any>) => `Easysea — Order ${data.orderCode || ''} confirmed!`,
+  subject: (data: Record<string, any>) => `Your order has been confirmed — Easysea B2B`,
   displayName: 'Order confirmed',
   previewData: { clientName: 'Mario Rossi', orderCode: 'ES-0001', totalAmount: '250.00' },
 } satisfies TemplateEntry
