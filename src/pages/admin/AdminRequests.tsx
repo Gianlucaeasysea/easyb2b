@@ -20,19 +20,19 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 const PAYMENT_TERMS_OPTIONS = [
-  { value: "prepaid", label: "Anticipato" },
-  { value: "30_days", label: "30 giorni" },
-  { value: "60_days", label: "60 giorni" },
-  { value: "90_days", label: "90 giorni" },
-  { value: "end_of_month", label: "Fine mese" },
+  { value: "prepaid", label: "Prepaid" },
+  { value: "30_days", label: "Net 30" },
+  { value: "60_days", label: "Net 60" },
+  { value: "90_days", label: "Net 90" },
+  { value: "end_of_month", label: "End of Month" },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  new: { label: "Nuova", className: "bg-primary/15 text-primary border-0" },
-  reviewed: { label: "In Revisione", className: "bg-warning/15 text-warning border-0" },
-  approved: { label: "Approvata", className: "bg-success/15 text-success border-0" },
-  converted: { label: "Approvata", className: "bg-success/15 text-success border-0" },
-  rejected: { label: "Rifiutata", className: "bg-destructive/15 text-destructive border-0" },
+  new: { label: "New", className: "bg-primary/15 text-primary border-0" },
+  reviewed: { label: "Under Review", className: "bg-warning/15 text-warning border-0" },
+  approved: { label: "Approved", className: "bg-success/15 text-success border-0" },
+  converted: { label: "Approved", className: "bg-success/15 text-success border-0" },
+  rejected: { label: "Rejected", className: "bg-destructive/15 text-destructive border-0" },
 };
 
 const generatePassword = (len = 14): string => {
@@ -104,7 +104,7 @@ const AdminRequests = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
-      toast.success("Note salvate");
+      toast.success("Notes saved");
     },
   });
 
@@ -121,8 +121,8 @@ const AdminRequests = () => {
       if (selectedRequest?.id === variables.id) {
         setSelectedRequest((prev: any) => prev ? { ...prev, status: variables.status } : prev);
       }
-      const labels: Record<string, string> = { reviewed: "Richiesta segnata in revisione", rejected: "Richiesta rifiutata" };
-      toast.success(labels[variables.status] || "Stato aggiornato");
+      const labels: Record<string, string> = { reviewed: "Request marked as under review", rejected: "Request rejected" };
+      toast.success(labels[variables.status] || "Status updated");
     },
   });
 
@@ -132,7 +132,7 @@ const AdminRequests = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       queryClient.invalidateQueries({ queryKey: ["crm-organizations"] });
-      toast.success("Lead + Organizzazione creati dalla richiesta!");
+      toast.success("Lead + Organization created from request!");
       setSelectedRequest(null);
     },
     onError: (e: any) => showErrorToast(e, "AdminRequests.convertToLead"),
@@ -151,20 +151,20 @@ const AdminRequests = () => {
         await supabase.functions.invoke("send-crm-email", {
           body: {
             recipient_email: rejectRequest.email,
-            subject: "EasySea — Aggiornamento sulla tua candidatura",
-            body: `Gentile ${rejectRequest.contact_name},\n\nGrazie per il tuo interesse nel diventare distributore EasySea.\n\nDopo un'attenta valutazione, al momento non siamo in grado di procedere con la tua candidatura.\n\nMotivo: ${rejectReason}\n\nTi ringraziamo per la comprensione.\n\nCordiali saluti,\nIl Team EasySea`,
+            subject: "EasySea — Update on your application",
+            body: `Dear ${rejectRequest.contact_name},\n\nThank you for your interest in becoming an EasySea dealer.\n\nAfter careful evaluation, we are currently unable to proceed with your application.\n\nReason: ${rejectReason}\n\nThank you for your understanding.\n\nBest regards,\nThe EasySea Team`,
             sent_by: user?.id,
             skip_client_id: true,
             idempotency_key: crypto.randomUUID(),
           },
         });
-        toast.success("Email di rifiuto inviata");
+        toast.success("Rejection email sent");
       } catch {
-        toast.error("Errore nell'invio dell'email di rifiuto");
+        toast.error("Error sending rejection email");
       }
     }
 
-    toast.success("Richiesta rifiutata");
+    toast.success("Request rejected");
     setRejectRequest(null);
     setRejectReason("");
     setSendRejectEmail(false);
@@ -198,7 +198,7 @@ const AdminRequests = () => {
   const handleWizardCreate = async () => {
     // Validation
     if (!wizardData.company_name.trim() || !wizardData.account_email.trim() || !wizardData.account_password.trim()) {
-      toast.error("Compila tutti i campi obbligatori: nome azienda, email account e password");
+      toast.error("Please fill all required fields: company name, account email and password");
       return;
     }
 
@@ -289,7 +289,7 @@ const AdminRequests = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
       queryClient.invalidateQueries({ queryKey: ["admin-clients"] });
       queryClient.invalidateQueries({ queryKey: ["pending-requests-count"] });
-      toast.success(`Account dealer creato per ${wizardData.company_name}`);
+      toast.success(`Dealer account created for ${wizardData.company_name}`);
       setWizardRequest(null);
       navigate(`/admin/clients/${clientId}`);
     } catch (error) {
@@ -315,28 +315,28 @@ const AdminRequests = () => {
     return true;
   });
 
-  const WIZARD_STEPS = ["Verifica Dati", "Configurazione Account", "Credenziali", "Conferma"];
+  const WIZARD_STEPS = ["Verify Data", "Account Setup", "Credentials", "Confirmation"];
 
   const FILTER_TABS = [
-    { value: "all", label: "Tutte", count: counts.all },
-    { value: "new", label: "Nuove", count: counts.new },
-    { value: "reviewed", label: "In Revisione", count: counts.reviewed },
-    { value: "approved", label: "Approvate", count: counts.approved },
-    { value: "rejected", label: "Rifiutate", count: counts.rejected },
+    { value: "all", label: "All", count: counts.all },
+    { value: "new", label: "New", count: counts.new },
+    { value: "reviewed", label: "Under Review", count: counts.reviewed },
+    { value: "approved", label: "Approved", count: counts.approved },
+    { value: "rejected", label: "Rejected", count: counts.rejected },
   ];
 
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">Richieste Dealer</h1>
-          <p className="text-sm text-muted-foreground">Gestisci le candidature dei nuovi distributori</p>
+          <h1 className="font-heading text-2xl font-bold text-foreground">Dealer Requests</h1>
+          <p className="text-sm text-muted-foreground">Manage new dealer applications</p>
         </div>
         <div className="flex items-center gap-2">
           {counts.new > 0 && (
-            <Badge className="bg-primary/15 text-primary border-0">{counts.new} nuove</Badge>
+            <Badge className="bg-primary/15 text-primary border-0">{counts.new} new</Badge>
           )}
-          <Badge variant="outline" className="text-xs">{counts.all} totali</Badge>
+          <Badge variant="outline" className="text-xs">{counts.all} total</Badge>
         </div>
       </div>
 
@@ -353,24 +353,24 @@ const AdminRequests = () => {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Caricamento...</p>
+        <p className="text-muted-foreground">Loading...</p>
       ) : !filtered?.length ? (
         <div className="text-center py-20 glass-card-solid">
           <FileText className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">Nessuna richiesta trovata.</p>
+          <p className="text-muted-foreground">No requests found.</p>
         </div>
       ) : (
         <div className="glass-card-solid overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Data Richiesta</TableHead>
-                <TableHead>Azienda</TableHead>
-                <TableHead>Nome Contatto</TableHead>
+                <TableHead>Request Date</TableHead>
+                <TableHead>Company</TableHead>
+                <TableHead>Contact Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Paese</TableHead>
-                <TableHead>Stato</TableHead>
-                <TableHead className="text-right">Azioni</TableHead>
+                <TableHead>Country</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -387,7 +387,7 @@ const AdminRequests = () => {
                     <TableCell>
                       <div className="flex items-center justify-end" onClick={e => e.stopPropagation()}>
                         <Button size="sm" variant="ghost" className="h-8 px-3 text-xs gap-1.5" onClick={() => { setSelectedRequest(r); setEditingNotes((r as any).admin_notes || ""); }}>
-                          <Eye size={14} /> Gestisci
+                          <Eye size={14} /> Manage
                         </Button>
                       </div>
                     </TableCell>
