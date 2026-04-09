@@ -54,7 +54,11 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 const DealerOrders = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightId = searchParams.get("highlight");
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const highlightRef = useRef<HTMLDivElement>(null);
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(highlightId);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
