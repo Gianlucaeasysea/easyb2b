@@ -228,6 +228,95 @@ const DealerOrders = () => {
     }
   };
 
+  // Draft management
+  const draftOrders = useMemo(() => (orders || []).filter((o: any) => o.status === "draft"), [orders]);
+  const nonDraftOrders = useMemo(() => (orders || []).filter((o: any) => o.status !== "draft"), [orders]);
+
+  const handleDeleteDraft = async (order: any) => {
+    setDeletingDraftId(order.id);
+    try {
+      // Mark linked deal as lost
+      await supabase.from("deals").update({ stage: "closed_lost", lost_reason: "Bozza eliminata dal dealer", closed_at: new Date().toISOString() }).eq("order_id", order.id).eq("source", "dealer_draft");
+      // Delete order items then order
+      await supabase.from("order_items").delete().eq("order_id", order.id);
+      const { error } = await supabase.from("orders").delete().eq("id", order.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+      toast.success("Bozza eliminata");
+    } catch (error) {
+      showErrorToast(error, "DealerOrders.deleteDraft");
+    } finally {
+      setDeletingDraftId(null);
+      setConfirmDeleteDraft(null);
+    }
+  };
+
+  const openDraftEditor = (order: any) => {
+    const items = (order.order_items || []).map((i: any) => ({
+      ...i,
+      name: i.products?.name || "—",
+      sku: i.products?.sku || "—",
+    }));
+    setDraftItems(items);
+    setDraftNotes(order.notes || "");
+    setEditingDraft(order);
+  };
+
+  const updateDraftItemQty = (itemId: string, qty: number) => {
+    if (qty <= 0) {
+      setDraftItems(prev => prev.filter(i => i.id !== itemId));
+    } else {
+      setDraftItems(prev => prev.map(i => i.id === itemId ? { ...i, quantity: qty, subtotal: qty * Number(i.unit_price) } : i));
+    }
+  };
+
+  const removeDraftItem = (itemId: string) => {
+    setDraftItems(prev => prev.filter(i => i.id !== itemId));
+  };
+
+  const draftTotal = draftItems.reduce((s, i) => s + Number(i.subtotal || 0), 0);
+
+  const submitDraft = async () => {
+    if (!editingDraft || draftItems.length === 0) return;
+    setSubmittingDraft(true);
+    try {
+      // Update items
+      for (const item of draftItems) {
+        await supabase.from("order_items").update({ quantity: item.quantity, subtotal: item.quantity * Number(item.unit_price) }).eq("id", item.id);
+      }
+      // Delete removed items
+      const currentItemIds = draftItems.map(i => i.id);
+      const originalItems = (editingDraft.order_items || []) as any[];
+      for (const orig of originalItems) {
+        if (!currentItemIds.includes(orig.id)) {
+          await supabase.from("order_items").delete().eq("id", orig.id);
+        }
+      }
+      // Update order
+      const { error } = await supabase.from("orders").update({
+        status: "submitted",
+        total_amount: draftTotal,
+        notes: draftNotes || null,
+      }).eq("id", editingDraft.id);
+      if (error) throw error;
+
+      // Send notification
+      try {
+        await supabase.functions.invoke("send-order-notification", {
+          body: { orderId: editingDraft.id, orderCode: editingDraft.order_code, type: "order_received" },
+        });
+      } catch {}
+
+      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+      toast.success("Ordine inviato con successo!");
+      setEditingDraft(null);
+    } catch (error) {
+      showErrorToast(error, "DealerOrders.submitDraft");
+    } finally {
+      setSubmittingDraft(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
