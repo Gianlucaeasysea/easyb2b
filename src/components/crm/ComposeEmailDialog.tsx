@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+
 import { cn } from "@/lib/utils";
 import TiptapEditor from "./TiptapEditor";
 
@@ -37,10 +37,10 @@ interface ComposeEmailDialogProps {
 }
 
 const MERGE_VARS = [
-  { key: "{{nome_contatto}}", label: "Nome contatto" },
-  { key: "{{azienda}}", label: "Azienda" },
-  { key: "{{ultimo_ordine}}", label: "Ultimo ordine" },
-  { key: "{{sconto_assegnato}}", label: "Sconto assegnato" },
+  { key: "{{nome_contatto}}", label: "Contact Name" },
+  { key: "{{azienda}}", label: "Company" },
+  { key: "{{ultimo_ordine}}", label: "Last Order" },
+  { key: "{{sconto_assegnato}}", label: "Assigned Discount" },
 ];
 
 export const ComposeEmailDialog = ({
@@ -181,7 +181,7 @@ export const ComposeEmailDialog = ({
     setGenerating(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Non autenticato");
+      if (!session) throw new Error("Not authenticated");
       const { data, error } = await supabase.functions.invoke("generate-email-draft", {
         body: {
           template_type: "custom",
@@ -194,7 +194,7 @@ export const ComposeEmailDialog = ({
       if (error) throw error;
       setBody(data.draft || "");
       setSubject(data.subject || subject || "");
-      toast.success("Bozza AI generata");
+      toast.success("AI draft generated");
     } catch (error) {
       showErrorToast(error, "ComposeEmailDialog.generateDraft");
     } finally {
@@ -204,17 +204,17 @@ export const ComposeEmailDialog = ({
 
   const handleSend = async (mode: "send" | "draft" | "schedule") => {
     if (mode !== "draft" && (!subject.trim() || !body.trim())) {
-      toast.error("Compila oggetto e corpo email");
+      toast.error("Please fill in subject and body");
       return;
     }
     if (!selectedRecipient) {
-      toast.error("Seleziona un destinatario");
+      toast.error("Select a recipient");
       return;
     }
     setSending(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Non autenticato");
+      if (!session) throw new Error("Not authenticated");
 
       const resolvedBody = resolveMergeVars(body);
       const resolvedSubject = resolveMergeVars(subject);
@@ -224,8 +224,8 @@ export const ComposeEmailDialog = ({
         // Save as draft in client_communications
         const { error } = await supabase.from("client_communications").insert({
           client_id: clientId,
-          subject: resolvedSubject || "(Bozza senza oggetto)",
-          body: htmlBody || "(vuoto)",
+          subject: resolvedSubject || "(Draft without subject)",
+          body: htmlBody || "(empty)",
           direction: "outbound",
           template_type: "custom",
           sent_by: session.user.id,
@@ -234,10 +234,10 @@ export const ComposeEmailDialog = ({
           order_id: orderId || null,
         });
         if (error) throw error;
-        toast.success("Bozza salvata!");
+        toast.success("Draft saved!");
       } else if (mode === "schedule") {
         if (!scheduleDate) {
-          toast.error("Seleziona una data per la programmazione");
+          toast.error("Select a date for scheduling");
           setSending(false);
           return;
         }
@@ -254,7 +254,7 @@ export const ComposeEmailDialog = ({
           scheduled_at: scheduleDate.toISOString(),
         });
         if (error) throw error;
-        toast.success(`Email programmata per ${format(scheduleDate, "dd/MM/yyyy HH:mm", { locale: it })}`);
+        toast.success(`Email scheduled for ${format(scheduleDate, "dd/MM/yyyy HH:mm")}`);
       } else {
         // Send immediately
         const bccList = ["g.scotto@easysea.org", ...ccEmails].join(", ");
@@ -273,7 +273,7 @@ export const ComposeEmailDialog = ({
         if (selectedContact) {
           await supabase.from("client_contacts").update({ last_contacted_at: new Date().toISOString() }).eq("email", selectedRecipient).eq("client_id", clientId);
         }
-        toast.success("Email inviata con successo!");
+        toast.success("Email sent successfully!");
       }
 
       setSubject("");
@@ -294,21 +294,21 @@ export const ComposeEmailDialog = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading text-lg flex items-center gap-2">
-            <Send size={18} /> {initialSubject ? "Rispondi" : "Componi Email"}
-            {orderCode && <Badge className="bg-primary/15 text-primary border-0 ml-2">Ordine {orderCode}</Badge>}
+            <Send size={18} /> {initialSubject ? "Reply" : "Compose Email"}
+            {orderCode && <Badge className="bg-primary/15 text-primary border-0 ml-2">Order {orderCode}</Badge>}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
           {/* Template selector */}
           <div>
-            <Label className="text-xs text-muted-foreground">Usa template</Label>
+            <Label className="text-xs text-muted-foreground">Use template</Label>
             <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
               <SelectTrigger className="mt-1 bg-secondary border-border">
-                <SelectValue placeholder="Seleziona template..." />
+                <SelectValue placeholder="Select template..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Nessun template</SelectItem>
+                <SelectItem value="__none__">No template</SelectItem>
                 {(dbTemplates || []).map(t => (
                   <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                 ))}
@@ -322,7 +322,7 @@ export const ComposeEmailDialog = ({
             {availableEmails.length > 1 ? (
               <Select value={selectedRecipient} onValueChange={setSelectedRecipient}>
                 <SelectTrigger className="mt-1 bg-secondary border-border">
-                  <SelectValue placeholder="Seleziona destinatario" />
+                  <SelectValue placeholder="Select recipient" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableEmails.map(e => (
@@ -337,14 +337,14 @@ export const ComposeEmailDialog = ({
             )}
             {showChannelWarning && (
               <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-warning/10 border border-warning/20 text-xs text-warning">
-                <AlertTriangle size={14} /> Questo contatto preferisce essere contattato via <strong>{preferredChannel}</strong>
+                <AlertTriangle size={14} /> This contact prefers to be reached via <strong>{preferredChannel}</strong>
               </div>
             )}
           </div>
 
           {/* CC section */}
           <div>
-            <Label className="text-xs text-muted-foreground flex items-center gap-1"><Users size={12} /> CC (opzionale)</Label>
+            <Label className="text-xs text-muted-foreground flex items-center gap-1"><Users size={12} /> CC (optional)</Label>
             <div className="mt-1 space-y-2">
               {availableEmails.filter(e => e.email !== selectedRecipient).map(e => (
                 <label key={e.email} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-secondary/50 p-1.5 rounded">
@@ -354,8 +354,8 @@ export const ComposeEmailDialog = ({
                 </label>
               ))}
               <div className="flex gap-2">
-                <Input value={customCc} onChange={e => setCustomCc(e.target.value)} placeholder="Aggiungi CC..." className="text-xs h-8 bg-secondary border-border" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomCc(); } }} />
-                <Button size="sm" variant="outline" onClick={addCustomCc} className="h-8 text-xs gap-1" disabled={!customCc.includes("@")}><Plus size={12} /> Aggiungi</Button>
+                <Input value={customCc} onChange={e => setCustomCc(e.target.value)} placeholder="Add CC..." className="text-xs h-8 bg-secondary border-border" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomCc(); } }} />
+                <Button size="sm" variant="outline" onClick={addCustomCc} className="h-8 text-xs gap-1" disabled={!customCc.includes("@")}><Plus size={12} /> Add</Button>
               </div>
               {ccEmails.filter(e => !availableEmails.some(ae => ae.email === e)).length > 0 && (
                 <div className="flex flex-wrap gap-1">
@@ -369,27 +369,27 @@ export const ComposeEmailDialog = ({
 
           {/* AI prompt */}
           <div className="p-3 bg-secondary/50 rounded-lg border border-border space-y-2">
-            <Label className="text-xs text-muted-foreground flex items-center gap-1"><Sparkles size={12} className="text-primary" /> Istruzioni AI (opzionale)</Label>
-            <Input value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} placeholder="Es. 'ordine in ritardo di 5 giorni, chiedere pazienza'" className="bg-background border-border text-sm" />
+            <Label className="text-xs text-muted-foreground flex items-center gap-1"><Sparkles size={12} className="text-primary" /> AI Instructions (optional)</Label>
+            <Input value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} placeholder="E.g. 'order delayed 5 days, ask for patience'" className="bg-background border-border text-sm" />
             <Button size="sm" variant="outline" onClick={handleGenerateDraft} disabled={generating} className="gap-1 text-xs">
               {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-              {generating ? "Generazione..." : "Genera Bozza AI"}
+              {generating ? "Generating..." : "Generate AI Draft"}
             </Button>
           </div>
 
           {/* Subject */}
           <div>
-            <Label className="text-xs text-muted-foreground">Oggetto</Label>
-            <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Oggetto email..." className="mt-1 bg-secondary border-border" />
+            <Label className="text-xs text-muted-foreground">Subject</Label>
+            <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Email subject..." className="mt-1 bg-secondary border-border" />
           </div>
 
           {/* Body with merge vars */}
           <div>
             <div className="flex items-center justify-between">
-              <Label className="text-xs text-muted-foreground">Corpo</Label>
+              <Label className="text-xs text-muted-foreground">Body</Label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1"><Variable size={10} /> Inserisci variabile</Button>
+                  <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1"><Variable size={10} /> Insert variable</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   {MERGE_VARS.map(v => (
@@ -401,7 +401,7 @@ export const ComposeEmailDialog = ({
               </DropdownMenu>
             </div>
             <div className="mt-1">
-              <TiptapEditor content={body} onChange={setBody} placeholder="Scrivi il contenuto dell'email..." />
+              <TiptapEditor content={body} onChange={setBody} placeholder="Write the email content..." />
             </div>
           </div>
 
@@ -410,11 +410,11 @@ export const ComposeEmailDialog = ({
             <input ref={fileInputRef} type="file" multiple className="hidden" onChange={async (e) => {
               const files = e.target.files;
               if (!files) return;
-              if (attachments.length + files.length > 5) { toast.error("Max 5 allegati"); return; }
+              if (attachments.length + files.length > 5) { toast.error("Max 5 attachments"); return; }
               setUploading(true);
               try {
                 for (const file of Array.from(files)) {
-                  if (file.size > 10 * 1024 * 1024) { toast.error(`${file.name} supera 10MB`); continue; }
+                  if (file.size > 10 * 1024 * 1024) { toast.error(`${file.name} exceeds 10MB`); continue; }
                   const path = `${clientId}/${Date.now()}-${file.name}`;
                   const { error } = await supabase.storage.from("email-attachments").upload(path, file);
                   if (error) throw error;
@@ -429,9 +429,9 @@ export const ComposeEmailDialog = ({
             }} />
             <Button type="button" variant="outline" size="sm" className="gap-1 text-xs" onClick={() => fileInputRef.current?.click()} disabled={uploading || attachments.length >= 5}>
               {uploading ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />}
-              {uploading ? "Caricamento..." : "Allega file"}
+              {uploading ? "Uploading..." : "Attach file"}
             </Button>
-            <span className="text-[10px] text-muted-foreground ml-2">Max 5 file, 10MB ciascuno</span>
+            <span className="text-[10px] text-muted-foreground ml-2">Max 5 files, 10MB each</span>
             {attachments.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {attachments.map((a, i) => (
@@ -450,11 +450,11 @@ export const ComposeEmailDialog = ({
           {/* Schedule picker */}
           {showSchedule && (
             <div className="p-3 bg-secondary/50 rounded-lg border border-border space-y-2">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1"><Clock size={12} /> Programma invio</Label>
+              <Label className="text-xs text-muted-foreground flex items-center gap-1"><Clock size={12} /> Schedule send</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start text-sm">
-                    {scheduleDate ? format(scheduleDate, "dd/MM/yyyy HH:mm", { locale: it }) : "Seleziona data e ora..."}
+                    {scheduleDate ? format(scheduleDate, "dd/MM/yyyy HH:mm") : "Select date and time..."}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -468,23 +468,23 @@ export const ComposeEmailDialog = ({
           <div className="flex items-center justify-between pt-2 flex-wrap gap-2">
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => handleSend("draft")} disabled={sending} className="gap-1 text-xs">
-                <Save size={12} /> Salva bozza
+                <Save size={12} /> Save draft
               </Button>
               <Button variant="outline" size="sm" onClick={() => { setShowSchedule(!showSchedule); }} className="gap-1 text-xs">
-                <Clock size={12} /> Programma
+                <Clock size={12} /> Schedule
               </Button>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Annulla</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               {showSchedule && scheduleDate ? (
                 <Button onClick={() => handleSend("schedule")} disabled={sending || !subject.trim() || !body.trim() || !selectedRecipient} className="gap-1 bg-primary text-primary-foreground hover:bg-primary/90">
                   {sending ? <Loader2 size={14} className="animate-spin" /> : <Clock size={14} />}
-                  {sending ? "Programmazione..." : "Programma invio"}
+                  {sending ? "Scheduling..." : "Schedule send"}
                 </Button>
               ) : (
                 <Button onClick={() => handleSend("send")} disabled={sending || !subject.trim() || !body.trim() || !selectedRecipient} className="gap-1 bg-primary text-primary-foreground hover:bg-primary/90">
                   {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                  {sending ? "Invio..." : "Invia ora"}
+                  {sending ? "Sending..." : "Send now"}
                 </Button>
               )}
             </div>
