@@ -82,8 +82,8 @@ const DealerNotifications = () => {
     if (!n) return;
     if (!n.read) markRead(n.id);
 
-    if (n.type === "order" && n.order_id) {
-      navigate("/portal/orders");
+    if ((n.type === "order" || n.type === "document") && n.order_id) {
+      navigate(`/portal/orders?highlight=${n.order_id}`);
       return;
     }
     if (n.type === "price_list") {

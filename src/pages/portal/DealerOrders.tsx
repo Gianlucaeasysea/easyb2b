@@ -12,7 +12,8 @@ import {
   Copy, DollarSign, XCircle, Trash2, Minus, Plus, Edit3,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
@@ -53,7 +54,11 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 const DealerOrders = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightId = searchParams.get("highlight");
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const highlightRef = useRef<HTMLDivElement>(null);
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(highlightId);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
@@ -101,6 +106,21 @@ const DealerOrders = () => {
   const totalPages = Math.max(1, Math.ceil(nonDraftOrders.length / pageSize));
   const sliceFrom = (page - 1) * pageSize;
   const pageData = nonDraftOrders.slice(sliceFrom, sliceFrom + pageSize);
+
+  // Highlight order from notification link
+  useEffect(() => {
+    if (highlightId && orders) {
+      setHighlightedId(highlightId);
+      setExpandedOrder(highlightId);
+      setTimeout(() => {
+        highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 300);
+      setTimeout(() => {
+        setHighlightedId(null);
+        setSearchParams({}, { replace: true });
+      }, 3000);
+    }
+  }, [highlightId, orders]);
 
   const getDownloadUrl = (filePath: string) => {
     const { data } = supabase.storage.from("order-documents").getPublicUrl(filePath);
@@ -405,7 +425,7 @@ const DealerOrders = () => {
             const isSubmitted = status === "submitted";
 
             return (
-              <div key={order.id} className="glass-card-solid overflow-hidden">
+              <div key={order.id} ref={order.id === highlightId ? highlightRef : undefined} className={`glass-card-solid overflow-hidden transition-all duration-500 ${highlightedId === order.id ? "ring-2 ring-primary bg-primary/5" : ""}`}>
                 {/* Header */}
                 <div
                   className="p-5 flex items-center justify-between cursor-pointer hover:bg-secondary/50 transition-colors"
