@@ -41,6 +41,21 @@ float fbm(vec2 p){
   return v;
 }
 
+// Ocean wave function — layered sine waves with noise displacement
+float oceanWave(vec2 p, float t) {
+  float wave = 0.0;
+  // Primary swell
+  wave += sin(p.x * 1.2 + t * 0.8 + sin(p.y * 0.5 + t * 0.3) * 0.8) * 0.35;
+  // Secondary cross-wave
+  wave += sin(p.x * 0.7 - p.y * 1.1 + t * 0.5) * 0.25;
+  // Choppy detail
+  wave += sin(p.x * 3.0 + p.y * 2.5 + t * 1.5) * 0.08;
+  wave += sin(p.x * 4.5 - p.y * 3.2 + t * 2.0) * 0.04;
+  // Noise-based turbulence
+  wave += (fbm(p * 1.5 + t * 0.2) - 0.5) * 0.3;
+  return wave;
+}
+
 vec3 hueShiftRGB(vec3 c,float h){
   float cosA=cos(h);
   float sinA=sin(h);
@@ -52,41 +67,64 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   vec2 uv=fragCoord/uResolution;
   vec2 p=(fragCoord-0.5*uResolution)/min(uResolution.x,uResolution.y);
 
-  // Warp
-  p+=uWarp*vec2(
-    fbm(p*3.0+uTime*0.3)-0.5,
-    fbm(p*3.0+uTime*0.3+100.0)-0.5
+  // Warp coordinates with ocean-like distortion
+  float t = uTime * 0.15;
+  
+  p += uWarp * vec2(
+    fbm(p * 2.0 + t * 0.5) - 0.5,
+    fbm(p * 2.0 + t * 0.5 + 100.0) - 0.5
   );
 
-  float t=uTime*0.15;
+  // Compute ocean surface
+  float wave1 = oceanWave(p * 2.5, uTime * 0.2);
+  float wave2 = oceanWave(p * 1.8 + vec2(50.0), uTime * 0.15);
+  float wave3 = oceanWave(p * 3.2 + vec2(200.0), uTime * 0.25);
 
-  // Layer 1 - deep blue flow
-  float n1=fbm(p*2.0+t*0.8);
-  // Layer 2 - cyan wisps
-  float n2=fbm(p*3.5-t*0.6+vec2(50.0));
-  // Layer 3 - bright highlights
-  float n3=fbm(p*5.0+t*1.2+vec2(200.0));
+  // EasySea palette
+  vec3 deepAbyss = vec3(0.02, 0.06, 0.14);    // very deep navy
+  vec3 navy      = vec3(0.047, 0.137, 0.251);  // #0c2340
+  vec3 deepBlue  = vec3(0.118, 0.227, 0.373);  // #1e3a5f
+  vec3 electric  = vec3(0.231, 0.510, 0.965);  // #3b82f6
+  vec3 cyan      = vec3(0.024, 0.714, 0.831);  // #06b6d4
+  vec3 foam      = vec3(0.6, 0.85, 0.95);      // white-ish foam highlights
 
-  // EasySea palette: navy #0c2340, blue #1e3a5f, electric #3b82f6, cyan #06b6d4
-  vec3 navy=vec3(0.047,0.137,0.251);
-  vec3 deepBlue=vec3(0.118,0.227,0.373);
-  vec3 electric=vec3(0.231,0.510,0.965);
-  vec3 cyan=vec3(0.024,0.714,0.831);
+  // Build ocean color from wave layers
+  vec3 col = deepAbyss;
+  
+  // Deep water base with gentle movement
+  float baseFlow = smoothstep(-0.3, 0.5, wave1);
+  col = mix(col, navy, baseFlow);
+  
+  // Mid-water blue tones
+  float midWater = smoothstep(0.0, 0.6, wave2) * 0.8;
+  col = mix(col, deepBlue, midWater);
 
-  vec3 col=navy;
-  col=mix(col,deepBlue,smoothstep(0.3,0.7,n1));
-  col=mix(col,electric*0.6,smoothstep(0.5,0.8,n2)*0.7);
-  col=mix(col,cyan*0.4,smoothstep(0.6,0.9,n3)*0.5);
+  // Electric blue highlights on wave crests
+  float crest = smoothstep(0.2, 0.6, wave1 + wave2 * 0.5);
+  col = mix(col, electric * 0.5, crest * 0.5);
 
-  // Vignette
-  float vig=1.0-dot(uv-0.5,uv-0.5)*1.8;
-  col*=vig;
+  // Cyan caustic-like reflections
+  float caustic = smoothstep(0.4, 0.8, wave3 * wave1 * 4.0 + 0.3);
+  col += cyan * caustic * 0.12;
 
-  // Subtle glow
-  float glow=smoothstep(0.7,1.0,n1*n2*4.0);
-  col+=electric*glow*0.15;
+  // Subtle foam on wave peaks
+  float foamLine = smoothstep(0.55, 0.7, wave1 + wave3 * 0.3);
+  col = mix(col, foam * 0.15, foamLine * 0.3);
 
-  fragColor=vec4(col,1.0);
+  // Soft horizontal light gradient (surface light from above)
+  float surfaceLight = smoothstep(-0.5, 0.8, p.y + wave1 * 0.3);
+  col = mix(col, col * 1.3, surfaceLight * 0.2);
+
+  // Vignette — slightly stronger at bottom for depth
+  float vig = 1.0 - dot(uv - 0.5, uv - 0.5) * 2.0;
+  vig *= smoothstep(0.0, 0.3, uv.y * 0.5 + 0.15);
+  col *= vig;
+
+  // Subtle glow on bright areas
+  float glow = smoothstep(0.5, 0.9, (wave1 + wave2) * 2.0);
+  col += electric * glow * 0.08;
+
+  fragColor = vec4(col, 1.0);
 }
 
 void main(){
