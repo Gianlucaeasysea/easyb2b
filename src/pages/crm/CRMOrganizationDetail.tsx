@@ -291,7 +291,7 @@ const CRMOrganizationDetail = () => {
 
   // Contact mutations
   const saveContact = async () => {
-    if (!contactForm.contact_name.trim()) { toast.error("Il nome è obbligatorio"); return; }
+    if (!contactForm.contact_name.trim()) { toast.error("Name is required"); return; }
     const payload = {
       client_id: id!,
       contact_name: contactForm.contact_name.trim(),
