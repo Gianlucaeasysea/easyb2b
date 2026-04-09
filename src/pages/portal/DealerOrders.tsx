@@ -107,7 +107,21 @@ const DealerOrders = () => {
   const sliceFrom = (page - 1) * pageSize;
   const pageData = nonDraftOrders.slice(sliceFrom, sliceFrom + pageSize);
 
-  const getDownloadUrl = (filePath: string) => {
+  // Highlight order from notification link
+  useEffect(() => {
+    if (highlightId && orders) {
+      setHighlightedId(highlightId);
+      setExpandedOrder(highlightId);
+      setTimeout(() => {
+        highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 300);
+      setTimeout(() => {
+        setHighlightedId(null);
+        setSearchParams({}, { replace: true });
+      }, 3000);
+    }
+  }, [highlightId, orders]);
+
     const { data } = supabase.storage.from("order-documents").getPublicUrl(filePath);
     return data.publicUrl;
   };
