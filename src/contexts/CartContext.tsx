@@ -214,7 +214,7 @@ export const CartSavedIndicator = () => {
           transition={{ duration: 0.3 }}
           className="text-[10px] text-muted-foreground"
         >
-          Carrello salvato
+           Cart saved
         </motion.span>
       )}
     </AnimatePresence>
