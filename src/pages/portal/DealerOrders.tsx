@@ -321,20 +321,20 @@ const DealerOrders = () => {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">I Miei Ordini</h1>
-          <p className="text-sm text-muted-foreground">Visualizza e traccia tutti i tuoi ordini B2B</p>
+          <h1 className="font-heading text-2xl font-bold text-foreground">My Orders</h1>
+          <p className="text-sm text-muted-foreground">View and track all your B2B orders</p>
         </div>
-        <Badge variant="outline" className="text-xs">{orders?.length || 0} ordini</Badge>
+        <Badge variant="outline" className="text-xs">{orders?.length || 0} orders</Badge>
       </div>
 
       {isLoading ? (
         <div className="text-center py-20 text-muted-foreground flex items-center justify-center gap-2">
-          <Loader2 className="animate-spin" size={16} /> Caricamento ordini...
+          <Loader2 className="animate-spin" size={16} /> Loading orders...
         </div>
       ) : !orders?.length ? (
         <div className="text-center py-20 glass-card-solid">
           <ShoppingBag className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">Nessun ordine ancora. Sfoglia il catalogo per effettuare il primo ordine.</p>
+          <p className="text-muted-foreground">No orders yet. Browse the catalog to place your first order.</p>
         </div>
       ) : (
         <>
@@ -342,7 +342,7 @@ const DealerOrders = () => {
           {draftOrders.length > 0 && (
             <div className="mb-6">
               <h2 className="font-heading text-lg font-bold text-foreground mb-3 flex items-center gap-2">
-                <Edit3 size={16} /> Bozze ({draftOrders.length})
+                <Edit3 size={16} /> Drafts ({draftOrders.length})
               </h2>
               <div className="space-y-2">
                 {draftOrders.map((order: any) => {
@@ -355,21 +355,21 @@ const DealerOrders = () => {
                         </div>
                         <div>
                           <p className="font-heading font-bold text-foreground">
-                            {order.order_code || `Bozza #${order.id.slice(0, 8).toUpperCase()}`}
+                            {order.order_code || `Draft #${order.id.slice(0, 8).toUpperCase()}`}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
-                            {items.length > 0 && <span className="ml-2">· {items.length} prodott{items.length > 1 ? "i" : "o"}</span>}
+                            {items.length > 0 && <span className="ml-2">· {items.length} product{items.length > 1 ? "s" : ""}</span>}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Badge className="border-0 text-xs bg-muted text-muted-foreground">Bozza</Badge>
+                        <Badge className="border-0 text-xs bg-muted text-muted-foreground">Draft</Badge>
                         <span className="font-heading font-bold text-foreground">
                           €{Number(order.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
                         </span>
                         <Button size="sm" onClick={() => openDraftEditor(order)}>
-                          Completa Ordine
+                          Complete Order
                         </Button>
                         <Button
                           variant="ghost"
@@ -421,13 +421,13 @@ const DealerOrders = () => {
                     </div>
                     <div>
                       <p className="font-heading font-bold text-foreground">
-                        {(order as any).order_code || `Ordine #${order.id.slice(0, 8).toUpperCase()}`}
+                        {(order as any).order_code || `Order #${order.id.slice(0, 8).toUpperCase()}`}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
-                        {items.length > 0 && <span className="ml-2">· {items.length} prodott{items.length > 1 ? "i" : "o"}</span>}
+                        {items.length > 0 && <span className="ml-2">· {items.length} product{items.length > 1 ? "s" : ""}</span>}
                         {(order as any).payment_due_date && (
-                          <span className="ml-2">· Scadenza: <span className={`font-semibold ${
+                          <span className="ml-2">· Due: <span className={`font-semibold ${
                             (order as any).payment_status === "paid" ? "text-success" :
                             new Date((order as any).payment_due_date) < new Date() ? "text-destructive" :
                             differenceInDays(new Date((order as any).payment_due_date), new Date()) <= 7 ? "text-warning" :
@@ -438,8 +438,8 @@ const DealerOrders = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                     {isDraft && <Badge className="border-0 text-xs bg-muted text-muted-foreground">Bozza</Badge>}
-                    {isSubmitted && <Badge className="border-0 text-xs bg-blue-100 text-blue-700">Inviato - In attesa di conferma</Badge>}
+                     {isDraft && <Badge className="border-0 text-xs bg-muted text-muted-foreground">Draft</Badge>}
+                    {isSubmitted && <Badge className="border-0 text-xs bg-blue-100 text-blue-700">Submitted - Awaiting confirmation</Badge>}
                     {!isDraft && !isSubmitted && <Badge className={`border-0 text-xs ${statusColor}`}>{statusLabel}</Badge>}
                     <span className="font-heading font-bold text-foreground text-lg">
                       €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
@@ -449,9 +449,9 @@ const DealerOrders = () => {
                         variant="ghost" size="sm"
                         className="h-7 text-destructive hover:text-destructive/80 text-xs"
                         onClick={(e) => { e.stopPropagation(); setConfirmCancel(order); }}
-                        title="Annulla Ordine"
+                        title="Cancel Order"
                       >
-                        <XCircle size={14} className="mr-1" /> Annulla
+                        <XCircle size={14} className="mr-1" /> Cancel
                       </Button>
                     )}
                     {!isCancelled && (
@@ -460,7 +460,7 @@ const DealerOrders = () => {
                         className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
                         disabled={duplicatingId === order.id}
                         onClick={(e) => { e.stopPropagation(); handlePrepareDuplicate(order); }}
-                        title="Duplica Ordine"
+                        title="Duplicate Order"
                       >
                         {duplicatingId === order.id ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
                       </Button>
@@ -480,7 +480,7 @@ const DealerOrders = () => {
                     )}
                     {isSalesOrder && (
                       <div className="px-5 py-2 bg-muted/50 border-b border-border">
-                        <p className="text-xs text-muted-foreground italic">📋 Ordine creato dal referente commerciale</p>
+                        <p className="text-xs text-muted-foreground italic">📋 Order created by sales representative</p>
                       </div>
                     )}
 
@@ -489,7 +489,7 @@ const DealerOrders = () => {
                       <div className="px-5 py-4 border-b border-border">
                         <div className="flex items-center gap-2 text-destructive">
                           <XCircle size={16} />
-                          <span className="text-sm font-semibold">Ordine Annullato</span>
+                          <span className="text-sm font-semibold">Order Cancelled</span>
                         </div>
                       </div>
                     ) : phaseIdx >= 0 && (
@@ -534,7 +534,7 @@ const DealerOrders = () => {
                               </div>
                               <span className={`text-[9px] mt-1 text-center max-w-[70px] leading-tight ${
                                 isPaid ? "font-bold text-success" : "text-muted-foreground"
-                              }`}>Pagato</span>
+                              }`}>Paid</span>
                             </div>
                           </div>
                         </div>
