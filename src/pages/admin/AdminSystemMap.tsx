@@ -17,37 +17,37 @@ interface TableStats {
 }
 
 const DB_TABLES = [
-  { name: "clients", icon: Users, description: "Anagrafica distributori/dealer", key_columns: ["company_name", "email", "discount_class", "status", "user_id", "zone"] },
-  { name: "products", icon: Package, description: "Varianti prodotto (da Shopify)", key_columns: ["name", "sku", "price", "stock_quantity", "active_b2b", "category"] },
-  { name: "product_details", icon: Layers, description: "Dettagli famiglia prodotto (descrizioni, specifiche, lead time)", key_columns: ["product_family", "display_name", "description", "features", "specifications", "lead_time"] },
-  { name: "orders", icon: ShoppingBag, description: "Ordini dei dealer", key_columns: ["client_id", "status", "total_amount", "order_code", "payment_status"] },
-  { name: "order_items", icon: ShoppingBag, description: "Righe ordine", key_columns: ["order_id", "product_id", "quantity", "unit_price", "discount_pct"] },
-  { name: "order_documents", icon: FileText, description: "Documenti allegati agli ordini", key_columns: ["order_id", "file_name", "doc_type"] },
-  { name: "price_lists", icon: Tag, description: "Listini prezzi personalizzati", key_columns: ["name", "client_id", "discount_tier_id"] },
-  { name: "price_list_items", icon: Tag, description: "Prezzi custom per prodotto in un listino", key_columns: ["price_list_id", "product_id", "custom_price"] },
-  { name: "price_list_clients", icon: Tag, description: "Associazione listino → cliente", key_columns: ["price_list_id", "client_id"] },
-  { name: "discount_tiers", icon: Tag, description: "Classi di sconto (A/B/C/D)", key_columns: ["name", "label", "discount_pct", "sort_order"] },
-  { name: "leads", icon: GitBranch, description: "Lead CRM per il team sales", key_columns: ["company_name", "status", "source", "assigned_to"] },
-  { name: "activities", icon: Zap, description: "Attività CRM (call, email, meeting)", key_columns: ["title", "type", "lead_id", "client_id", "scheduled_at"] },
-  { name: "distributor_requests", icon: FileText, description: "Richieste diventare distributore (pubbliche)", key_columns: ["company_name", "email", "status"] },
-  { name: "user_roles", icon: Shield, description: "Ruoli utente (admin, dealer, sales, operations)", key_columns: ["user_id", "role"] },
-  { name: "profiles", icon: Users, description: "Profili utente auth", key_columns: ["user_id", "email", "company_name"] },
-  { name: "client_contacts", icon: Users, description: "Contatti aggiuntivi per cliente", key_columns: ["client_id", "contact_name", "email", "role"] },
+  { name: "clients", icon: Users, description: "Distributor/dealer registry", key_columns: ["company_name", "email", "discount_class", "status", "user_id", "zone"] },
+  { name: "products", icon: Package, description: "Product variants (from Shopify)", key_columns: ["name", "sku", "price", "stock_quantity", "active_b2b", "category"] },
+  { name: "product_details", icon: Layers, description: "Product family details (descriptions, specs, lead time)", key_columns: ["product_family", "display_name", "description", "features", "specifications", "lead_time"] },
+  { name: "orders", icon: ShoppingBag, description: "Dealer orders", key_columns: ["client_id", "status", "total_amount", "order_code", "payment_status"] },
+  { name: "order_items", icon: ShoppingBag, description: "Order items", key_columns: ["order_id", "product_id", "quantity", "unit_price", "discount_pct"] },
+  { name: "order_documents", icon: FileText, description: "Order attached documents", key_columns: ["order_id", "file_name", "doc_type"] },
+  { name: "price_lists", icon: Tag, description: "Custom price lists", key_columns: ["name", "client_id", "discount_tier_id"] },
+  { name: "price_list_items", icon: Tag, description: "Custom prices per product in a list", key_columns: ["price_list_id", "product_id", "custom_price"] },
+  { name: "price_list_clients", icon: Tag, description: "Price list → client association", key_columns: ["price_list_id", "client_id"] },
+  { name: "discount_tiers", icon: Tag, description: "Discount tiers (A/B/C/D)", key_columns: ["name", "label", "discount_pct", "sort_order"] },
+  { name: "leads", icon: GitBranch, description: "CRM leads for sales team", key_columns: ["company_name", "status", "source", "assigned_to"] },
+  { name: "activities", icon: Zap, description: "CRM activities (call, email, meeting)", key_columns: ["title", "type", "lead_id", "client_id", "scheduled_at"] },
+  { name: "distributor_requests", icon: FileText, description: "Distributor requests (public)", key_columns: ["company_name", "email", "status"] },
+  { name: "user_roles", icon: Shield, description: "User roles (admin, dealer, sales, operations)", key_columns: ["user_id", "role"] },
+  { name: "profiles", icon: Users, description: "Auth user profiles", key_columns: ["user_id", "email", "company_name"] },
+  { name: "client_contacts", icon: Users, description: "Additional contacts per client", key_columns: ["client_id", "contact_name", "email", "role"] },
 ];
 
 const RELATIONS = [
-  { from: "clients", to: "orders", label: "client_id", description: "Un cliente ha molti ordini" },
-  { from: "orders", to: "order_items", label: "order_id", description: "Un ordine ha molte righe" },
-  { from: "products", to: "order_items", label: "product_id", description: "Un prodotto appare in molte righe ordine" },
-  { from: "orders", to: "order_documents", label: "order_id", description: "Un ordine ha molti documenti" },
-  { from: "price_lists", to: "price_list_items", label: "price_list_id", description: "Un listino ha molti prezzi custom" },
-  { from: "products", to: "price_list_items", label: "product_id", description: "Un prodotto ha prezzi in più listini" },
-  { from: "price_lists", to: "price_list_clients", label: "price_list_id", description: "Un listino è assegnato a più clienti" },
-  { from: "clients", to: "price_list_clients", label: "client_id", description: "Un cliente può avere più listini" },
-  { from: "discount_tiers", to: "price_lists", label: "discount_tier_id", description: "Un listino può avere un tier di sconto" },
-  { from: "clients", to: "client_contacts", label: "client_id", description: "Un cliente ha più contatti" },
-  { from: "leads", to: "activities", label: "lead_id", description: "Un lead ha molte attività" },
-  { from: "clients", to: "activities", label: "client_id", description: "Attività legate a un cliente" },
+  { from: "clients", to: "orders", label: "client_id", description: "A client has many orders" },
+  { from: "orders", to: "order_items", label: "order_id", description: "An order has many items" },
+  { from: "products", to: "order_items", label: "product_id", description: "A product appears in many order items" },
+  { from: "orders", to: "order_documents", label: "order_id", description: "An order has many documents" },
+  { from: "price_lists", to: "price_list_items", label: "price_list_id", description: "A list has many custom prices" },
+  { from: "products", to: "price_list_items", label: "product_id", description: "A product has prices in multiple lists" },
+  { from: "price_lists", to: "price_list_clients", label: "price_list_id", description: "A list is assigned to multiple clients" },
+  { from: "clients", to: "price_list_clients", label: "client_id", description: "A client can have multiple lists" },
+  { from: "discount_tiers", to: "price_lists", label: "discount_tier_id", description: "A list can have a discount tier" },
+  { from: "clients", to: "client_contacts", label: "client_id", description: "A client has multiple contacts" },
+  { from: "leads", to: "activities", label: "lead_id", description: "A lead has many activities" },
+  { from: "clients", to: "activities", label: "client_id", description: "Activities linked to a client" },
   { from: "products", to: "product_details", label: "category ↔ product_family", description: "Varianti raggruppate per famiglia" },
 ];
 
@@ -105,10 +105,10 @@ const USER_FLOWS = [
 ];
 
 const ROLES_MAP = [
-  { role: "admin", access: ["/admin/*"], permissions: "Full CRUD su tutto. Gestione utenti, prodotti, ordini, listini, CRM." },
-  { role: "dealer", access: ["/portal/*"], permissions: "Vede solo i propri dati: catalogo, ordini, carrello, promozioni, supporto." },
-  { role: "sales", access: ["/crm/*"], permissions: "Gestisce lead, attività, pipeline. Vede clienti assegnati." },
-  { role: "operations", access: ["/admin/*"], permissions: "Come admin ma focalizzato su ordini e logistica." },
+  { role: "admin", access: ["/admin/*"], permissions: "Full CRUD on everything. Users, products, orders, price lists, CRM." },
+  { role: "dealer", access: ["/portal/*"], permissions: "Views own data only: catalog, orders, cart, promos, support." },
+  { role: "sales", access: ["/crm/*"], permissions: "Manages leads, activities, pipeline. Views assigned clients." },
+  { role: "operations", access: ["/admin/*"], permissions: "Like admin but focused on orders and logistics." },
 ];
 
 const AdminSystemMap = () => {
@@ -140,15 +140,15 @@ const AdminSystemMap = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">System Map</h1>
-          <p className="text-sm text-muted-foreground">Architettura, relazioni e flussi della piattaforma</p>
+          <p className="text-sm text-muted-foreground">Platform architecture, relations and flows</p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">
-            Ultimo aggiornamento: {lastRefresh.toLocaleTimeString("it-IT")}
+            Last updated: {lastRefresh.toLocaleTimeString("en-US")}
           </span>
           <Button variant="outline" size="sm" onClick={fetchStats} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
-            Aggiorna
+            Refresh
           </Button>
         </div>
       </div>
@@ -157,8 +157,8 @@ const AdminSystemMap = () => {
         <TabsList className="bg-muted/50">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="tables">Database</TabsTrigger>
-          <TabsTrigger value="relations">Relazioni</TabsTrigger>
-          <TabsTrigger value="flows">Flussi</TabsTrigger>
+          <TabsTrigger value="relations">Relations</TabsTrigger>
+          <TabsTrigger value="flows">Flows</TabsTrigger>
           <TabsTrigger value="roles">Ruoli & RLS</TabsTrigger>
         </TabsList>
 
