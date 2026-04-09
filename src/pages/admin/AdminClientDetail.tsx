@@ -124,7 +124,11 @@ const AdminClientDetail = () => {
   const [newContact, setNewContact] = useState({ contact_name: "", email: "", phone: "", role: "" });
   const [showAddContact, setShowAddContact] = useState(false);
   const [showCreateAccount, setShowCreateAccount] = useState(false);
-  const [accountPassword, setAccountPassword] = useState("dealer2025");
+  const generatePassword = () => {
+    const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%";
+    return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  };
+  const [accountPassword, setAccountPassword] = useState(() => generatePassword());
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [showComposeFromOrder, setShowComposeFromOrder] = useState(false);
   const [composeOrderContext, setComposeOrderContext] = useState<any>(null);
