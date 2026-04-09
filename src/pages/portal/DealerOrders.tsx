@@ -122,9 +122,9 @@ const DealerOrders = () => {
     }
   }, [highlightId, orders]);
 
-  const getDownloadUrl = async (filePath: string) => {
+  const handleDownloadDoc = async (filePath: string) => {
     const { data } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 300);
-    return data?.signedUrl || "";
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   };
 
   const getPhaseIndex = (status: string) => {
@@ -645,12 +645,10 @@ const DealerOrders = () => {
                       ) : (
                         <div className="space-y-2">
                           {docs.map((doc: any) => (
-                            <a
+                            <button
                               key={doc.id}
-                              href={getDownloadUrl(doc.file_path)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-between bg-background/50 rounded-lg px-4 py-3 hover:bg-background/80 transition-colors group"
+                              onClick={() => handleDownloadDoc(doc.file_path)}
+                              className="flex items-center justify-between bg-background/50 rounded-lg px-4 py-3 hover:bg-background/80 transition-colors group w-full text-left"
                             >
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
