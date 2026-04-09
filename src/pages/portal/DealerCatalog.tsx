@@ -196,7 +196,7 @@ const DealerCatalog = () => {
         <Alert className="mb-6 border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
           <AlertTriangle className="h-4 w-4 text-yellow-600" />
           <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-            Il tuo listino prezzi non è ancora stato assegnato. Contatta il tuo referente commerciale per attivare i prezzi personalizzati.
+            Your price list has not been assigned yet. Contact your sales representative to activate personalized pricing.
           </AlertDescription>
         </Alert>
       )}
@@ -204,7 +204,7 @@ const DealerCatalog = () => {
       {catalogProducts.length === 0 ? (
         <div className="text-center py-20">
           <Package className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">Nessun prodotto disponibile.</p>
+          <p className="text-muted-foreground">No products available.</p>
         </div>
       ) : (
         <>
@@ -290,10 +290,10 @@ const DealerCatalog = () => {
                           </div>
                           <div className="text-right">
                             <span className={`text-xs font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
-                              {inStock ? "Available" : "Esaurito"}
+                              {inStock ? "Available" : "Out of Stock"}
                             </span>
                             {!inStock && leadTime && (
-                              <p className="text-[10px] font-semibold text-destructive/80">Rientro: {leadTime}</p>
+                              <p className="text-[10px] font-semibold text-destructive/80">Restock: {leadTime}</p>
                             )}
                           </div>
                         </div>
@@ -309,9 +309,9 @@ const DealerCatalog = () => {
                                   <p className="font-heading text-lg font-bold text-foreground">€{b2bPrice.toFixed(2)}</p>
                                 </>
                               ) : !hasPriceList ? (
-                                <p className="text-sm font-medium text-muted-foreground italic">Prezzo su richiesta</p>
+                                <p className="text-sm font-medium text-muted-foreground italic">Price on request</p>
                               ) : (
-                                <p className="text-sm font-medium text-muted-foreground italic">Non incluso nel tuo listino</p>
+                                <p className="text-sm font-medium text-muted-foreground italic">Not included in your price list</p>
                               )}
                             </div>
                             <div className="text-right">
@@ -319,10 +319,10 @@ const DealerCatalog = () => {
                                 <Badge variant="outline" className="text-[10px] bg-success/20 text-success border-0 mb-1">-{discountPct}%</Badge>
                               )}
                               <span className={`block text-xs font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
-                                {inStock ? `${p.stock_quantity} in stock` : "Esaurito"}
+                                {inStock ? `${p.stock_quantity} in stock` : "Out of Stock"}
                               </span>
                               {!inStock && leadTime && (
-                                <span className="block text-[11px] font-semibold text-destructive/80">Rientro: {leadTime}</span>
+                                <span className="block text-[11px] font-semibold text-destructive/80">Restock: {leadTime}</span>
                               )}
                             </div>
                           </div>
@@ -417,7 +417,7 @@ const DealerCatalog = () => {
           canAddToCart={selectedHasPrice && (selectedProduct?.stock_quantity ?? 0) > 0}
           onAddToCart={() => {
             if (!selectedHasPrice) {
-              toast.error("Impossibile aggiungere: prezzo non disponibile");
+              toast.error("Cannot add: price not available");
               return;
             }
             const plEntry = priceListProductMap.get(selectedProduct.id);
