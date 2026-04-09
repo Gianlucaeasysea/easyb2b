@@ -231,8 +231,6 @@ const DealerOrders = () => {
   };
 
   // Draft management
-  const draftOrders = useMemo(() => (orders || []).filter((o: any) => o.status === "draft"), [orders]);
-  const nonDraftOrders = useMemo(() => (orders || []).filter((o: any) => o.status !== "draft"), [orders]);
 
   const handleDeleteDraft = async (order: any) => {
     setDeletingDraftId(order.id);
@@ -607,7 +605,7 @@ const DealerOrders = () => {
         <TablePagination
           currentPage={page}
           totalPages={totalPages}
-          totalItems={allOrders.length}
+          totalItems={nonDraftOrders.length}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
