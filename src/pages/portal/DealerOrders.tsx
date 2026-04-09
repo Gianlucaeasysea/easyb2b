@@ -425,7 +425,7 @@ const DealerOrders = () => {
             const isSubmitted = status === "submitted";
 
             return (
-              <div key={order.id} className="glass-card-solid overflow-hidden">
+              <div key={order.id} ref={order.id === highlightId ? highlightRef : undefined} className={`glass-card-solid overflow-hidden transition-all duration-500 ${highlightedId === order.id ? "ring-2 ring-primary bg-primary/5" : ""}`}>
                 {/* Header */}
                 <div
                   className="p-5 flex items-center justify-between cursor-pointer hover:bg-secondary/50 transition-colors"
