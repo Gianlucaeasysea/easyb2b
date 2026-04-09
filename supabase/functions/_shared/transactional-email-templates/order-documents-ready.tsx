@@ -33,7 +33,7 @@ const OrderDocumentsReadyEmail = ({ clientName, orderCode }: OrderDocumentsReady
 
 export const template = {
   component: OrderDocumentsReadyEmail,
-  subject: (data: Record<string, any>) => `Easysea — Documents available for order ${data.orderCode || ''}`,
+  subject: (data: Record<string, any>) => `Documents available for your order — Easysea B2B`,
   displayName: 'Order documents ready',
   previewData: { clientName: 'Mario Rossi', orderCode: 'ES-0001' },
 } satisfies TemplateEntry

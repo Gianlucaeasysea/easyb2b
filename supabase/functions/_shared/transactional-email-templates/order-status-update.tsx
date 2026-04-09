@@ -39,7 +39,7 @@ const OrderStatusUpdateEmail = ({ clientName, orderCode, status, trackingNumber,
 
 export const template = {
   component: OrderStatusUpdateEmail,
-  subject: (data: Record<string, any>) => `Easysea — Order ${data.orderCode || ''} status: ${data.status || 'updated'}`,
+  subject: (data: Record<string, any>) => `Order status update — Easysea B2B`,
   displayName: 'Order status update',
   previewData: { clientName: 'Mario Rossi', orderCode: 'ES-0001', status: 'Shipped', trackingNumber: 'TRK123456' },
 } satisfies TemplateEntry

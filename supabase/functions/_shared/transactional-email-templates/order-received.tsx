@@ -47,7 +47,7 @@ const OrderReceivedEmail = ({ clientName, orderCode, itemsHtml, totalAmount, not
 
 export const template = {
   component: OrderReceivedEmail,
-  subject: (data: Record<string, any>) => `Easysea — Order ${data.orderCode || ''} received`,
+  subject: (data: Record<string, any>) => `Order Received — Easysea B2B`,
   displayName: 'Order received (client)',
   previewData: { clientName: 'Mario Rossi', orderCode: 'ES-0001', totalAmount: '250.00' },
 } satisfies TemplateEntry
