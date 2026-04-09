@@ -46,12 +46,11 @@ const CRMCreateOrder = () => {
 
   // Fetch clients assigned to current sales user
   const { data: clients } = useQuery({
-    queryKey: ["crm-create-order-clients", user?.id],
+    queryKey: ["crm-create-order-clients"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
         .select("id, company_name, contact_name, address, payment_terms, zone")
-        .eq("assigned_sales_id", user!.id)
         .order("company_name");
       if (error) throw error;
       return data;
