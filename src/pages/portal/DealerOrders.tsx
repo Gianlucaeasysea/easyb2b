@@ -95,6 +95,9 @@ const DealerOrders = () => {
     enabled: !!client,
   });
 
+  const draftOrders = useMemo(() => (orders || []).filter((o: any) => o.status === "draft"), [orders]);
+  const nonDraftOrders = useMemo(() => (orders || []).filter((o: any) => o.status !== "draft"), [orders]);
+
   const totalPages = Math.max(1, Math.ceil(nonDraftOrders.length / pageSize));
   const sliceFrom = (page - 1) * pageSize;
   const pageData = nonDraftOrders.slice(sliceFrom, sliceFrom + pageSize);
