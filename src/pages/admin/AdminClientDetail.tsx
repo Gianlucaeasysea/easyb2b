@@ -743,8 +743,8 @@ const AdminClientDetail = () => {
                         try {
                           const { error } = await supabase.functions.invoke("reset-dealer-password", { body: { email: client.email } });
                           if (error) throw error;
-                          toast.success(`Email di reset password inviata a ${client.email}`);
-                        } catch (e) { toast.error(e instanceof Error ? e.message : "Errore invio reset"); }
+                          toast.success(`Password reset email sent to ${client.email}`);
+                        } catch (e) { toast.error(e instanceof Error ? e.message : "Error sending reset"); }
                       }}>
                         <KeyRound size={12} /> Reset Password
                       </Button>
@@ -754,11 +754,11 @@ const AdminClientDetail = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">Nessun account portale creato</p>
+                <p className="text-xs text-muted-foreground">No portal account created</p>
                 <Button size="sm" onClick={() => setShowCreateAccount(true)} className="w-full gap-1" disabled={!client?.email}>
-                  <UserPlus size={14} /> Crea Account Dealer
+                  <UserPlus size={14} /> Create Dealer Account
                 </Button>
-                {!client?.email && <p className="text-[10px] text-destructive">⚠️ Inserisci prima un'email al cliente</p>}
+                {!client?.email && <p className="text-[10px] text-destructive">⚠️ Please add an email to the client first</p>}
               </div>
             )}
           </div>
