@@ -748,6 +748,104 @@ const DealerOrders = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Delete Draft Dialog */}
+      <Dialog open={!!confirmDeleteDraft} onOpenChange={() => setConfirmDeleteDraft(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Elimina Bozza</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Sei sicuro di voler eliminare questa bozza? Questa azione non può essere annullata.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteDraft(null)}>Indietro</Button>
+            <Button variant="destructive" onClick={() => handleDeleteDraft(confirmDeleteDraft)} disabled={!!deletingDraftId}>
+              {deletingDraftId ? "Eliminazione..." : "Elimina Bozza"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Draft Editor Dialog */}
+      <Dialog open={!!editingDraft} onOpenChange={() => setEditingDraft(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Completa Ordine — {editingDraft?.order_code || `#${editingDraft?.id?.slice(0, 8).toUpperCase()}`}
+            </DialogTitle>
+          </DialogHeader>
+          {editingDraft && (
+            <div className="space-y-4">
+              {draftItems.length === 0 ? (
+                <p className="text-center text-muted-foreground py-6">Nessun prodotto nella bozza. Aggiungi prodotti dal catalogo.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Prodotto</TableHead>
+                      <TableHead className="text-xs text-right">Prezzo</TableHead>
+                      <TableHead className="text-xs text-center w-[130px]">Quantità</TableHead>
+                      <TableHead className="text-xs text-right">Subtotale</TableHead>
+                      <TableHead className="w-10" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {draftItems.map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <p className="text-sm font-medium">{item.name}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{item.sku}</p>
+                        </TableCell>
+                        <TableCell className="text-right text-sm">€{Number(item.unit_price).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateDraftItemQty(item.id, item.quantity - 1)}>
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={item.quantity}
+                              onChange={(e) => updateDraftItemQty(item.id, parseInt(e.target.value) || 1)}
+                              className="w-16 h-7 text-center text-sm"
+                            />
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateDraftItemQty(item.id, item.quantity + 1)}>
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-medium">€{(Number(item.unit_price) * item.quantity).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeDraftItem(item.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+              <div className="flex justify-end text-lg font-bold">Totale: €{draftTotal.toFixed(2)}</div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Note (opzionale)</label>
+                <Textarea
+                  placeholder="Aggiungi note all'ordine..."
+                  value={draftNotes}
+                  onChange={(e) => setDraftNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingDraft(null)}>Chiudi</Button>
+                <Button onClick={submitDraft} disabled={submittingDraft || draftItems.length === 0}>
+                  {submittingDraft ? "Invio in corso..." : "Invia Ordine"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
