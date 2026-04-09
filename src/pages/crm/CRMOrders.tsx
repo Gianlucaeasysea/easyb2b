@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePaginatedData } from "@/hooks/usePaginatedData";
@@ -8,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { TablePagination } from "@/components/ui/TablePagination";
-import { Package, Clock, Truck, CheckCircle, Search, ShoppingBag } from "lucide-react";
+import { Package, Clock, Truck, CheckCircle, Search, ShoppingBag, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { getOrderStatusLabel, getOrderStatusColor, getPaymentStatusLabel, getPaymentStatusColor } from "@/lib/constants";
@@ -34,6 +36,7 @@ const quickFilterConfig: { key: QuickFilter; label: string; statuses: string[] }
 
 const CRMOrders = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
@@ -125,7 +128,12 @@ const CRMOrders = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-bold text-foreground">Ordini</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-heading text-2xl font-bold text-foreground">Ordini</h1>
+        <Button onClick={() => navigate("/crm/orders/new")}>
+          <Plus className="h-4 w-4 mr-1" /> Crea Ordine
+        </Button>
+      </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -75,6 +75,7 @@ import CRMAutomations from "./pages/crm/CRMAutomations";
 import CRMHelp from "./pages/crm/CRMHelp";
 import CRMOrders from "./pages/crm/CRMOrders";
 import CRMOrderDetail from "./pages/crm/CRMOrderDetail";
+import CRMCreateOrder from "./pages/crm/CRMCreateOrder";
 
 const queryClient = new QueryClient();
 
@@ -162,6 +163,7 @@ const App = () => (
               <Route path="contacts" element={<CRMContactsPeople />} />
               <Route path="email-templates" element={<CRMEmailTemplates />} />
               <Route path="orders" element={<CRMOrders />} />
+              <Route path="orders/new" element={<CRMCreateOrder />} />
               <Route path="orders/:id" element={<CRMOrderDetail />} />
               <Route path="tasks" element={<CRMTasks />} />
               <Route path="analytics" element={<CRMAnalytics />} />
