@@ -700,7 +700,7 @@ const DealerOrders = () => {
       <Dialog open={!!priceCheckData} onOpenChange={() => setPriceCheckData(null)}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Verifica prezzi prima di duplicare</DialogTitle>
+            <DialogTitle>Price check before duplicating</DialogTitle>
           </DialogHeader>
           {priceCheckData && (
             <>
@@ -708,10 +708,10 @@ const DealerOrders = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs">Prodotto</TableHead>
-                      <TableHead className="text-xs text-right">Prezzo Orig.</TableHead>
-                      <TableHead className="text-xs text-right">Prezzo Attuale</TableHead>
-                      <TableHead className="text-xs text-right">Variazione</TableHead>
+                      <TableHead className="text-xs">Product</TableHead>
+                      <TableHead className="text-xs text-right">Orig. Price</TableHead>
+                      <TableHead className="text-xs text-right">Current Price</TableHead>
+                      <TableHead className="text-xs text-right">Change</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -726,14 +726,14 @@ const DealerOrders = () => {
                           <TableCell className="text-xs text-right font-mono">€{item.originalPrice.toFixed(2)}</TableCell>
                           <TableCell className="text-xs text-right font-mono">
                             {!item.available || item.currentPrice === null
-                              ? <span className="text-destructive font-medium">Non disponibile</span>
+                              ? <span className="text-destructive font-medium">Unavailable</span>
                               : `€${item.currentPrice.toFixed(2)}`}
                           </TableCell>
                           <TableCell className="text-xs text-right font-medium">
                             {!item.available || item.currentPrice === null ? (
-                              <span className="text-destructive">Rimosso</span>
+                              <span className="text-destructive">Removed</span>
                             ) : diff === 0 ? (
-                              <span className="text-success">Invariato</span>
+                              <span className="text-success">Unchanged</span>
                             ) : diff! > 0 ? (
                               <span className="text-destructive">+€{diff!.toFixed(2)} ↑</span>
                             ) : (
@@ -748,10 +748,10 @@ const DealerOrders = () => {
               </div>
               <div className="flex justify-between text-sm mt-2 p-3 bg-secondary/50 rounded-lg">
                 <span className="text-muted-foreground">
-                  Totale originale: <span className="font-mono font-semibold text-foreground">€{priceCheckData.originalTotal.toFixed(2)}</span>
+                  Original total: <span className="font-mono font-semibold text-foreground">€{priceCheckData.originalTotal.toFixed(2)}</span>
                 </span>
                 <span className="text-muted-foreground">
-                  Nuovo totale: <span className="font-mono font-semibold text-primary">€{priceCheckData.newTotal.toFixed(2)}</span>
+                  New total: <span className="font-mono font-semibold text-primary">€{priceCheckData.newTotal.toFixed(2)}</span>
                 </span>
               </div>
               <DialogFooter>
