@@ -41,7 +41,7 @@ const DealerSupport = () => {
           </div>
           <h3 className="font-heading font-semibold text-foreground text-sm mb-1">Email Support</h3>
           <p className="text-xs text-muted-foreground mb-3">Typically responds within 24h</p>
-          <a href="mailto:b2b@easysea.org" className="text-sm text-primary hover:underline">b2b@easysea.org</a>
+          <a href="mailto:business@easysea.org" className="text-sm text-primary hover:underline">business@easysea.org</a>
         </div>
 
         <div className="glass-card-solid p-5">

@@ -24,8 +24,11 @@ const Footer = () => (
         <div>
           <h4 className="font-heading text-[11px] font-bold text-foreground mb-5 uppercase tracking-[0.2em]">Contact</h4>
           <ul className="space-y-3 text-sm text-muted-foreground">
-            <li className="flex items-center gap-2.5"><Mail size={13} className="text-primary" /> b2b@easysea.org</li>
-            <li className="flex items-center gap-2.5"><Globe size={13} className="text-primary" /> easysea.org</li>
+            <li className="flex items-center gap-2.5"><Mail size={13} className="text-primary" /> business@easysea.org</li>
+            <li className="flex items-center gap-2.5">
+              <Globe size={13} className="text-primary" />
+              <a href="https://easysea.org" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">easysea.org</a>
+            </li>
             <li className="flex items-start gap-2.5"><MapPin size={13} className="mt-0.5 flex-shrink-0 text-primary" /> Via Per Curnasco 52, 24127 Bergamo (BG), Italia</li>
           </ul>
         </div>
