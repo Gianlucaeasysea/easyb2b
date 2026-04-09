@@ -2,12 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClientMode } from "@/contexts/ClientModeContext";
-import { Package, Search, ShoppingCart, Minus, Plus, AlertTriangle } from "lucide-react";
+import { Package, Search, ShoppingCart, ShoppingBag, Minus, Plus, LayoutGrid, List } from "lucide-react";
 import OptimizedImage from "@/components/ui/OptimizedImage";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
@@ -48,9 +49,19 @@ const DealerCatalog = () => {
   const { isClientMode } = useClientMode();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const { addItem, totalItems, items: cartItems } = useCart();
+  const { addItem, totalItems } = useCart();
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    const saved = localStorage.getItem("catalog_view_mode");
+    return saved === "list" ? "list" : "grid";
+  });
+  const [showRetailPrices, setShowRetailPrices] = useState(false);
+
+  const handleViewModeChange = (mode: "grid" | "list") => {
+    setViewMode(mode);
+    localStorage.setItem("catalog_view_mode", mode);
+  };
 
   const { data: client } = useQuery({
     queryKey: ["my-client"],
@@ -62,29 +73,30 @@ const DealerCatalog = () => {
   });
 
   // Get price lists assigned to this client via junction table
-  const { data: myPriceListItems } = useQuery({
+  const { data: myPriceListItems, isLoading: loadingPriceList } = useQuery({
     queryKey: ["my-price-list-items", client?.id],
     queryFn: async () => {
       const { data: assignments } = await supabase
         .from("price_list_clients")
         .select("price_list_id")
         .eq("client_id", client!.id);
-      
+
       if (!assignments?.length) return [];
 
       const plIds = assignments.map(a => a.price_list_id);
       const { data: items, error } = await supabase
         .from("price_list_items")
-        .select("*, products(*)")
+        .select("*, products!inner(*)")
         .in("price_list_id", plIds);
-      
+
       if (error) throw error;
-      return items || [];
+      // Only keep items where the product exists and is active for B2B
+      return (items || []).filter((item: any) => item.products && item.products.active_b2b === true);
     },
     enabled: !!client?.id,
   });
 
-  // Fetch all product details
+  // Fetch product details for enrichment
   const { data: productDetails } = useQuery({
     queryKey: ["product-details"],
     queryFn: async () => {
@@ -115,19 +127,27 @@ const DealerCatalog = () => {
 
   const hasPriceList = priceListProductMap.size > 0;
 
-  // Fetch ALL active B2B products when dealer has no price list (to show them disabled)
-  const { data: allProducts } = useQuery({
-    queryKey: ["all-b2b-products"],
-    queryFn: async () => {
-      const { data } = await supabase.from("products").select("*").eq("active_b2b", true);
-      return data || [];
-    },
-    enabled: !hasPriceList && !!client?.id,
-  });
+  // FIX 1 & 2: If no price list assigned, show empty state — never show fake products
+  if (!loadingPriceList && myPriceListItems !== undefined && !hasPriceList) {
+    return (
+      <div>
+        <h1 className="font-heading text-2xl font-bold text-foreground mb-6">Product Catalog</h1>
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <ShoppingBag className="h-16 w-16 text-muted-foreground mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Catalog not yet available</h2>
+          <p className="text-muted-foreground max-w-md">
+            Your personalized price list has not been assigned yet.
+            Contact your sales representative or write to business@easysea.org to activate your catalog.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  const catalogProducts = hasPriceList
-    ? Array.from(priceListProductMap.entries()).map(([id, { product }]) => product).filter(Boolean)
-    : (allProducts || []);
+  // Only show products from the price list (active_b2b already filtered above)
+  const catalogProducts = Array.from(priceListProductMap.entries())
+    .map(([, { product }]) => product)
+    .filter(Boolean);
 
   const MACRO_CATEGORIES = [
     { label: "Boat Hook", keywords: ["boat hook", "jake"] },
@@ -164,6 +184,28 @@ const DealerCatalog = () => {
     ? Math.round((1 - selectedB2bPrice / selectedRetailPrice) * 100)
     : 0;
 
+  const handleAddToCart = (p: any) => {
+    const plEntry = priceListProductMap.get(p.id);
+    if (!plEntry) return;
+    const b2bPrice = plEntry.customPrice;
+    const retailPrice = Number(p.compare_at_price || p.price || 0);
+    const discountPct = retailPrice > 0 && b2bPrice < retailPrice ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
+    const qty = quantities[p.id] || 1;
+    addItem({
+      productId: p.id,
+      name: p.name,
+      sku: p.sku,
+      unitPrice: Number(p.price),
+      b2bPrice,
+      discountPct,
+      stock: p.stock_quantity ?? 0,
+      image: p.images?.[0] || null,
+      quantity: qty,
+    });
+    toast.success(`${qty}x ${p.name} added`);
+    setQuantities(prev => ({ ...prev, [p.id]: 1 }));
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -171,15 +213,11 @@ const DealerCatalog = () => {
           <h1 className="font-heading text-2xl font-bold text-foreground">
             {isClientMode ? "Our Products" : "Product Catalog"}
           </h1>
-          {isClientMode ? (
-            <p className="text-sm text-muted-foreground">Retail prices shown</p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {hasPriceList
-                ? `Your personalized B2B catalog — ${catalogProducts.length} products`
-                : "No price list assigned yet. Contact your sales rep."}
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            {isClientMode
+              ? "Retail prices shown"
+              : `Your personalized B2B catalog — ${catalogProducts.length} products`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
@@ -194,216 +232,319 @@ const DealerCatalog = () => {
         </div>
       </div>
 
-      {!hasPriceList && (
-        <Alert className="mb-6 border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
-          <AlertTriangle className="h-4 w-4 text-yellow-600" />
-          <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-            Your price list has not been assigned yet. Contact your sales representative to activate personalized pricing.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Search, Filters, View Toggle, Retail Toggle */}
+      <div className="flex gap-3 mb-6 flex-wrap items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+          <Input placeholder="Search by name or SKU..." className="pl-10 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
 
-      {catalogProducts.length === 0 ? (
+        {/* View mode toggle */}
+        {!isClientMode && (
+          <div className="flex border rounded-md">
+            <Button
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => handleViewModeChange("grid")}
+              className={viewMode === "grid" ? "bg-foreground text-background" : ""}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => handleViewModeChange("list")}
+              className={viewMode === "list" ? "bg-foreground text-background" : ""}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Retail price toggle */}
+        {!isClientMode && (
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={showRetailPrices}
+              onCheckedChange={setShowRetailPrices}
+              id="retail-toggle"
+            />
+            <Label htmlFor="retail-toggle" className="text-sm cursor-pointer">Retail prices</Label>
+          </div>
+        )}
+      </div>
+
+      {/* Category filters */}
+      <div className="flex gap-1.5 flex-wrap mb-6">
+        <Button
+          variant={!selectedCategory ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedCategory(null)}
+          className={`rounded-lg text-xs ${!selectedCategory ? "bg-foreground text-background" : ""}`}
+        >
+          All
+        </Button>
+        {categoryCounts.map(cat => (
+          <Button
+            key={cat.label}
+            variant={selectedCategory === cat.label ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectedCategory(cat.label)}
+            className={`rounded-lg text-xs ${selectedCategory === cat.label ? "bg-foreground text-background" : ""}`}
+          >
+            {cat.label}
+          </Button>
+        ))}
+      </div>
+
+      {loadingPriceList ? (
+        <p className="text-muted-foreground">Loading catalog...</p>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-20">
           <Package className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">No products available.</p>
+          <p className="text-muted-foreground">No products found.</p>
+        </div>
+      ) : viewMode === "list" && !isClientMode ? (
+        /* LIST VIEW */
+        <div className="space-y-0 border rounded-lg overflow-hidden">
+          {filtered.map((p, i) => {
+            const plEntry = priceListProductMap.get(p.id);
+            const b2bPrice = plEntry?.customPrice ?? 0;
+            const retailPrice = Number(p.compare_at_price || p.price || 0);
+            const discountPct = retailPrice > 0 && b2bPrice < retailPrice
+              ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
+            const inStock = (p.stock_quantity ?? 0) > 0;
+            const detail = getDetailForProduct(p);
+            const leadTime = (detail as any)?.lead_time;
+
+            return (
+              <div
+                key={p.id}
+                className={`flex items-center gap-4 p-3 hover:bg-muted/50 cursor-pointer transition-colors ${i > 0 ? "border-t" : ""}`}
+                onClick={() => setSelectedProduct(p)}
+              >
+                {/* Image */}
+                <div className="w-12 h-12 rounded bg-secondary flex-shrink-0 overflow-hidden">
+                  <OptimizedImage
+                    src={p.images?.[0]}
+                    alt={p.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                    containerClassName="w-full h-full"
+                  />
+                </div>
+
+                {/* Name + SKU */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-heading text-sm font-semibold text-foreground truncate">{p.name}</p>
+                  {p.sku && <p className="text-xs font-mono text-muted-foreground">{p.sku}</p>}
+                </div>
+
+                {/* Stock */}
+                <div className="flex-shrink-0">
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] border-0 ${
+                      !inStock ? "bg-destructive/10 text-destructive" :
+                      (p.stock_quantity ?? 0) < 10 ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                      "bg-success/10 text-success"
+                    }`}
+                  >
+                    {!inStock ? "Out of Stock" : (p.stock_quantity ?? 0) < 10 ? "Low Stock" : "In Stock"}
+                  </Badge>
+                  {!inStock && leadTime && (
+                    <p className="text-[10px] text-destructive/80 font-semibold mt-0.5">{leadTime}</p>
+                  )}
+                </div>
+
+                {/* Retail price (conditional) */}
+                {showRetailPrices && (
+                  <div className="flex-shrink-0 text-right w-20">
+                    <p className="text-xs text-muted-foreground">Retail</p>
+                    <p className="text-sm text-muted-foreground">€{retailPrice.toFixed(2)}</p>
+                  </div>
+                )}
+
+                {/* B2B Price */}
+                <div className="flex-shrink-0 text-right w-24">
+                  {retailPrice > 0 && retailPrice !== b2bPrice && (
+                    <p className="text-xs text-muted-foreground line-through">€{retailPrice.toFixed(2)}</p>
+                  )}
+                  <p className="font-heading text-base font-bold text-foreground">€{b2bPrice.toFixed(2)}</p>
+                </div>
+
+                {/* Discount */}
+                <div className="flex-shrink-0 w-12 text-center">
+                  {discountPct > 0 && (
+                    <Badge variant="outline" className="text-[10px] bg-success/20 text-success border-0">-{discountPct}%</Badge>
+                  )}
+                </div>
+
+                {/* Quantity + Add */}
+                <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={p.stock_quantity ?? 999}
+                    value={quantities[p.id] || 1}
+                    onChange={(e) => {
+                      const val = Math.max(1, Math.min(parseInt(e.target.value) || 1, p.stock_quantity ?? 999));
+                      setQuantities(prev => ({ ...prev, [p.id]: val }));
+                    }}
+                    className="w-14 text-center h-8 text-sm"
+                    disabled={!inStock}
+                  />
+                  <Button
+                    disabled={!inStock}
+                    size="sm"
+                    className="rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold text-xs h-8 px-3"
+                    onClick={() => handleAddToCart(p)}
+                  >
+                    <ShoppingCart size={12} />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
-        <>
-          {/* Search & Filters */}
-          <div className="flex gap-3 mb-6 flex-wrap">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-              <Input placeholder="Search by name or SKU..." className="pl-10 rounded-lg bg-secondary border-border" value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <div className="flex gap-1.5 flex-wrap">
-              <Button
-                variant={!selectedCategory ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(null)}
-                className={`rounded-lg text-xs ${!selectedCategory ? "bg-foreground text-background" : ""}`}
+        /* GRID VIEW */
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((p, i) => {
+            const plEntry = priceListProductMap.get(p.id);
+            const b2bPrice = plEntry?.customPrice ?? 0;
+            const retailPrice = Number(p.compare_at_price || p.price || 0);
+            const discountPct = retailPrice > 0 && b2bPrice < retailPrice
+              ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
+            const inStock = (p.stock_quantity ?? 0) > 0;
+            const detail = getDetailForProduct(p);
+            const leadTime = (detail as any)?.lead_time;
+
+            return (
+              <div
+                key={p.id}
+                className="glass-card-solid overflow-hidden group hover:border-primary/30 transition-colors cursor-pointer"
+                onClick={() => setSelectedProduct(p)}
               >
-                All
-              </Button>
-              {categoryCounts.map(cat => (
-                <Button
-                  key={cat.label}
-                  variant={selectedCategory === cat.label ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(cat.label)}
-                  className={`rounded-lg text-xs ${selectedCategory === cat.label ? "bg-foreground text-background" : ""}`}
-                >
-                  {cat.label}
-                </Button>
-              ))}
-            </div>
-          </div>
+                <div className="aspect-square bg-secondary flex items-center justify-center relative">
+                  <OptimizedImage
+                    src={p.images?.[0]}
+                    alt={p.name}
+                    loading={i < 4 ? "eager" : "lazy"}
+                    className="w-full h-full object-cover"
+                    containerClassName="w-full h-full"
+                  />
+                  {p.category && (
+                    <Badge className="absolute top-2 left-2 text-[10px] bg-background/80 text-foreground border-0 backdrop-blur-sm">
+                      {p.category}
+                    </Badge>
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3 className="font-heading text-sm font-semibold text-foreground mb-1">{p.name}</h3>
+                  {p.sku && <p className="text-xs font-mono text-muted-foreground">{p.sku}</p>}
+                  {(p as any).barcode && <p className="text-xs font-mono text-muted-foreground mb-1">EAN: {(p as any).barcode}</p>}
+                  {p.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{p.description}</p>}
 
-          {filtered.length === 0 ? (
-            <div className="text-center py-20">
-              <Package className="mx-auto text-muted-foreground mb-4" size={48} />
-              <p className="text-muted-foreground">No products found.</p>
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filtered.map((p, i) => {
-                const plEntry = priceListProductMap.get(p.id);
-                const productHasPrice = !!plEntry;
-                const b2bPrice = plEntry?.customPrice ?? 0;
-                const retailPrice = Number(p.compare_at_price || p.price || 0);
-                const discountPct = productHasPrice && retailPrice > 0 && b2bPrice < retailPrice
-                  ? Math.round((1 - b2bPrice / retailPrice) * 100)
-                  : 0;
-                const inStock = (p.stock_quantity ?? 0) > 0;
-                const canAddToCart = productHasPrice && inStock;
-                const detail = getDetailForProduct(p);
-                const leadTime = (detail as any)?.lead_time;
-
-                return (
-                  <div
-                    key={p.id}
-                    className="glass-card-solid overflow-hidden group hover:border-primary/30 transition-colors cursor-pointer"
-                    onClick={() => setSelectedProduct(p)}
-                  >
-                    <div className="aspect-square bg-secondary flex items-center justify-center relative">
-                      <OptimizedImage
-                        src={p.images?.[0]}
-                        alt={p.name}
-                        loading={i < 4 ? "eager" : "lazy"}
-                        className="w-full h-full object-cover"
-                        containerClassName="w-full h-full"
-                      />
-                      {p.category && (
-                        <Badge className="absolute top-2 left-2 text-[10px] bg-background/80 text-foreground border-0 backdrop-blur-sm">
-                          {p.category}
-                        </Badge>
-                      )}
+                  {isClientMode ? (
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="font-heading text-lg font-bold text-foreground">€{Number(p.compare_at_price || p.price).toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">Retail price</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-xs font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
+                          {inStock ? "Available" : "Out of Stock"}
+                        </span>
+                        {!inStock && leadTime && (
+                          <p className="text-[10px] font-semibold text-destructive/80">Restock: {leadTime}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="p-4">
-                      <h3 className="font-heading text-sm font-semibold text-foreground mb-1">{p.name}</h3>
-                      {p.sku && <p className="text-xs font-mono text-muted-foreground">{p.sku}</p>}
-                      {(p as any).barcode && <p className="text-xs font-mono text-muted-foreground mb-1">EAN: {(p as any).barcode}</p>}
-                      {p.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{p.description}</p>}
-
-                      {isClientMode ? (
-                        <div className="flex items-end justify-between">
-                          <div>
-                            <p className="font-heading text-lg font-bold text-foreground">€{Number(p.compare_at_price || p.price).toFixed(2)}</p>
-                            <p className="text-xs text-muted-foreground">Retail price</p>
-                          </div>
-                          <div className="text-right">
-                            <span className={`text-xs font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
-                              {inStock ? "Available" : "Out of Stock"}
-                            </span>
-                            {!inStock && leadTime && (
-                              <p className="text-[10px] font-semibold text-destructive/80">Restock: {leadTime}</p>
-                            )}
-                          </div>
+                  ) : (
+                    <>
+                      <div className="flex items-end justify-between">
+                        <div>
+                          {p.compare_at_price && (
+                            <p className="text-xs text-muted-foreground line-through">€{Number(p.compare_at_price).toFixed(2)}</p>
+                          )}
+                          <p className="font-heading text-lg font-bold text-foreground">€{b2bPrice.toFixed(2)}</p>
+                          {showRetailPrices && p.price && (
+                            <p className="text-xs text-muted-foreground">Retail: €{Number(p.price).toFixed(2)}</p>
+                          )}
                         </div>
-                      ) : (
-                        <>
-                          <div className="flex items-end justify-between">
-                            <div>
-                              {productHasPrice ? (
-                                <>
-                                  {p.compare_at_price && (
-                                    <p className="text-xs text-muted-foreground line-through">€{Number(p.compare_at_price).toFixed(2)}</p>
-                                  )}
-                                  <p className="font-heading text-lg font-bold text-foreground">€{b2bPrice.toFixed(2)}</p>
-                                </>
-                              ) : !hasPriceList ? (
-                                <p className="text-sm font-medium text-muted-foreground italic">Price on request</p>
-                              ) : (
-                                <p className="text-sm font-medium text-muted-foreground italic">Not included in your price list</p>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              {productHasPrice && discountPct > 0 && (
-                                <Badge variant="outline" className="text-[10px] bg-success/20 text-success border-0 mb-1">-{discountPct}%</Badge>
-                              )}
-                              <span className={`block text-xs font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
-                                {inStock ? `${p.stock_quantity} in stock` : "Out of Stock"}
-                              </span>
-                              {!inStock && leadTime && (
-                                <span className="block text-[11px] font-semibold text-destructive/80">Restock: {leadTime}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-3">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 shrink-0"
-                              disabled={!canAddToCart}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const curr = quantities[p.id] || 1;
-                                if (curr > 1) setQuantities(prev => ({ ...prev, [p.id]: curr - 1 }));
-                              }}
-                            >
-                              <Minus size={12} />
-                            </Button>
-                            <Input
-                              type="number"
-                              min={1}
-                              max={p.stock_quantity ?? 999}
-                              value={quantities[p.id] || 1}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                const val = Math.max(1, Math.min(parseInt(e.target.value) || 1, p.stock_quantity ?? 999));
-                                setQuantities(prev => ({ ...prev, [p.id]: val }));
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-14 text-center h-8 text-sm"
-                              disabled={!canAddToCart}
-                            />
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 shrink-0"
-                              disabled={!canAddToCart || (quantities[p.id] || 1) >= (p.stock_quantity ?? 999)}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const curr = quantities[p.id] || 1;
-                                setQuantities(prev => ({ ...prev, [p.id]: Math.min(curr + 1, p.stock_quantity ?? 999) }));
-                              }}
-                            >
-                              <Plus size={12} />
-                            </Button>
-                            <Button
-                              disabled={!canAddToCart}
-                              size="sm"
-                              className="flex-1 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs h-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const qty = quantities[p.id] || 1;
-                                addItem({
-                                  productId: p.id,
-                                  name: p.name,
-                                  sku: p.sku,
-                                  unitPrice: Number(p.price),
-                                  b2bPrice,
-                                  discountPct,
-                                  stock: p.stock_quantity ?? 0,
-                                  image: p.images?.[0] || null,
-                                  quantity: qty,
-                                });
-                                toast.success(`${qty}x ${p.name} added`);
-                                setQuantities(prev => ({ ...prev, [p.id]: 1 }));
-                              }}
-                            >
-                              <ShoppingCart size={12} /> Add
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+                        <div className="text-right">
+                          {discountPct > 0 && (
+                            <Badge variant="outline" className="text-[10px] bg-success/20 text-success border-0 mb-1">-{discountPct}%</Badge>
+                          )}
+                          <span className={`block text-xs font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
+                            {inStock ? `${p.stock_quantity} in stock` : "Out of Stock"}
+                          </span>
+                          {!inStock && leadTime && (
+                            <span className="block text-[11px] font-semibold text-destructive/80">Restock: {leadTime}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-3">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          disabled={!inStock}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const curr = quantities[p.id] || 1;
+                            if (curr > 1) setQuantities(prev => ({ ...prev, [p.id]: curr - 1 }));
+                          }}
+                        >
+                          <Minus size={12} />
+                        </Button>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={p.stock_quantity ?? 999}
+                          value={quantities[p.id] || 1}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const val = Math.max(1, Math.min(parseInt(e.target.value) || 1, p.stock_quantity ?? 999));
+                            setQuantities(prev => ({ ...prev, [p.id]: val }));
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-14 text-center h-8 text-sm"
+                          disabled={!inStock}
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          disabled={!inStock || (quantities[p.id] || 1) >= (p.stock_quantity ?? 999)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const curr = quantities[p.id] || 1;
+                            setQuantities(prev => ({ ...prev, [p.id]: Math.min(curr + 1, p.stock_quantity ?? 999) }));
+                          }}
+                        >
+                          <Plus size={12} />
+                        </Button>
+                        <Button
+                          disabled={!inStock}
+                          size="sm"
+                          className="flex-1 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs h-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToCart(p);
+                          }}
+                        >
+                          <ShoppingCart size={12} /> Add
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* Product Detail Modal */}
@@ -423,21 +564,7 @@ const DealerCatalog = () => {
               toast.error("Cannot add: price not available");
               return;
             }
-            const plEntry = priceListProductMap.get(selectedProduct.id);
-            const b2bPrice = plEntry!.customPrice;
-            const retailPrice = Number(selectedProduct.compare_at_price || selectedProduct.price || 0);
-            const discountPct = retailPrice > 0 && b2bPrice < retailPrice ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
-            addItem({
-              productId: selectedProduct.id,
-              name: selectedProduct.name,
-              sku: selectedProduct.sku,
-              unitPrice: Number(selectedProduct.price),
-              b2bPrice,
-              discountPct,
-              stock: selectedProduct.stock_quantity ?? 0,
-              image: selectedProduct.images?.[0] || null,
-            });
-            toast.success(`${selectedProduct.name} added to cart`);
+            handleAddToCart(selectedProduct);
           }}
         />
       )}
