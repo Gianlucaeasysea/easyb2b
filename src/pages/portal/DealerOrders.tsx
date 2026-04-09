@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ShoppingBag, ExternalLink, Clock, CheckCircle, Truck, Package,
   ChevronDown, ChevronUp, FileText, Download, Bell, Loader2, Send,
-  Copy, DollarSign, XCircle, Trash2, Minus, Plus, Edit3,
+  Copy, DollarSign, XCircle, Trash2, Minus, Plus, Edit3, Search, PackagePlus,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -937,7 +937,12 @@ const DealerOrders = () => {
                   </TableBody>
                 </Table>
               )}
-               <div className="flex justify-end text-lg font-bold">Total: €{draftTotal.toFixed(2)}</div>
+              <div className="flex items-center justify-between">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShowAddProductsToDraft(true)}>
+                  <PackagePlus className="h-4 w-4" /> Add Products
+                </Button>
+                <div className="text-lg font-bold">Total: €{draftTotal.toFixed(2)}</div>
+              </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Notes (optional)</label>
                 <Textarea
