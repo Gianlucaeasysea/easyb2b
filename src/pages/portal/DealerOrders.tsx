@@ -962,6 +962,79 @@ const DealerOrders = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Add Products to Draft Dialog */}
+      <Dialog open={showAddProductsToDraft} onOpenChange={v => { if (!v) { setShowAddProductsToDraft(false); setAddProductSearch(""); setAddProductQtys({}); } }}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Products to Draft</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+              <Input
+                placeholder="Search products..."
+                value={addProductSearch}
+                onChange={e => setAddProductSearch(e.target.value)}
+                className="pl-9 text-sm"
+              />
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto space-y-1">
+              {(() => {
+                const existingIds = new Set(draftItems.map(i => i.product_id));
+                const available = (priceListProducts || [])
+                  .filter((p: any) => {
+                    const product = p.products;
+                    if (!product) return false;
+                    const q = addProductSearch.toLowerCase();
+                    return !q || product.name.toLowerCase().includes(q) || (product.sku || "").toLowerCase().includes(q);
+                  });
+                if (!available.length) return <p className="text-sm text-muted-foreground text-center py-4">No products found</p>;
+                return available.map((plItem: any) => {
+                  const product = plItem.products;
+                  const isAlreadyInDraft = existingIds.has(product.id);
+                  const qty = addProductQtys[product.id] || 0;
+                  return (
+                    <div key={product.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{product.name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{product.sku} · €{Number(plItem.custom_price).toFixed(2)}</p>
+                        {isAlreadyInDraft && <Badge variant="outline" className="text-[10px]">Already in draft</Badge>}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" disabled={qty <= 0}
+                          onClick={() => setAddProductQtys(prev => ({ ...prev, [product.id]: Math.max(0, qty - 1) }))}>
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={qty}
+                          onChange={e => setAddProductQtys(prev => ({ ...prev, [product.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                          className="w-14 h-7 text-center text-sm"
+                        />
+                        <Button variant="ghost" size="icon" className="h-7 w-7"
+                          onClick={() => setAddProductQtys(prev => ({ ...prev, [product.id]: qty + 1 }))}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowAddProductsToDraft(false); setAddProductQtys({}); }}>Cancel</Button>
+            <Button
+              onClick={handleAddProductsToDraft}
+              disabled={savingDraftItems || Object.values(addProductQtys).every(q => q === 0)}
+            >
+              {savingDraftItems ? "Adding..." : `Add ${Object.values(addProductQtys).filter(q => q > 0).length} Products`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
