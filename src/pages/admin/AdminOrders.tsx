@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { differenceInDays } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -223,6 +224,7 @@ const AdminOrders = () => {
       <TableHead className="text-xs text-right">Total</TableHead>
       <TableHead className="text-xs text-right">Shipping</TableHead>
       <TableHead className="text-xs">Payed Date</TableHead>
+      <TableHead className="text-xs">Scadenza</TableHead>
       <TableHead className="text-xs">Delivery Date</TableHead>
       <TableHead className="text-xs w-10"></TableHead>
     </TableRow>
@@ -334,6 +336,21 @@ const AdminOrders = () => {
                       : "—"}
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.payed_date)}</TableCell>
+                  <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)}>
+                    {(() => {
+                      const dueDate = (o as any).payment_due_date;
+                      if (!dueDate) return <span className="text-xs text-muted-foreground">—</span>;
+                      const due = new Date(dueDate);
+                      const isOverdue = due < new Date() && o.payment_status !== "paid";
+                      const isPaid = o.payment_status === "paid";
+                      return (
+                        <span className={`text-xs font-mono ${isOverdue ? "text-destructive font-semibold" : isPaid ? "text-success" : "text-muted-foreground"}`}>
+                          {fmtDate(dueDate)}
+                          {isOverdue && <span className="ml-1 text-[10px]">⚠</span>}
+                        </span>
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.delivery_date)}</TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
                     {o.status === "submitted" && (

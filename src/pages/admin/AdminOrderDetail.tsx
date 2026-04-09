@@ -374,6 +374,21 @@ const AdminOrderDetail = () => {
             <div className="mt-3 pt-3 border-t border-border space-y-2 text-sm">
               <p><span className="text-muted-foreground">Payment:</span> <Badge className={`border-0 text-[10px] ml-1 ${getPaymentStatusColor(order.payment_status || "unpaid")}`}>{getPaymentStatusLabel(order.payment_status || "unpaid")}</Badge></p>
               <p><span className="text-muted-foreground">Data Pagamento:</span> {order.payed_date || "—"}</p>
+              <p><span className="text-muted-foreground">Termini:</span> {PAYMENT_TERMS_LABELS[order.payment_terms || ""] || order.payment_terms || "—"}</p>
+              {(order as any).payment_due_date && (
+                <p>
+                  <span className="text-muted-foreground">Scadenza pagamento:</span>{" "}
+                  <span className="font-semibold">{format(new Date((order as any).payment_due_date), "dd/MM/yyyy")}</span>
+                  {(() => {
+                    const due = new Date((order as any).payment_due_date);
+                    const today = new Date();
+                    const overdue = due < today && order.payment_status !== "paid";
+                    const daysOverdue = differenceInDays(today, due);
+                    if (overdue) return <Badge variant="destructive" className="ml-2 text-[10px]">SCADUTO da {daysOverdue} giorni</Badge>;
+                    return null;
+                  })()}
+                </p>
+              )}
               <p><span className="text-muted-foreground">Delivery Date:</span> {order.delivery_date || "—"}</p>
             </div>
             {order.notes && (
