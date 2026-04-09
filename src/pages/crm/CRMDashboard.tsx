@@ -341,7 +341,7 @@ const CRMDashboard = () => {
         return (
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard icon={Handshake} label="Open Deals" value={String(openDeals.length)} color="gradient-blue" />
-            <StatCard icon={Euro} label="Pipeline Value" value={`€${pipelineValue.toLocaleString("it-IT")}`} color="bg-primary" />
+            <StatCard icon={Euro} label="Pipeline Value" value={`€${pipelineValue.toLocaleString("en-US")}`} color="bg-primary" />
             <StatCard icon={TrendingUp} label="Win Rate" value={`${winRate}%`} color={winRate >= 50 ? "bg-success" : "bg-warning"} sub={`${wonDeals.length}W / ${lostDeals.length}L`} />
             <StatCard icon={Calendar} label="Closing This Week" value={String(closingSoon.length)} color={closingSoon.length > 0 ? "bg-warning" : "gradient-blue"} />
           </div>

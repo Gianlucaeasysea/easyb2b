@@ -77,7 +77,7 @@ const AdminMarketing = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-marketing-materials"] });
-      toast.success("File eliminato");
+      toast.success("File deleted");
     },
   });
 
@@ -221,7 +221,7 @@ const AdminMarketing = () => {
           {isEditing ? (
             <>
               <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-primary gap-1" onClick={saveEdit} disabled={updateMutation.isPending}>
-                <Check size={12} /> Salva
+                <Check size={12} /> Save
               </Button>
               <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground gap-1" onClick={() => setEditingId(null)}>
                 <X size={12} />
@@ -251,12 +251,12 @@ const AdminMarketing = () => {
     <div>
       <div className="mb-8">
         <h1 className="font-heading text-2xl font-bold text-foreground">Marketing Materials</h1>
-        <p className="text-sm text-muted-foreground">Carica e gestisci i materiali scaricabili dai dealer</p>
+        <p className="text-sm text-muted-foreground">Upload and manage downloadable materials for dealers</p>
       </div>
 
       {/* Upload Form */}
       <div className="glass-card-solid p-5 mb-6">
-        <h2 className="font-heading font-bold text-foreground text-sm mb-4">Carica nuovo file</h2>
+        <h2 className="font-heading font-bold text-foreground text-sm mb-4">Upload new file</h2>
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[200px]">
             <label className="text-xs text-muted-foreground mb-1 block">Titolo</label>
@@ -292,7 +292,7 @@ const AdminMarketing = () => {
             <Package size={12} /> Per Prodotto
           </Button>
           <Button variant={viewMode === "category" ? "default" : "outline"} size="sm" onClick={() => setViewMode("category")} className="text-xs gap-1">
-            <FolderOpen size={12} /> Per Categoria
+            <FolderOpen size={12} /> By Category
           </Button>
         </div>
       </div>
@@ -300,7 +300,7 @@ const AdminMarketing = () => {
       {!filtered.length ? (
         <div className="text-center py-20 glass-card-solid">
           <Upload className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">Nessun materiale caricato. Usa il form sopra per aggiungere file.</p>
+          <p className="text-muted-foreground">No materials uploaded. Use the form above to add files.</p>
         </div>
       ) : viewMode === "product" ? (
         <div className="space-y-3">
