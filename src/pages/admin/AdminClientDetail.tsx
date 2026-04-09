@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check, CreditCard, Plus, Bell, Send, FileText, Upload, Download, PackagePlus, Tag } from "lucide-react";
+import { ArrowLeft, Save, ShoppingBag, TrendingUp, MapPin, Mail, Phone, Globe, Building2, UserPlus, Trash2, X, Eye, KeyRound, Copy, Check, CreditCard, Plus, Bell, Send, FileText, Upload, Download, PackagePlus, Tag, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import { ComposeEmailDialog } from "@/components/crm/ComposeEmailDialog";
@@ -124,7 +124,11 @@ const AdminClientDetail = () => {
   const [newContact, setNewContact] = useState({ contact_name: "", email: "", phone: "", role: "" });
   const [showAddContact, setShowAddContact] = useState(false);
   const [showCreateAccount, setShowCreateAccount] = useState(false);
-  const [accountPassword, setAccountPassword] = useState("dealer2025");
+  const generatePassword = () => {
+    const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%";
+    return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  };
+  const [accountPassword, setAccountPassword] = useState(() => generatePassword());
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [showComposeFromOrder, setShowComposeFromOrder] = useState(false);
   const [composeOrderContext, setComposeOrderContext] = useState<any>(null);
@@ -474,6 +478,7 @@ const AdminClientDetail = () => {
 
   const createDealerAccount = async () => {
     if (!client?.email) { toast.error("Client must have an email"); return; }
+    if (accountPassword.length < 10) { toast.error("Password must be at least 10 characters"); return; }
     setCreatingAccount(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -1179,9 +1184,15 @@ const AdminClientDetail = () => {
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Password</Label>
-              <Input value={accountPassword} onChange={e => setAccountPassword(e.target.value)} className="mt-1 bg-secondary border-border rounded-lg font-mono" />
+              <div className="flex gap-2">
+                <Input value={accountPassword} onChange={e => setAccountPassword(e.target.value)} className="mt-1 bg-secondary border-border rounded-lg font-mono flex-1" />
+                <Button variant="outline" size="sm" className="mt-1 shrink-0" onClick={() => setAccountPassword(generatePassword())} title="Regenerate">
+                  <RefreshCw size={14} />
+                </Button>
+              </div>
+              {accountPassword.length < 10 && <p className="text-[11px] text-destructive">Min 10 characters</p>}
             </div>
-            <Button onClick={createDealerAccount} disabled={creatingAccount} className="w-full gap-1">
+            <Button onClick={createDealerAccount} disabled={creatingAccount || accountPassword.length < 10} className="w-full gap-1">
               <UserPlus size={14} /> {creatingAccount ? "Creazione..." : "Crea Account"}
             </Button>
           </div>
