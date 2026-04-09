@@ -478,6 +478,7 @@ const AdminClientDetail = () => {
 
   const createDealerAccount = async () => {
     if (!client?.email) { toast.error("Client must have an email"); return; }
+    if (accountPassword.length < 10) { toast.error("Password must be at least 10 characters"); return; }
     setCreatingAccount(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -1183,8 +1184,13 @@ const AdminClientDetail = () => {
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Password</Label>
-              <Input value={accountPassword} onChange={e => setAccountPassword(e.target.value)} className="mt-1 bg-secondary border-border rounded-lg font-mono" />
-            </div>
+              <div className="flex gap-2">
+                <Input value={accountPassword} onChange={e => setAccountPassword(e.target.value)} className="mt-1 bg-secondary border-border rounded-lg font-mono flex-1" />
+                <Button variant="outline" size="sm" className="mt-1 shrink-0" onClick={() => setAccountPassword(generatePassword())} title="Regenerate">
+                  <RefreshCw size={14} />
+                </Button>
+              </div>
+              {accountPassword.length < 10 && <p className="text-[11px] text-destructive">Min 10 characters</p>}
             <Button onClick={createDealerAccount} disabled={creatingAccount} className="w-full gap-1">
               <UserPlus size={14} /> {creatingAccount ? "Creazione..." : "Crea Account"}
             </Button>
