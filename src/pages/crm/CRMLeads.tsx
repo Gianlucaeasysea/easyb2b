@@ -25,13 +25,13 @@ import BulkActionBar, { runBulkOperation, bulkResultToast } from "@/components/a
 import { toast as sonnerToast } from "sonner";
 
 const LEAD_STAGES = [
-  { value: "new", label: "Nuovo", color: "border-blue-500 text-blue-500", bg: "bg-blue-500/10", icon: UserPlus, columnColor: "border-t-blue-500" },
-  { value: "contacted", label: "Contattato", color: "border-amber-500 text-amber-500", bg: "bg-amber-500/10", icon: Phone, columnColor: "border-t-amber-500" },
-  { value: "qualified", label: "Qualificato", color: "border-cyan-500 text-cyan-500", bg: "bg-cyan-500/10", icon: CheckCircle, columnColor: "border-t-cyan-500" },
-  { value: "proposal", label: "Proposta", color: "border-purple-500 text-purple-500", bg: "bg-purple-500/10", icon: FileText, columnColor: "border-t-purple-500" },
+  { value: "new", label: "New", color: "border-blue-500 text-blue-500", bg: "bg-blue-500/10", icon: UserPlus, columnColor: "border-t-blue-500" },
+  { value: "contacted", label: "Contacted", color: "border-amber-500 text-amber-500", bg: "bg-amber-500/10", icon: Phone, columnColor: "border-t-amber-500" },
+  { value: "qualified", label: "Qualified", color: "border-cyan-500 text-cyan-500", bg: "bg-cyan-500/10", icon: CheckCircle, columnColor: "border-t-cyan-500" },
+  { value: "proposal", label: "Proposal", color: "border-purple-500 text-purple-500", bg: "bg-purple-500/10", icon: FileText, columnColor: "border-t-purple-500" },
   { value: "onboarding", label: "Onboarding", color: "border-orange-500 text-orange-500", bg: "bg-orange-500/10", icon: KeyRound, columnColor: "border-t-orange-500" },
-  { value: "won", label: "Vinto", color: "border-emerald-500 text-emerald-500", bg: "bg-emerald-500/10", icon: Trophy, columnColor: "border-t-emerald-500" },
-  { value: "lost", label: "Perso", color: "border-red-500 text-red-500", bg: "bg-red-500/10", icon: XCircle, columnColor: "border-t-red-500" },
+  { value: "won", label: "Won", color: "border-emerald-500 text-emerald-500", bg: "bg-emerald-500/10", icon: Trophy, columnColor: "border-t-emerald-500" },
+  { value: "lost", label: "Lost", color: "border-red-500 text-red-500", bg: "bg-red-500/10", icon: XCircle, columnColor: "border-t-red-500" },
 ];
 
 const ALL_STATUS_COLORS: Record<string, string> = {
@@ -434,9 +434,9 @@ const CRMLeads = () => {
                         </Button>
                       )}
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/60 hover:text-destructive" onClick={() => {
-                        if (confirm(`Eliminare il lead "${l.company_name}"?`)) deleteLeadsCascade([l.id]).then(() => {
+                        if (confirm(`Delete lead "${l.company_name}"?`)) deleteLeadsCascade([l.id]).then(() => {
                           queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
-                          sonnerToast.success("Lead eliminato");
+                          sonnerToast.success("Lead deleted");
                         }).catch(err => showErrorToast(err, "CRMLeads.deleteSingle"));
                       }} title="Delete">
                         <Trash2 size={14} />
@@ -529,20 +529,20 @@ const CRMLeads = () => {
       {/* Floating Bulk Action Bar */}
       <BulkActionBar count={selected.size} onDeselect={() => setSelected(new Set())}>
         <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => setShowSalesDialog(true)}>
-          <UserCheck size={14} /> Assegna a Sales
+          <UserCheck size={14} /> Assign to Sales
         </Button>
         <Button size="sm" variant="secondary" className="gap-1 h-8" onClick={() => setShowStatusDialog(true)}>
-          <RefreshCw size={14} /> Cambia Stato
+          <RefreshCw size={14} /> Change Status
         </Button>
         <Button size="sm" variant="destructive" className="gap-1 h-8" onClick={() => setShowDeleteConfirm(true)}>
-          <Trash2 size={14} /> Elimina
+          <Trash2 size={14} /> Delete
         </Button>
       </BulkActionBar>
 
       {/* Status Dialog */}
       <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Cambia Stato ({selected.size} lead)</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Change Status ({selected.size} leads)</DialogTitle></DialogHeader>
           <Select value={bulkStatus} onValueChange={setBulkStatus}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -552,8 +552,8 @@ const CRMLeads = () => {
             </SelectContent>
           </Select>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStatusDialog(false)}>Annulla</Button>
-            <Button onClick={handleBulkStatus} disabled={bulkLoading}>{bulkLoading ? "Aggiornamento..." : "Applica"}</Button>
+            <Button variant="outline" onClick={() => setShowStatusDialog(false)}>Cancel</Button>
+            <Button onClick={handleBulkStatus} disabled={bulkLoading}>{bulkLoading ? "Updating..." : "Apply"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -561,9 +561,9 @@ const CRMLeads = () => {
       {/* Assign Sales Dialog */}
       <Dialog open={showSalesDialog} onOpenChange={setShowSalesDialog}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Assegna a Sales ({selected.size} lead)</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Assign to Sales ({selected.size} leads)</DialogTitle></DialogHeader>
           <Select value={bulkSalesId} onValueChange={setBulkSalesId}>
-            <SelectTrigger><SelectValue placeholder="Seleziona sales..." /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Select sales rep..." /></SelectTrigger>
             <SelectContent>
               {salesUsers?.map(s => (
                 <SelectItem key={s.user_id} value={s.user_id}>{s.contact_name || s.email || s.user_id}</SelectItem>
@@ -571,8 +571,8 @@ const CRMLeads = () => {
             </SelectContent>
           </Select>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSalesDialog(false)}>Annulla</Button>
-            <Button onClick={handleBulkSales} disabled={bulkLoading || !bulkSalesId}>{bulkLoading ? "Aggiornamento..." : "Applica"}</Button>
+            <Button variant="outline" onClick={() => setShowSalesDialog(false)}>Cancel</Button>
+            <Button onClick={handleBulkSales} disabled={bulkLoading || !bulkSalesId}>{bulkLoading ? "Updating..." : "Apply"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -580,12 +580,12 @@ const CRMLeads = () => {
       {/* Delete Confirmation */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Conferma Eliminazione</DialogTitle></DialogHeader>
-          <p className="text-sm text-destructive">⚠️ Verranno eliminati {selected.size} lead con tutte le attività associate.</p>
+          <DialogHeader><DialogTitle>Confirm Deletion</DialogTitle></DialogHeader>
+          <p className="text-sm text-destructive">⚠️ This will delete {selected.size} leads and all associated activities.</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Annulla</Button>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkLoading}>
-              {bulkLoading ? "Eliminazione..." : `Elimina ${selected.size} lead`}
+              {bulkLoading ? "Deleting..." : `Delete ${selected.size} leads`}
             </Button>
           </DialogFooter>
         </DialogContent>
