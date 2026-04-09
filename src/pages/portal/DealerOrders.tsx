@@ -4,17 +4,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ShoppingBag, ExternalLink, Clock, CheckCircle, Truck, Package,
   ChevronDown, ChevronUp, FileText, Download, Bell, Loader2, Send,
+  Copy, DollarSign, XCircle, Trash2, Minus, Plus, Edit3,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
-
-import { Copy, DollarSign, XCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -56,6 +57,14 @@ const DealerOrders = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<any>(null);
+  const [confirmDeleteDraft, setConfirmDeleteDraft] = useState<any>(null);
+  const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
+  const [editingDraft, setEditingDraft] = useState<any>(null);
+  const [draftItems, setDraftItems] = useState<any[]>([]);
+  const [draftNotes, setDraftNotes] = useState("");
+  const [submittingDraft, setSubmittingDraft] = useState(false);
   const [priceCheckData, setPriceCheckData] = useState<{
     order: any;
     items: { product_id: string; name: string; sku: string; quantity: number; originalPrice: number; currentPrice: number | null; available: boolean }[];
@@ -63,8 +72,6 @@ const DealerOrders = () => {
     newTotal: number;
     hasChanges: boolean;
   } | null>(null);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState<any>(null);
   const { data: client } = useQuery({
     queryKey: ["my-client"],
     queryFn: async () => {
@@ -88,10 +95,12 @@ const DealerOrders = () => {
     enabled: !!client,
   });
 
-  const allOrders = orders || [];
-  const totalPages = Math.max(1, Math.ceil(allOrders.length / pageSize));
+  const draftOrders = useMemo(() => (orders || []).filter((o: any) => o.status === "draft"), [orders]);
+  const nonDraftOrders = useMemo(() => (orders || []).filter((o: any) => o.status !== "draft"), [orders]);
+
+  const totalPages = Math.max(1, Math.ceil(nonDraftOrders.length / pageSize));
   const sliceFrom = (page - 1) * pageSize;
-  const pageData = allOrders.slice(sliceFrom, sliceFrom + pageSize);
+  const pageData = nonDraftOrders.slice(sliceFrom, sliceFrom + pageSize);
 
   const getDownloadUrl = (filePath: string) => {
     const { data } = supabase.storage.from("order-documents").getPublicUrl(filePath);
@@ -221,6 +230,93 @@ const DealerOrders = () => {
     }
   };
 
+  // Draft management
+
+  const handleDeleteDraft = async (order: any) => {
+    setDeletingDraftId(order.id);
+    try {
+      // Mark linked deal as lost
+      await supabase.from("deals").update({ stage: "closed_lost", lost_reason: "Bozza eliminata dal dealer", closed_at: new Date().toISOString() }).eq("order_id", order.id).eq("source", "dealer_draft");
+      // Delete order items then order
+      await supabase.from("order_items").delete().eq("order_id", order.id);
+      const { error } = await supabase.from("orders").delete().eq("id", order.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+      toast.success("Bozza eliminata");
+    } catch (error) {
+      showErrorToast(error, "DealerOrders.deleteDraft");
+    } finally {
+      setDeletingDraftId(null);
+      setConfirmDeleteDraft(null);
+    }
+  };
+
+  const openDraftEditor = (order: any) => {
+    const items = (order.order_items || []).map((i: any) => ({
+      ...i,
+      name: i.products?.name || "—",
+      sku: i.products?.sku || "—",
+    }));
+    setDraftItems(items);
+    setDraftNotes(order.notes || "");
+    setEditingDraft(order);
+  };
+
+  const updateDraftItemQty = (itemId: string, qty: number) => {
+    if (qty <= 0) {
+      setDraftItems(prev => prev.filter(i => i.id !== itemId));
+    } else {
+      setDraftItems(prev => prev.map(i => i.id === itemId ? { ...i, quantity: qty, subtotal: qty * Number(i.unit_price) } : i));
+    }
+  };
+
+  const removeDraftItem = (itemId: string) => {
+    setDraftItems(prev => prev.filter(i => i.id !== itemId));
+  };
+
+  const draftTotal = draftItems.reduce((s, i) => s + Number(i.subtotal || 0), 0);
+
+  const submitDraft = async () => {
+    if (!editingDraft || draftItems.length === 0) return;
+    setSubmittingDraft(true);
+    try {
+      // Update items
+      for (const item of draftItems) {
+        await supabase.from("order_items").update({ quantity: item.quantity, subtotal: item.quantity * Number(item.unit_price) }).eq("id", item.id);
+      }
+      // Delete removed items
+      const currentItemIds = draftItems.map(i => i.id);
+      const originalItems = (editingDraft.order_items || []) as any[];
+      for (const orig of originalItems) {
+        if (!currentItemIds.includes(orig.id)) {
+          await supabase.from("order_items").delete().eq("id", orig.id);
+        }
+      }
+      // Update order
+      const { error } = await supabase.from("orders").update({
+        status: "submitted",
+        total_amount: draftTotal,
+        notes: draftNotes || null,
+      }).eq("id", editingDraft.id);
+      if (error) throw error;
+
+      // Send notification
+      try {
+        await supabase.functions.invoke("send-order-notification", {
+          body: { orderId: editingDraft.id, orderCode: editingDraft.order_code, type: "order_received" },
+        });
+      } catch {}
+
+      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+      toast.success("Ordine inviato con successo!");
+      setEditingDraft(null);
+    } catch (error) {
+      showErrorToast(error, "DealerOrders.submitDraft");
+    } finally {
+      setSubmittingDraft(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -242,6 +338,55 @@ const DealerOrders = () => {
         </div>
       ) : (
         <>
+          {/* Drafts Section */}
+          {draftOrders.length > 0 && (
+            <div className="mb-6">
+              <h2 className="font-heading text-lg font-bold text-foreground mb-3 flex items-center gap-2">
+                <Edit3 size={16} /> Bozze ({draftOrders.length})
+              </h2>
+              <div className="space-y-2">
+                {draftOrders.map((order: any) => {
+                  const items = (order.order_items || []) as any[];
+                  return (
+                    <div key={order.id} className="glass-card-solid p-4 flex items-center justify-between border-dashed border-2 border-border">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                          <Package size={18} className="text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-heading font-bold text-foreground">
+                            {order.order_code || `Bozza #${order.id.slice(0, 8).toUpperCase()}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
+                            {items.length > 0 && <span className="ml-2">· {items.length} prodott{items.length > 1 ? "i" : "o"}</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge className="border-0 text-xs bg-muted text-muted-foreground">Bozza</Badge>
+                        <span className="font-heading font-bold text-foreground">
+                          €{Number(order.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+                        </span>
+                        <Button size="sm" onClick={() => openDraftEditor(order)}>
+                          Completa Ordine
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive/80"
+                          onClick={() => setConfirmDeleteDraft(order)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
           {pageData.map(order => {
             const status = order.status || "draft";
@@ -509,7 +654,7 @@ const DealerOrders = () => {
         <TablePagination
           currentPage={page}
           totalPages={totalPages}
-          totalItems={allOrders.length}
+          totalItems={nonDraftOrders.length}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
@@ -601,6 +746,104 @@ const DealerOrders = () => {
               {cancellingId ? "Annullamento..." : "Annulla Ordine"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Delete Draft Dialog */}
+      <Dialog open={!!confirmDeleteDraft} onOpenChange={() => setConfirmDeleteDraft(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Elimina Bozza</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Sei sicuro di voler eliminare questa bozza? Questa azione non può essere annullata.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteDraft(null)}>Indietro</Button>
+            <Button variant="destructive" onClick={() => handleDeleteDraft(confirmDeleteDraft)} disabled={!!deletingDraftId}>
+              {deletingDraftId ? "Eliminazione..." : "Elimina Bozza"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Draft Editor Dialog */}
+      <Dialog open={!!editingDraft} onOpenChange={() => setEditingDraft(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Completa Ordine — {editingDraft?.order_code || `#${editingDraft?.id?.slice(0, 8).toUpperCase()}`}
+            </DialogTitle>
+          </DialogHeader>
+          {editingDraft && (
+            <div className="space-y-4">
+              {draftItems.length === 0 ? (
+                <p className="text-center text-muted-foreground py-6">Nessun prodotto nella bozza. Aggiungi prodotti dal catalogo.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Prodotto</TableHead>
+                      <TableHead className="text-xs text-right">Prezzo</TableHead>
+                      <TableHead className="text-xs text-center w-[130px]">Quantità</TableHead>
+                      <TableHead className="text-xs text-right">Subtotale</TableHead>
+                      <TableHead className="w-10" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {draftItems.map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <p className="text-sm font-medium">{item.name}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{item.sku}</p>
+                        </TableCell>
+                        <TableCell className="text-right text-sm">€{Number(item.unit_price).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateDraftItemQty(item.id, item.quantity - 1)}>
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={item.quantity}
+                              onChange={(e) => updateDraftItemQty(item.id, parseInt(e.target.value) || 1)}
+                              className="w-16 h-7 text-center text-sm"
+                            />
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateDraftItemQty(item.id, item.quantity + 1)}>
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-medium">€{(Number(item.unit_price) * item.quantity).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeDraftItem(item.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+              <div className="flex justify-end text-lg font-bold">Totale: €{draftTotal.toFixed(2)}</div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Note (opzionale)</label>
+                <Textarea
+                  placeholder="Aggiungi note all'ordine..."
+                  value={draftNotes}
+                  onChange={(e) => setDraftNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingDraft(null)}>Chiudi</Button>
+                <Button onClick={submitDraft} disabled={submittingDraft || draftItems.length === 0}>
+                  {submittingDraft ? "Invio in corso..." : "Invia Ordine"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
