@@ -130,6 +130,7 @@ const DealerCart = () => {
         setOrderConfirmed({ id: order.id, code: order.order_code || `#${order.id.slice(0, 8).toUpperCase()}` });
       } else {
         toast.success("Bozza salvata! Puoi completare l'ordine in qualsiasi momento dalla sezione Ordini.");
+        navigate("/portal/orders");
       }
 
       clearCart();
@@ -163,10 +164,10 @@ const DealerCart = () => {
     return (
       <div className="text-center py-20">
         <ShoppingCart className="mx-auto text-muted-foreground mb-4" size={48} />
-        <h1 className="font-heading text-2xl font-bold text-foreground mb-2">Your cart is empty</h1>
-        <p className="text-muted-foreground mb-6">Browse the catalog to add products to your order.</p>
+        <h1 className="font-heading text-2xl font-bold text-foreground mb-2">Il tuo carrello è vuoto</h1>
+        <p className="text-muted-foreground mb-6">Sfoglia il catalogo per aggiungere prodotti al tuo ordine.</p>
         <Link to="/portal/catalog">
-          <Button className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">Browse Catalog</Button>
+          <Button className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">Sfoglia Catalogo</Button>
         </Link>
       </div>
     );
@@ -178,12 +179,12 @@ const DealerCart = () => {
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">Order Review</h1>
-          <p className="text-sm text-muted-foreground">{totalItems} item{totalItems !== 1 ? "s" : ""} in your cart</p>
+          <h1 className="font-heading text-2xl font-bold text-foreground">Revisione Ordine</h1>
+          <p className="text-sm text-muted-foreground">{totalItems} articol{totalItems !== 1 ? "i" : "o"} nel carrello</p>
         </div>
         <Link to="/portal/catalog">
           <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-            <ArrowLeft size={14} /> Continue Shopping
+            <ArrowLeft size={14} /> Continua lo Shopping
           </Button>
         </Link>
       </div>
@@ -192,10 +193,10 @@ const DealerCart = () => {
         <div className="flex items-center gap-3 p-4 rounded-lg bg-warning/10 border border-warning/30 mb-6">
           <AlertTriangle className="text-warning shrink-0" size={20} />
           <div>
-            <p className="text-sm font-heading font-semibold text-warning">Minimum order not reached</p>
+            <p className="text-sm font-heading font-semibold text-warning">Ordine minimo non raggiunto</p>
             <p className="text-xs text-muted-foreground">
-              The minimum order amount is <span className="font-semibold text-foreground">€{MIN_ORDER_AMOUNT.toFixed(2)}</span>. 
-              You need <span className="font-semibold text-foreground">€{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)}</span> more to place your order.
+              L'ordine minimo è di <span className="font-semibold text-foreground">€{MIN_ORDER_AMOUNT.toFixed(2)}</span>. 
+              Ti mancano <span className="font-semibold text-foreground">€{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)}</span>.
             </p>
           </div>
         </div>
@@ -244,7 +245,7 @@ const DealerCart = () => {
                   </div>
                 )}
                 {outOfStock && (
-                  <Badge variant="outline" className="mt-1 text-[10px] text-destructive border-destructive/30">Out of stock</Badge>
+                  <Badge variant="outline" className="mt-1 text-[10px] text-destructive border-destructive/30">Esaurito</Badge>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -262,11 +263,11 @@ const DealerCart = () => {
       {/* Notes & Summary */}
       <div className="grid md:grid-cols-2 gap-6">
         <div>
-          <label className="text-sm font-heading font-semibold text-foreground mb-2 block">Order Notes (optional)</label>
-          <Textarea placeholder="Special instructions, delivery preferences..." value={notes} onChange={e => setNotes(e.target.value)} className="rounded-lg bg-secondary border-border resize-none" rows={4} />
+          <label className="text-sm font-heading font-semibold text-foreground mb-2 block">Note Ordine (opzionale)</label>
+          <Textarea placeholder="Istruzioni speciali, preferenze di consegna..." value={notes} onChange={e => setNotes(e.target.value)} className="rounded-lg bg-secondary border-border resize-none" rows={4} />
         </div>
         <div className="glass-card-solid p-6">
-          <h3 className="font-heading font-bold text-foreground mb-4">Order Summary</h3>
+          <h3 className="font-heading font-bold text-foreground mb-4">Riepilogo Ordine</h3>
           <div className="space-y-2 mb-4">
             {items.map(item => (
               <div key={item.productId} className="flex justify-between text-sm">
@@ -296,7 +297,7 @@ const DealerCart = () => {
             </p>
           </div>
           {belowMinimum && (
-            <p className="text-xs text-warning mb-4">Minimum order: €{MIN_ORDER_AMOUNT.toFixed(2)} — add €{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)} more</p>
+            <p className="text-xs text-warning mb-4">Ordine minimo: €{MIN_ORDER_AMOUNT.toFixed(2)} — aggiungi €{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)}</p>
           )}
           <div className="space-y-2">
             <Button
@@ -313,7 +314,7 @@ const DealerCart = () => {
               className="w-full gap-2 font-heading font-semibold"
             >
               <Save size={14} />
-              {savingDraft ? "Saving..." : "Salva come Bozza"}
+              {savingDraft ? "Salvataggio..." : "Salva come Bozza"}
             </Button>
           </div>
         </div>
