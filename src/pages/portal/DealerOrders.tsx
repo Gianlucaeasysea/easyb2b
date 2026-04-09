@@ -90,6 +90,25 @@ const DealerOrders = () => {
     enabled: !!user,
   });
 
+  // Price list products for "Add Products" to draft
+  const { data: priceListProducts } = useQuery({
+    queryKey: ["my-price-list-products", client?.id],
+    queryFn: async () => {
+      const { data: assignments } = await supabase
+        .from("price_list_clients")
+        .select("price_list_id")
+        .eq("client_id", client!.id);
+      if (!assignments?.length) return [];
+      const plIds = assignments.map(a => a.price_list_id);
+      const { data: items } = await supabase
+        .from("price_list_items")
+        .select("*, products!inner(*)")
+        .in("price_list_id", plIds);
+      return (items || []).filter((item: any) => item.products && item.products.active_b2b === true);
+    },
+    enabled: !!client?.id && !!showAddProductsToDraft,
+  });
+
   const { data: orders, isLoading } = useQuery({
     queryKey: ["my-orders-full"],
     queryFn: async () => {
