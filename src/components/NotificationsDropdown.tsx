@@ -115,7 +115,7 @@ export function NotificationsDropdown({ basePath, targetRole }: NotificationsDro
           {notifications.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Bell size={24} className="mx-auto mb-2 opacity-30" />
-              <p className="text-xs">Nessuna notifica</p>
+              <p className="text-xs">No notifications</p>
             </div>
           ) : (
             notifications.map(n => (
