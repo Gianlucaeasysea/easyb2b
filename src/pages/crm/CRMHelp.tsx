@@ -178,8 +178,7 @@ const CRMHelp = () => {
                   <li><strong>New</strong> — Fresh lead, not yet contacted</li>
                   <li><strong>Contacted</strong> — Initial outreach made</li>
                   <li><strong>Qualified</strong> — Confirmed interest and fit</li>
-                  <li><strong>Proposal</strong> — Offer or quote sent</li>
-                  <li><strong>Negotiation</strong> — Discussing terms</li>
+                  <li><strong>Onboarding</strong> — Setting up as a client</li>
                   <li><strong>Won</strong> — Deal closed, converted to client</li>
                   <li><strong>Lost</strong> — Did not convert</li>
                 </ul>
