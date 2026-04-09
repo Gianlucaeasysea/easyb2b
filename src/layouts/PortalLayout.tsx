@@ -3,32 +3,80 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DealerSidebar } from "@/components/portal/DealerSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, Eye, EyeOff, Bell, ChevronRight } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ClientModeProvider, useClientMode } from "@/contexts/ClientModeContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { toast } from "sonner";
 import logo from "@/assets/white_logo.png";
 
 const PortalHeader = () => {
   const { signOut, user } = useAuth();
   const { isClientMode, toggleClientMode } = useClientMode();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const { data: client } = useQuery({
+    queryKey: ["dealer-client", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("clients").select("id").eq("user_id", user!.id).maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
 
   const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["unread-notifications-count"],
+    queryKey: ["unread-notifications-count", client?.id],
     queryFn: async () => {
       const { count, error } = await supabase
         .from("client_notifications")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", client!.id)
         .eq("read", false);
       if (error) return 0;
       return count || 0;
     },
+    enabled: !!client?.id,
     refetchInterval: 30000,
   });
+
+  // Real-time subscription for new notifications
+  useEffect(() => {
+    if (!client?.id) return;
+
+    const channel = supabase
+      .channel(`dealer-notifications-${client.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "client_notifications",
+          filter: `client_id=eq.${client.id}`,
+        },
+        (payload) => {
+          const n = payload.new as { title?: string; body?: string };
+          // Refresh counts and notification list
+          queryClient.invalidateQueries({ queryKey: ["unread-notifications-count"] });
+          queryClient.invalidateQueries({ queryKey: ["client-notifications"] });
+          // Show toast
+          toast(n.title || "Nuova notifica", {
+            description: n.body ? (n.body.length > 80 ? n.body.substring(0, 80) + "…" : n.body) : undefined,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [client?.id, queryClient]);
+
+  const displayCount = unreadCount > 99 ? "99+" : unreadCount;
 
   return (
     <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background/80 backdrop-blur-xl">
@@ -50,8 +98,8 @@ const PortalHeader = () => {
         >
           <Bell size={18} />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 flex items-center justify-center rounded-full gradient-blue text-primary-foreground text-[10px] font-bold">
-              {unreadCount}
+            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+              {displayCount}
             </span>
           )}
         </Button>
