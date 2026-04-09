@@ -2,21 +2,19 @@ import { Outlet, useLocation, Link } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DealerSidebar } from "@/components/portal/DealerSidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, Eye, EyeOff, Bell, ChevronRight } from "lucide-react";
+import { LogOut, Bell, ChevronRight } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ClientModeProvider, useClientMode } from "@/contexts/ClientModeContext";
+import { ClientModeProvider } from "@/contexts/ClientModeContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import logo from "@/assets/white_logo.png";
 
 const PortalHeader = () => {
   const { signOut, user } = useAuth();
-  const { isClientMode, toggleClientMode } = useClientMode();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -83,11 +81,6 @@ const PortalHeader = () => {
       <div className="flex items-center gap-3">
         <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
         <img src={logo} alt="Easysea" className="h-5 opacity-70" />
-        {isClientMode && (
-          <Badge className="bg-primary/15 text-primary border-0 text-[10px] font-heading font-bold animate-pulse">
-            CLIENT VIEW
-          </Badge>
-        )}
       </div>
       <div className="flex items-center gap-2">
         <Button
@@ -102,19 +95,6 @@ const PortalHeader = () => {
               {displayCount}
             </span>
           )}
-        </Button>
-        <Button
-          variant={isClientMode ? "default" : "outline"}
-          size="sm"
-          onClick={toggleClientMode}
-          className={`text-xs gap-1.5 rounded-full font-heading font-semibold ${
-            isClientMode
-              ? "gradient-blue text-primary-foreground hover:opacity-90"
-              : "border-border text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {isClientMode ? <EyeOff size={14} /> : <Eye size={14} />}
-          {isClientMode ? "Exit Client Mode" : "Client Mode"}
         </Button>
         <span className="text-[11px] text-muted-foreground hidden sm:block ml-1 font-heading">{user?.email}</span>
         <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground hover:text-foreground">
