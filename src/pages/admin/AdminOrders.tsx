@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { differenceInDays, addDays, lastDayOfMonth, addMonths } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -52,7 +53,12 @@ const AdminOrders = () => {
         .not("order_type", "in", '("MANUAL B2C","B2C","CUSTOM")')
         .order("created_at", { ascending: false });
 
-      if (statusFilter !== "all") query = query.eq("status", statusFilter);
+      if (statusFilter === "overdue") {
+        const today = new Date().toISOString().split("T")[0];
+        query = query.lt("payment_due_date", today).neq("payment_status", "paid");
+      } else if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
       if (dateFrom) query = query.gte("created_at", `${dateFrom}T00:00:00`);
       if (dateTo) query = query.lte("created_at", `${dateTo}T23:59:59`);
       if (search) query = query.or(`order_code.ilike.%${search}%,tracking_number.ilike.%${search}%`);
@@ -223,6 +229,7 @@ const AdminOrders = () => {
       <TableHead className="text-xs text-right">Total</TableHead>
       <TableHead className="text-xs text-right">Shipping</TableHead>
       <TableHead className="text-xs">Payed Date</TableHead>
+      <TableHead className="text-xs">Scadenza</TableHead>
       <TableHead className="text-xs">Delivery Date</TableHead>
       <TableHead className="text-xs w-10"></TableHead>
     </TableRow>
@@ -249,6 +256,15 @@ const AdminOrders = () => {
         >
           <CheckCircle size={14} />
           Da confermare
+        </Button>
+        <Button
+          variant={statusFilter === "overdue" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter(statusFilter === "overdue" ? "all" : "overdue")}
+          className={`gap-1.5 ${statusFilter === "overdue" ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground" : "text-destructive border-destructive/30"}`}
+        >
+          <AlertTriangle size={14} />
+          Pagamenti scaduti
         </Button>
       </div>
 
@@ -334,6 +350,21 @@ const AdminOrders = () => {
                       : "—"}
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.payed_date)}</TableCell>
+                  <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)}>
+                    {(() => {
+                      const dueDate = (o as any).payment_due_date;
+                      if (!dueDate) return <span className="text-xs text-muted-foreground">—</span>;
+                      const due = new Date(dueDate);
+                      const isOverdue = due < new Date() && o.payment_status !== "paid";
+                      const isPaid = o.payment_status === "paid";
+                      return (
+                        <span className={`text-xs font-mono ${isOverdue ? "text-destructive font-semibold" : isPaid ? "text-success" : "text-muted-foreground"}`}>
+                          {fmtDate(dueDate)}
+                          {isOverdue && <span className="ml-1 text-[10px]">⚠</span>}
+                        </span>
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.delivery_date)}</TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
                     {o.status === "submitted" && (
@@ -343,7 +374,18 @@ const AdminOrders = () => {
                         title="Conferma Ordine"
                         onClick={async () => {
                           try {
-                            await supabase.from("orders").update({ status: "confirmed" }).eq("id", o.id);
+                            const calcDueDate = (pt: string | null) => {
+                              const now = new Date();
+                              switch (pt) {
+                                case "prepaid": return now;
+                                case "60_days": return addDays(now, 60);
+                                case "90_days": return addDays(now, 90);
+                                case "end_of_month": return lastDayOfMonth(addMonths(now, 1));
+                                default: return addDays(now, 30);
+                              }
+                            };
+                            const dueDate = calcDueDate(o.payment_terms);
+                            await supabase.from("orders").update({ status: "confirmed", payment_due_date: format(dueDate, "yyyy-MM-dd") }).eq("id", o.id);
                             await supabase.from("client_notifications").insert({
                               client_id: o.client_id,
                               title: "Ordine confermato",

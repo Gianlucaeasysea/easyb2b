@@ -11,7 +11,7 @@ import {
   ChevronDown, ChevronUp, FileText, Download, Bell, Loader2, Send,
   Copy, DollarSign, XCircle, Trash2, Minus, Plus, Edit3,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { useState, useMemo } from "react";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
@@ -425,6 +425,14 @@ const DealerOrders = () => {
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
                         {items.length > 0 && <span className="ml-2">· {items.length} prodott{items.length > 1 ? "i" : "o"}</span>}
+                        {(order as any).payment_due_date && (
+                          <span className="ml-2">· Scadenza: <span className={`font-semibold ${
+                            (order as any).payment_status === "paid" ? "text-success" :
+                            new Date((order as any).payment_due_date) < new Date() ? "text-destructive" :
+                            differenceInDays(new Date((order as any).payment_due_date), new Date()) <= 7 ? "text-warning" :
+                            "text-foreground"
+                          }`}>{format(new Date((order as any).payment_due_date), "dd/MM/yyyy")}</span></span>
+                        )}
                       </p>
                     </div>
                   </div>

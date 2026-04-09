@@ -38,7 +38,7 @@ const DealerInvoices = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("orders")
-        .select("id, order_code, created_at, total_amount, payment_status, payment_terms, payed_date, status, shipping_cost_client")
+        .select("id, order_code, created_at, total_amount, payment_status, payment_terms, payment_due_date, payed_date, status, shipping_cost_client")
         .eq("client_id", client!.id)
         .neq("status", "draft")
         .neq("status", "cancelled")
@@ -73,9 +73,19 @@ const DealerInvoices = () => {
   };
 
   const getDueDate = (order: any) => {
+    if (order.payment_due_date) return new Date(order.payment_due_date);
     const days = paymentTermsDays[order.payment_terms] ?? 30;
     return addDays(new Date(order.created_at), days);
   };
+
+  // Sort: overdue unpaid first, then by date
+  const sortedOrders = [...orders].sort((a, b) => {
+    const aOverdue = a.payment_status !== "paid" && getDueDate(a) < new Date();
+    const bOverdue = b.payment_status !== "paid" && getDueDate(b) < new Date();
+    if (aOverdue && !bOverdue) return -1;
+    if (!aOverdue && bOverdue) return 1;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 
   const getInvoiceForOrder = (orderId: string) => invoiceDocs.filter(d => d.order_id === orderId);
 
@@ -95,7 +105,7 @@ const DealerInvoices = () => {
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map(order => {
+          {sortedOrders.map(order => {
             const ps = paymentStatusLabels[order.payment_status || "unpaid"] || paymentStatusLabels.unpaid;
             const dueDate = getDueDate(order);
             const isOverdue = order.payment_status !== "paid" && dueDate < new Date();

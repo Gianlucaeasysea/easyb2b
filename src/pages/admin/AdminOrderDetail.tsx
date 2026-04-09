@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Clock, CheckCircle, Truck, Package, Mail, AlertTriangle, XCircle } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle, Truck, Package, Mail, AlertTriangle, XCircle, CalendarClock } from "lucide-react";
+import { addDays, lastDayOfMonth, addMonths, differenceInDays } from "date-fns";
 import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -21,6 +22,25 @@ import {
   ORDER_STATUSES, PAYMENT_STATUSES, getOrderStatusLabel, getOrderStatusColor,
   getPaymentStatusLabel, getPaymentStatusColor, getAvailableTransitions, canTransitionTo,
 } from "@/lib/constants";
+
+const PAYMENT_TERMS_LABELS: Record<string, string> = {
+  prepaid: "Pagamento anticipato",
+  "30_days": "30 giorni data fattura",
+  "60_days": "60 giorni data fattura",
+  "90_days": "90 giorni data fattura",
+  end_of_month: "Fine mese",
+};
+
+const calculateDueDate = (paymentTerms: string | null, confirmedDate: Date): Date => {
+  switch (paymentTerms) {
+    case "prepaid": return confirmedDate;
+    case "30_days": return addDays(confirmedDate, 30);
+    case "60_days": return addDays(confirmedDate, 60);
+    case "90_days": return addDays(confirmedDate, 90);
+    case "end_of_month": return lastDayOfMonth(addMonths(confirmedDate, 1));
+    default: return addDays(confirmedDate, 30);
+  }
+};
 import type { Tables } from "@/integrations/supabase/types";
 
 type OrderRow = Tables<"orders">;
@@ -163,7 +183,12 @@ const AdminOrderDetail = () => {
     if (!id || !order) return;
     setSaving(true);
     try {
-      await supabase.from("orders").update({ status: "confirmed" }).eq("id", id);
+      const confirmedDate = new Date();
+      const dueDate = calculateDueDate(order.payment_terms, confirmedDate);
+      await supabase.from("orders").update({
+        status: "confirmed",
+        payment_due_date: format(dueDate, "yyyy-MM-dd"),
+      }).eq("id", id);
       await supabase.from("order_events").insert({
         order_id: id, event_type: "status_change", title: "Stato aggiornato: Confermato",
       });
@@ -349,6 +374,21 @@ const AdminOrderDetail = () => {
             <div className="mt-3 pt-3 border-t border-border space-y-2 text-sm">
               <p><span className="text-muted-foreground">Payment:</span> <Badge className={`border-0 text-[10px] ml-1 ${getPaymentStatusColor(order.payment_status || "unpaid")}`}>{getPaymentStatusLabel(order.payment_status || "unpaid")}</Badge></p>
               <p><span className="text-muted-foreground">Data Pagamento:</span> {order.payed_date || "—"}</p>
+              <p><span className="text-muted-foreground">Termini:</span> {PAYMENT_TERMS_LABELS[order.payment_terms || ""] || order.payment_terms || "—"}</p>
+              {(order as any).payment_due_date && (
+                <p>
+                  <span className="text-muted-foreground">Scadenza pagamento:</span>{" "}
+                  <span className="font-semibold">{format(new Date((order as any).payment_due_date), "dd/MM/yyyy")}</span>
+                  {(() => {
+                    const due = new Date((order as any).payment_due_date);
+                    const today = new Date();
+                    const overdue = due < today && order.payment_status !== "paid";
+                    const daysOverdue = differenceInDays(today, due);
+                    if (overdue) return <Badge variant="destructive" className="ml-2 text-[10px]">SCADUTO da {daysOverdue} giorni</Badge>;
+                    return null;
+                  })()}
+                </p>
+              )}
               <p><span className="text-muted-foreground">Delivery Date:</span> {order.delivery_date || "—"}</p>
             </div>
             {order.notes && (
