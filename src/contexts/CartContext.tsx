@@ -104,8 +104,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           removedAny = true;
           continue;
         }
-        const stock = product.stock_quantity ?? 0;
-        if (stock <= 0) {
+        const stock = product.stock_quantity;
+        // NULL stock = unlimited availability
+        if (stock !== null && stock <= 0) {
+          toast.info(`${product.name} is out of stock and was removed from your cart`);
           removedAny = true;
           continue;
         }
