@@ -13,7 +13,7 @@ import { FileText, Check, X, Target, Eye, ChevronRight, ChevronLeft, KeyRound, C
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+
 import { convertRequestToPipeline } from "@/lib/crmEntityActions";
 import { showErrorToast } from "@/lib/errorHandler";
 import { toast } from "sonner";
