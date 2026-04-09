@@ -111,11 +111,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           removedAny = true;
           continue;
         }
-        if (item.quantity > stock) {
-          toast.info(`Quantità di ${product.name} aggiornata a ${stock} per disponibilità limitata`);
+        if (stock !== null && item.quantity > stock) {
+          toast.info(`${product.name} quantity reduced to ${stock} due to limited availability`);
           validated.push({ ...item, quantity: stock, stock });
         } else {
-          validated.push({ ...item, stock });
+          validated.push({ ...item, stock: stock ?? 9999 });
         }
       }
 
