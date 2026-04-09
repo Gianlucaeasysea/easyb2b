@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import CookieBanner from "@/components/CookieBanner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Public pages
 import Index from "./pages/Index";
@@ -77,7 +78,16 @@ import CRMOrders from "./pages/crm/CRMOrders";
 import CRMOrderDetail from "./pages/crm/CRMOrderDetail";
 import CRMCreateOrder from "./pages/crm/CRMCreateOrder";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 300_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -85,6 +95,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ErrorBoundary section="application">
         <AuthProvider>
           <Routes>
             {/* Public */}
@@ -175,6 +186,7 @@ const App = () => (
           </Routes>
           <CookieBanner />
         </AuthProvider>
+        </ErrorBoundary>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

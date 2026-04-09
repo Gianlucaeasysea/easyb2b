@@ -38,8 +38,15 @@ serve(async (req) => {
 
     const { orderId, orderCode, type } = await req.json();
 
-    if (!orderId || !type) {
-      return new Response(JSON.stringify({ error: "Missing orderId or type" }), {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!orderId || typeof orderId !== "string" || !UUID_RE.test(orderId)) {
+      return new Response(JSON.stringify({ error: "Missing or invalid orderId (must be UUID)" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!type || typeof type !== "string") {
+      return new Response(JSON.stringify({ error: "Missing or invalid type" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

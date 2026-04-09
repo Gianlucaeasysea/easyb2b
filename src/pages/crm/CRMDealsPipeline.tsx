@@ -109,7 +109,7 @@ const CRMDealsPipeline = () => {
 
   useEffect(() => {
     const channel = supabase
-      .channel("deals-pipeline-realtime")
+      .channel(`deals-pipeline-${crypto.randomUUID().slice(0, 8)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "deals" },

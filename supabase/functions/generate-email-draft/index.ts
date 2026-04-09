@@ -74,6 +74,21 @@ Deno.serve(async (req) => {
 
   const { template_type, context } = body
 
+  // Input validation
+  const validTypes = ['order_update', 'payment_reminder', 'custom']
+  if (template_type && !validTypes.includes(template_type)) {
+    return new Response(JSON.stringify({ error: `Invalid template_type. Must be one of: ${validTypes.join(', ')}` }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+  if (!context || typeof context !== 'object') {
+    return new Response(JSON.stringify({ error: 'Missing or invalid context object' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   const systemPrompt = `Sei un assistente commerciale di EasySea, azienda che produce e distribuisce prodotti nautici B2B.
 Scrivi email professionali, cordiali e concise in italiano.
 Il mittente è business@easysea.org (EasySea).

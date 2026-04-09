@@ -1,6 +1,27 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateInput(body: any): string | null {
+  const { companyName, contactName, email, phone } = body;
+
+  if (!companyName || typeof companyName !== "string" || companyName.trim().length < 2 || companyName.length > 200) {
+    return "Company name is required (2-200 characters)";
+  }
+  if (!contactName || typeof contactName !== "string" || contactName.trim().length < 2 || contactName.length > 100) {
+    return "Contact name is required (2-100 characters)";
+  }
+  if (!email || typeof email !== "string" || !EMAIL_RE.test(email) || email.length > 255) {
+    return "A valid email is required";
+  }
+  if (!phone || typeof phone !== "string" || phone.trim().length < 5 || phone.length > 30) {
+    return "A valid phone number is required";
+  }
+
+  return null;
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -9,7 +30,22 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const validationError = validateInput(body);
+    if (validationError) {
+      return new Response(JSON.stringify({ error: validationError }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { companyName, contactName, email, phone, zone, country, businessType, website, message, vatNumber } = body;
 
     const GMAIL_APP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD");
