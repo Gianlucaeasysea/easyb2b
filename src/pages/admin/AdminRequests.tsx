@@ -147,14 +147,14 @@ const AdminRequests = () => {
     // Optionally send rejection email
     if (sendRejectEmail) {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Use edge function directly to send rejection email without requiring client_id
         await supabase.functions.invoke("send-crm-email", {
           body: {
-            client_id: null,
             recipient_email: rejectRequest.email,
             subject: "EasySea — Aggiornamento sulla tua candidatura",
             body: `Gentile ${rejectRequest.contact_name},\n\nGrazie per il tuo interesse nel diventare distributore EasySea.\n\nDopo un'attenta valutazione, al momento non siamo in grado di procedere con la tua candidatura.\n\nMotivo: ${rejectReason}\n\nTi ringraziamo per la comprensione.\n\nCordiali saluti,\nIl Team EasySea`,
             sent_by: user?.id,
+            skip_client_id: true,
             idempotency_key: crypto.randomUUID(),
           },
         });
