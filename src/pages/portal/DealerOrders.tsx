@@ -664,7 +664,7 @@ const DealerOrders = () => {
                                 </div>
                               </div>
                               <Download size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                            </a>
+                            </button>
                           ))}
                         </div>
                       )}
