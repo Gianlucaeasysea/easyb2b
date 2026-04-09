@@ -351,7 +351,7 @@ const AdminClientDetail = () => {
   const [form, setForm] = useState({
     company_name: "", contact_name: "", email: "", phone: "", country: "", zone: "",
     status: "", notes: "", address: "", website: "", business_type: "", vat_number: "",
-    payment_terms: "30_days", payment_terms_notes: "",
+    payment_terms: "100% upfront", payment_terms_notes: "",
   });
 
   const [bank, setBank] = useState({ bank_name: "", iban: "", swift_bic: "", account_holder: "" });
@@ -365,7 +365,7 @@ const AdminClientDetail = () => {
         zone: client.zone || "", status: client.status || "lead",
         notes: client.notes || "", address: client.address || "", website: client.website || "",
         business_type: client.business_type || "", vat_number: client.vat_number || "",
-        payment_terms: (client as any).payment_terms || "30_days",
+        payment_terms: (client as any).payment_terms || "100% upfront",
         payment_terms_notes: (client as any).payment_terms_notes || "",
       });
     }
@@ -786,14 +786,14 @@ const AdminClientDetail = () => {
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground font-semibold">Payment Terms</Label>
-                <Select value={form.payment_terms || "30_days"} onValueChange={v => setForm(f => ({ ...f, payment_terms: v }))}>
+                <Select value={form.payment_terms || "100% upfront"} onValueChange={v => setForm(f => ({ ...f, payment_terms: v }))}>
                   <SelectTrigger className="mt-1 bg-secondary border-border rounded-lg"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="prepaid">Prepaid</SelectItem>
-                    <SelectItem value="30_days">Net 30</SelectItem>
-                    <SelectItem value="60_days">Net 60</SelectItem>
-                    <SelectItem value="90_days">Net 90</SelectItem>
-                    <SelectItem value="end_of_month">End of Month</SelectItem>
+                    <SelectItem value="100% upfront">100% Upfront — Full payment in advance</SelectItem>
+                    <SelectItem value="Net 30">Net 30 — Payment within 30 days of delivery</SelectItem>
+                    <SelectItem value="Net 60">Net 60 — Payment within 60 days of delivery</SelectItem>
+                    <SelectItem value="50/50">50/50 — 50% upfront, 50% on delivery</SelectItem>
+                    <SelectItem value="Custom">Custom — Specify in notes</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
