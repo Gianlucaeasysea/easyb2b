@@ -160,7 +160,7 @@ const DealerCatalog = () => {
   const selectedRetailPrice = selectedProduct ? Number(selectedProduct.compare_at_price || selectedProduct.price) : 0;
   const selectedHasPrice = !!selectedPlEntry;
   const selectedB2bPrice = selectedPlEntry?.customPrice ?? 0;
-  const selectedDiscountPct = selectedRetailPrice > 0 ? Math.round((1 - selectedB2bPrice / Number(selectedProduct?.price || 1)) * 100) : 0;
+  const selectedDiscountPct = selectedRetailPrice > 0 ? Math.max(0, Math.round((1 - selectedB2bPrice / selectedRetailPrice) * 100)) : 0;
 
   return (
     <div>
@@ -248,8 +248,9 @@ const DealerCatalog = () => {
                 const plEntry = priceListProductMap.get(p.id);
                 const productHasPrice = !!plEntry;
                 const b2bPrice = plEntry?.customPrice ?? 0;
-                const discountPct = productHasPrice && Number(p.price) > 0
-                  ? Math.round((1 - b2bPrice / Number(p.price)) * 100)
+                const retailPrice = Number(p.compare_at_price || p.price || 0);
+                const discountPct = productHasPrice && retailPrice > 0
+                  ? Math.max(0, Math.round((1 - b2bPrice / retailPrice) * 100))
                   : 0;
                 const inStock = (p.stock_quantity ?? 0) > 0;
                 const canAddToCart = productHasPrice && inStock;
@@ -422,7 +423,8 @@ const DealerCatalog = () => {
             }
             const plEntry = priceListProductMap.get(selectedProduct.id);
             const b2bPrice = plEntry!.customPrice;
-            const discountPct = Number(selectedProduct.price) > 0 ? Math.round((1 - b2bPrice / Number(selectedProduct.price)) * 100) : 0;
+            const retailPrice = Number(selectedProduct.compare_at_price || selectedProduct.price || 0);
+            const discountPct = retailPrice > 0 ? Math.max(0, Math.round((1 - b2bPrice / retailPrice) * 100)) : 0;
             addItem({
               productId: selectedProduct.id,
               name: selectedProduct.name,
