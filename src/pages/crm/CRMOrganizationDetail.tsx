@@ -21,7 +21,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { isPast } from "date-fns";
 import { format, differenceInDays, isValid } from "date-fns";
-import { it } from "date-fns/locale";
+
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,7 +58,7 @@ const fmtDate = (d: string | null | undefined) => {
   if (!d) return "—";
   try {
     const date = new Date(d);
-    return isValid(date) ? format(date, "dd MMM yyyy", { locale: it }) : "—";
+    return isValid(date) ? format(date, "dd MMM yyyy") : "—";
   } catch { return "—"; }
 };
 
@@ -92,7 +92,7 @@ const CRMOrganizationDetail = () => {
 
   const handleCreateCredentials = async () => {
     if (!client?.email) {
-      toast.error("Questa organizzazione non ha un'email configurata");
+      toast.error("This organization has no email configured");
       return;
     }
     setCreatingCredentials(true);
@@ -100,13 +100,13 @@ const CRMOrganizationDetail = () => {
       const password = generatePassword();
       const result = await invokeDealerAccountAction<{ email_sent?: boolean }>({ client_id: id!, email: client.email, password });
       if (result?.email_sent) {
-        toast.success("Credenziali create e inviate via email al dealer");
+        toast.success("Credentials created and sent via email to the dealer");
       } else {
-        toast.success("Credenziali create (email non inviata — controlla la configurazione Gmail)");
+        toast.success("Credentials created (email not sent — check Gmail configuration)");
       }
       queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
     } catch (err: any) {
-      toast.error(err.message || "Errore nella creazione delle credenziali");
+      toast.error(err.message || "Failed to create credentials");
     } finally {
       setCreatingCredentials(false);
     }
@@ -115,14 +115,14 @@ const CRMOrganizationDetail = () => {
   const [deletingCredentials, setDeletingCredentials] = useState(false);
 
   const handleDeleteCredentials = async () => {
-    if (!confirm("Sei sicuro di voler eliminare le credenziali dealer? L'account verrà rimosso definitivamente.")) return;
+    if (!confirm("Are you sure you want to delete the dealer credentials? The account will be permanently removed.")) return;
     setDeletingCredentials(true);
     try {
       await invokeDealerAccountAction<{ success: boolean }>({ client_id: id!, action: "delete" });
-      toast.success("Credenziali dealer eliminate");
+      toast.success("Dealer credentials deleted");
       queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
     } catch (err: any) {
-      toast.error(err.message || "Errore nell'eliminazione delle credenziali");
+      toast.error(err.message || "Failed to delete credentials");
     } finally {
       setDeletingCredentials(false);
     }
