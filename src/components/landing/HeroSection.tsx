@@ -28,14 +28,16 @@ const HeroSection = () => {
       <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent pointer-events-none z-[1]" />
 
       <motion.div className="relative z-10 container mx-auto px-4 text-center pt-20 pb-16" style={{ y: textY, opacity }}>
-        <motion.p
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-xs uppercase tracking-[0.4em] text-muted-foreground mb-10 font-heading font-semibold"
+          className="mb-8"
         >
-          B2B Dealer Platform
-        </motion.p>
+          <span className="inline-block px-5 py-2 rounded-full border border-primary/30 bg-primary/10 text-sm font-heading font-semibold tracking-wider text-primary uppercase">
+            B2B Dealer Platform
+          </span>
+        </motion.div>
 
         <motion.h1
           initial={{ opacity: 0, y: 40 }}
@@ -43,18 +45,20 @@ const HeroSection = () => {
           transition={{ duration: 0.9, delay: 0.1 }}
           className="font-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-foreground leading-[0.95] tracking-tight mb-4"
         >
-          We Design
+          Your Nautical
+          <br />
+          <span className="text-gradient-blue">Business Hub</span>
         </motion.h1>
 
         <motion.h2
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.2 }}
-          className="font-heading text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-10 leading-snug"
+          className="font-heading text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-10 leading-snug text-muted-foreground"
         >
-          <span className="text-gradient-blue">Beautiful and innovative</span>
+          Premium accessories, exclusive B2B pricing
           <br className="hidden sm:block" />
-          <span className="text-foreground"> nautical accessories</span>
+          <span className="text-foreground"> & dedicated dealer support</span>
         </motion.h2>
 
         <motion.p
