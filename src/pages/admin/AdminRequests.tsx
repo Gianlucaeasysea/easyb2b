@@ -63,7 +63,6 @@ const AdminRequests = () => {
     address: "", payment_terms: "30_days", payment_terms_notes: "",
     price_list_id: "", assigned_sales_id: "",
     account_email: "", account_password: "", send_welcome_email: true,
-    credential_mode: "password" as "password" | "magic_link",
   });
   const [wizardCreating, setWizardCreating] = useState(false);
 
@@ -192,40 +191,78 @@ const AdminRequests = () => {
       account_email: request.email || "",
       account_password: generatePassword(),
       send_welcome_email: true,
-      credential_mode: "password",
     });
     setSelectedRequest(null);
   };
 
   const handleWizardCreate = async () => {
+    // Validation
+    if (!wizardData.company_name.trim() || !wizardData.account_email.trim() || !wizardData.account_password.trim()) {
+      toast.error("Compila tutti i campi obbligatori: nome azienda, email account e password");
+      return;
+    }
+
     setWizardCreating(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
-      // 1. Create client record
-      const { data: newClient, error: clientErr } = await supabase.from("clients").insert({
-        company_name: wizardData.company_name,
-        contact_name: wizardData.contact_name,
-        email: wizardData.email,
-        phone: wizardData.phone,
-        country: wizardData.country,
-        zone: wizardData.zone,
-        business_type: wizardData.business_type,
-        website: wizardData.website || null,
-        vat_number: wizardData.vat_number || null,
-        address: wizardData.address || null,
-        payment_terms: wizardData.payment_terms,
-        payment_terms_notes: wizardData.payment_terms_notes || null,
-        assigned_sales_id: wizardData.assigned_sales_id || null,
-        status: "onboarding",
-      } as any).select().single();
-      if (clientErr) throw clientErr;
+      // Fix #8: Check if a client already exists with same email or company name (deduplication)
+      let clientId: string;
+      const { data: existingClient } = await supabase
+        .from("clients")
+        .select("id")
+        .or(`email.eq.${wizardData.email},company_name.eq.${wizardData.company_name}`)
+        .limit(1)
+        .maybeSingle();
 
-      // 2. Assign price list
-      if (wizardData.price_list_id && newClient) {
+      if (existingClient) {
+        // Update existing client with wizard data
+        const { error: updateErr } = await supabase.from("clients").update({
+          company_name: wizardData.company_name,
+          contact_name: wizardData.contact_name,
+          email: wizardData.email,
+          phone: wizardData.phone,
+          country: wizardData.country,
+          zone: wizardData.zone,
+          business_type: wizardData.business_type,
+          website: wizardData.website || null,
+          vat_number: wizardData.vat_number || null,
+          address: wizardData.address || null,
+          payment_terms: wizardData.payment_terms,
+          payment_terms_notes: wizardData.payment_terms_notes || null,
+          assigned_sales_id: wizardData.assigned_sales_id || null,
+          status: "onboarding",
+        } as any).eq("id", existingClient.id);
+        if (updateErr) throw updateErr;
+        clientId = existingClient.id;
+      } else {
+        // Create new client record
+        const { data: newClient, error: clientErr } = await supabase.from("clients").insert({
+          company_name: wizardData.company_name,
+          contact_name: wizardData.contact_name,
+          email: wizardData.email,
+          phone: wizardData.phone,
+          country: wizardData.country,
+          zone: wizardData.zone,
+          business_type: wizardData.business_type,
+          website: wizardData.website || null,
+          vat_number: wizardData.vat_number || null,
+          address: wizardData.address || null,
+          payment_terms: wizardData.payment_terms,
+          payment_terms_notes: wizardData.payment_terms_notes || null,
+          assigned_sales_id: wizardData.assigned_sales_id || null,
+          status: "onboarding",
+        } as any).select().single();
+        if (clientErr) throw clientErr;
+        clientId = newClient.id;
+      }
+
+      // 2. Assign price list (remove old assignments first to avoid duplicates)
+      if (wizardData.price_list_id) {
+        await supabase.from("price_list_clients").delete().eq("client_id", clientId);
         await supabase.from("price_list_clients").insert({
           price_list_id: wizardData.price_list_id,
-          client_id: newClient.id,
+          client_id: clientId,
         } as any);
       }
 
@@ -237,7 +274,7 @@ const AdminRequests = () => {
           Authorization: `Bearer ${session?.access_token}`,
         },
         body: JSON.stringify({
-          client_id: newClient.id,
+          client_id: clientId,
           email: wizardData.account_email,
           password: wizardData.account_password,
           send_welcome_email: wizardData.send_welcome_email,
@@ -254,7 +291,7 @@ const AdminRequests = () => {
       queryClient.invalidateQueries({ queryKey: ["pending-requests-count"] });
       toast.success(`Account dealer creato per ${wizardData.company_name}`);
       setWizardRequest(null);
-      navigate(`/admin/clients/${newClient.id}`);
+      navigate(`/admin/clients/${clientId}`);
     } catch (error) {
       showErrorToast(error, "AdminRequests.wizardCreate");
     } finally {
@@ -587,45 +624,23 @@ const AdminRequests = () => {
                 <p className="text-sm text-foreground font-semibold">Credenziali Portale Dealer</p>
               </div>
               <div>
-                <Label className="text-xs">Email</Label>
+                <Label className="text-xs">Email *</Label>
                 <Input value={wizardData.account_email} onChange={e => setWizardData(d => ({ ...d, account_email: e.target.value }))} className="bg-secondary font-mono" />
               </div>
 
-              {/* Credential mode */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold">Metodo di accesso</Label>
-                <div className="space-y-2">
-                  <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${wizardData.credential_mode === "magic_link" ? "border-primary bg-primary/5" : "border-border bg-secondary/50"}`}>
-                    <input type="radio" name="cred_mode" checked={wizardData.credential_mode === "magic_link"} onChange={() => setWizardData(d => ({ ...d, credential_mode: "magic_link" }))} className="mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold">Invia Magic Link <Badge variant="secondary" className="ml-1 text-[10px]">Consigliato</Badge></p>
-                      <p className="text-xs text-muted-foreground">Il dealer imposta la propria password</p>
-                    </div>
-                  </label>
-                  <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${wizardData.credential_mode === "password" ? "border-primary bg-primary/5" : "border-border bg-secondary/50"}`}>
-                    <input type="radio" name="cred_mode" checked={wizardData.credential_mode === "password"} onChange={() => setWizardData(d => ({ ...d, credential_mode: "password" }))} className="mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold">Genera Password</p>
-                      <p className="text-xs text-muted-foreground">Genera una password casuale da inviare al dealer</p>
-                    </div>
-                  </label>
+              <div>
+                <Label className="text-xs">Password *</Label>
+                <div className="flex gap-2">
+                  <Input value={wizardData.account_password} onChange={e => setWizardData(d => ({ ...d, account_password: e.target.value }))} className="bg-secondary font-mono flex-1" />
+                  <Button variant="outline" size="sm" onClick={() => setWizardData(d => ({ ...d, account_password: generatePassword() }))} className="gap-1">
+                    <RefreshCw size={12} /> Genera
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(wizardData.account_password); toast.success("Password copiata"); }}>
+                    <Copy size={12} />
+                  </Button>
                 </div>
+                <p className="text-[11px] text-muted-foreground mt-1">La password verrà inviata al dealer tramite email di benvenuto</p>
               </div>
-
-              {wizardData.credential_mode === "password" && (
-                <div>
-                  <Label className="text-xs">Password</Label>
-                  <div className="flex gap-2">
-                    <Input value={wizardData.account_password} onChange={e => setWizardData(d => ({ ...d, account_password: e.target.value }))} className="bg-secondary font-mono flex-1" />
-                    <Button variant="outline" size="sm" onClick={() => setWizardData(d => ({ ...d, account_password: generatePassword() }))} className="gap-1">
-                      <RefreshCw size={12} /> Genera
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(wizardData.account_password); toast.success("Password copiata"); }}>
-                      <Copy size={12} />
-                    </Button>
-                  </div>
-                </div>
-              )}
 
               <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
                 <Checkbox checked={wizardData.send_welcome_email} onCheckedChange={(c) => setWizardData(d => ({ ...d, send_welcome_email: !!c }))} />
@@ -653,11 +668,7 @@ const AdminRequests = () => {
                 </div>
                 <div className="border-t border-border pt-3">
                   <span className="text-muted-foreground text-xs">Email account</span><p className="font-mono text-sm">{wizardData.account_email}</p>
-                  {wizardData.credential_mode === "password" ? (
-                    <><span className="text-muted-foreground text-xs">Password</span><p className="font-mono text-sm">{wizardData.account_password}</p></>
-                  ) : (
-                    <p className="text-xs text-muted-foreground mt-1">🔗 Verrà inviato un Magic Link</p>
-                  )}
+                  <span className="text-muted-foreground text-xs">Password</span><p className="font-mono text-sm">{wizardData.account_password}</p>
                   <p className="text-xs text-muted-foreground mt-1">{wizardData.send_welcome_email ? "✅ Email di benvenuto sarà inviata" : "❌ Email non sarà inviata"}</p>
                 </div>
               </div>
@@ -670,7 +681,10 @@ const AdminRequests = () => {
               <ChevronLeft size={14} /> {wizardStep > 0 ? "Indietro" : "Annulla"}
             </Button>
             {wizardStep < 3 ? (
-              <Button onClick={() => setWizardStep(s => s + 1)} className="gap-1" disabled={wizardStep === 0 && !wizardData.company_name.trim()}>
+              <Button onClick={() => setWizardStep(s => s + 1)} className="gap-1" disabled={
+                (wizardStep === 0 && (!wizardData.company_name.trim() || !wizardData.email.trim())) ||
+                (wizardStep === 2 && (!wizardData.account_email.trim() || !wizardData.account_password.trim()))
+              }>
                 Avanti <ChevronRight size={14} />
               </Button>
             ) : (
