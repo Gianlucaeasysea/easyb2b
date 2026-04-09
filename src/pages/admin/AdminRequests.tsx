@@ -13,26 +13,26 @@ import { FileText, Check, X, Target, Eye, ChevronRight, ChevronLeft, KeyRound, C
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+
 import { convertRequestToPipeline } from "@/lib/crmEntityActions";
 import { showErrorToast } from "@/lib/errorHandler";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 const PAYMENT_TERMS_OPTIONS = [
-  { value: "prepaid", label: "Anticipato" },
-  { value: "30_days", label: "30 giorni" },
-  { value: "60_days", label: "60 giorni" },
-  { value: "90_days", label: "90 giorni" },
-  { value: "end_of_month", label: "Fine mese" },
+  { value: "prepaid", label: "Prepaid" },
+  { value: "30_days", label: "Net 30" },
+  { value: "60_days", label: "Net 60" },
+  { value: "90_days", label: "Net 90" },
+  { value: "end_of_month", label: "End of Month" },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  new: { label: "Nuova", className: "bg-primary/15 text-primary border-0" },
-  reviewed: { label: "In Revisione", className: "bg-warning/15 text-warning border-0" },
-  approved: { label: "Approvata", className: "bg-success/15 text-success border-0" },
-  converted: { label: "Approvata", className: "bg-success/15 text-success border-0" },
-  rejected: { label: "Rifiutata", className: "bg-destructive/15 text-destructive border-0" },
+  new: { label: "New", className: "bg-primary/15 text-primary border-0" },
+  reviewed: { label: "Under Review", className: "bg-warning/15 text-warning border-0" },
+  approved: { label: "Approved", className: "bg-success/15 text-success border-0" },
+  converted: { label: "Approved", className: "bg-success/15 text-success border-0" },
+  rejected: { label: "Rejected", className: "bg-destructive/15 text-destructive border-0" },
 };
 
 const generatePassword = (len = 14): string => {
@@ -104,7 +104,7 @@ const AdminRequests = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
-      toast.success("Note salvate");
+      toast.success("Notes saved");
     },
   });
 
@@ -121,8 +121,8 @@ const AdminRequests = () => {
       if (selectedRequest?.id === variables.id) {
         setSelectedRequest((prev: any) => prev ? { ...prev, status: variables.status } : prev);
       }
-      const labels: Record<string, string> = { reviewed: "Richiesta segnata in revisione", rejected: "Richiesta rifiutata" };
-      toast.success(labels[variables.status] || "Stato aggiornato");
+      const labels: Record<string, string> = { reviewed: "Request marked as under review", rejected: "Request rejected" };
+      toast.success(labels[variables.status] || "Status updated");
     },
   });
 
@@ -132,7 +132,7 @@ const AdminRequests = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       queryClient.invalidateQueries({ queryKey: ["crm-organizations"] });
-      toast.success("Lead + Organizzazione creati dalla richiesta!");
+      toast.success("Lead + Organization created from request!");
       setSelectedRequest(null);
     },
     onError: (e: any) => showErrorToast(e, "AdminRequests.convertToLead"),
@@ -151,20 +151,20 @@ const AdminRequests = () => {
         await supabase.functions.invoke("send-crm-email", {
           body: {
             recipient_email: rejectRequest.email,
-            subject: "EasySea — Aggiornamento sulla tua candidatura",
-            body: `Gentile ${rejectRequest.contact_name},\n\nGrazie per il tuo interesse nel diventare distributore EasySea.\n\nDopo un'attenta valutazione, al momento non siamo in grado di procedere con la tua candidatura.\n\nMotivo: ${rejectReason}\n\nTi ringraziamo per la comprensione.\n\nCordiali saluti,\nIl Team EasySea`,
+            subject: "EasySea — Update on your application",
+            body: `Dear ${rejectRequest.contact_name},\n\nThank you for your interest in becoming an EasySea dealer.\n\nAfter careful evaluation, we are currently unable to proceed with your application.\n\nReason: ${rejectReason}\n\nThank you for your understanding.\n\nBest regards,\nThe EasySea Team`,
             sent_by: user?.id,
             skip_client_id: true,
             idempotency_key: crypto.randomUUID(),
           },
         });
-        toast.success("Email di rifiuto inviata");
+        toast.success("Rejection email sent");
       } catch {
-        toast.error("Errore nell'invio dell'email di rifiuto");
+        toast.error("Error sending rejection email");
       }
     }
 
-    toast.success("Richiesta rifiutata");
+    toast.success("Request rejected");
     setRejectRequest(null);
     setRejectReason("");
     setSendRejectEmail(false);
@@ -198,7 +198,7 @@ const AdminRequests = () => {
   const handleWizardCreate = async () => {
     // Validation
     if (!wizardData.company_name.trim() || !wizardData.account_email.trim() || !wizardData.account_password.trim()) {
-      toast.error("Compila tutti i campi obbligatori: nome azienda, email account e password");
+      toast.error("Please fill all required fields: company name, account email and password");
       return;
     }
 
@@ -289,7 +289,7 @@ const AdminRequests = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
       queryClient.invalidateQueries({ queryKey: ["admin-clients"] });
       queryClient.invalidateQueries({ queryKey: ["pending-requests-count"] });
-      toast.success(`Account dealer creato per ${wizardData.company_name}`);
+      toast.success(`Dealer account created for ${wizardData.company_name}`);
       setWizardRequest(null);
       navigate(`/admin/clients/${clientId}`);
     } catch (error) {
@@ -315,28 +315,28 @@ const AdminRequests = () => {
     return true;
   });
 
-  const WIZARD_STEPS = ["Verifica Dati", "Configurazione Account", "Credenziali", "Conferma"];
+  const WIZARD_STEPS = ["Verify Data", "Account Setup", "Credentials", "Confirmation"];
 
   const FILTER_TABS = [
-    { value: "all", label: "Tutte", count: counts.all },
-    { value: "new", label: "Nuove", count: counts.new },
-    { value: "reviewed", label: "In Revisione", count: counts.reviewed },
-    { value: "approved", label: "Approvate", count: counts.approved },
-    { value: "rejected", label: "Rifiutate", count: counts.rejected },
+    { value: "all", label: "All", count: counts.all },
+    { value: "new", label: "New", count: counts.new },
+    { value: "reviewed", label: "Under Review", count: counts.reviewed },
+    { value: "approved", label: "Approved", count: counts.approved },
+    { value: "rejected", label: "Rejected", count: counts.rejected },
   ];
 
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">Richieste Dealer</h1>
-          <p className="text-sm text-muted-foreground">Gestisci le candidature dei nuovi distributori</p>
+          <h1 className="font-heading text-2xl font-bold text-foreground">Dealer Requests</h1>
+          <p className="text-sm text-muted-foreground">Manage new dealer applications</p>
         </div>
         <div className="flex items-center gap-2">
           {counts.new > 0 && (
-            <Badge className="bg-primary/15 text-primary border-0">{counts.new} nuove</Badge>
+            <Badge className="bg-primary/15 text-primary border-0">{counts.new} new</Badge>
           )}
-          <Badge variant="outline" className="text-xs">{counts.all} totali</Badge>
+          <Badge variant="outline" className="text-xs">{counts.all} total</Badge>
         </div>
       </div>
 
@@ -353,24 +353,24 @@ const AdminRequests = () => {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Caricamento...</p>
+        <p className="text-muted-foreground">Loading...</p>
       ) : !filtered?.length ? (
         <div className="text-center py-20 glass-card-solid">
           <FileText className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">Nessuna richiesta trovata.</p>
+          <p className="text-muted-foreground">No requests found.</p>
         </div>
       ) : (
         <div className="glass-card-solid overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Data Richiesta</TableHead>
-                <TableHead>Azienda</TableHead>
-                <TableHead>Nome Contatto</TableHead>
+                <TableHead>Request Date</TableHead>
+                <TableHead>Company</TableHead>
+                <TableHead>Contact Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Paese</TableHead>
-                <TableHead>Stato</TableHead>
-                <TableHead className="text-right">Azioni</TableHead>
+                <TableHead>Country</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -378,7 +378,7 @@ const AdminRequests = () => {
                 const sc = STATUS_CONFIG[r.status || "new"] || STATUS_CONFIG.new;
                 return (
                   <TableRow key={r.id} className="cursor-pointer hover:bg-secondary/50" onClick={() => { setSelectedRequest(r); setEditingNotes((r as any).admin_notes || ""); }}>
-                    <TableCell className="text-muted-foreground text-xs">{format(new Date(r.created_at), "dd MMM yyyy", { locale: it })}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{format(new Date(r.created_at), "dd MMM yyyy")}</TableCell>
                     <TableCell className="font-heading font-semibold">{r.company_name}</TableCell>
                     <TableCell className="text-sm">{r.contact_name}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{r.email}</TableCell>
@@ -387,7 +387,7 @@ const AdminRequests = () => {
                     <TableCell>
                       <div className="flex items-center justify-end" onClick={e => e.stopPropagation()}>
                         <Button size="sm" variant="ghost" className="h-8 px-3 text-xs gap-1.5" onClick={() => { setSelectedRequest(r); setEditingNotes((r as any).admin_notes || ""); }}>
-                          <Eye size={14} /> Gestisci
+                          <Eye size={14} /> Manage
                         </Button>
                       </div>
                     </TableCell>
@@ -419,22 +419,22 @@ const AdminRequests = () => {
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-2">
                   {/* LEFT — Request Data */}
                   <div className="md:col-span-3 space-y-4">
-                    <h3 className="text-xs font-heading font-bold text-muted-foreground uppercase tracking-wider">Dati Richiesta</h3>
+                    <h3 className="text-xs font-heading font-bold text-muted-foreground uppercase tracking-wider">Request Data</h3>
                     <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div><span className="text-muted-foreground text-xs">Referente</span><p className="font-medium">{selectedRequest.contact_name}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Contact</span><p className="font-medium">{selectedRequest.contact_name}</p></div>
                       <div><span className="text-muted-foreground text-xs">Email</span><p className="font-medium">{selectedRequest.email}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Telefono</span><p className="font-medium">{selectedRequest.phone}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Paese</span><p className="font-medium">{(selectedRequest as any).country || "—"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Zona</span><p className="font-medium">{selectedRequest.zone || "—"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Tipo Attività</span><p className="font-medium">{selectedRequest.business_type || "—"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">P.IVA</span><p className="font-medium">{(selectedRequest as any).vat_number || "—"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Sito Web</span><p className="font-medium">{selectedRequest.website || "—"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Consenso Marketing</span><p className="font-medium">{selectedRequest.marketing_consent ? "✅ Sì" : "❌ No"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Data Invio</span><p className="font-medium">{format(new Date(selectedRequest.created_at), "dd MMMM yyyy, HH:mm", { locale: it })}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Phone</span><p className="font-medium">{selectedRequest.phone}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Country</span><p className="font-medium">{(selectedRequest as any).country || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Zone</span><p className="font-medium">{selectedRequest.zone || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Business Type</span><p className="font-medium">{selectedRequest.business_type || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">VAT Number</span><p className="font-medium">{(selectedRequest as any).vat_number || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Website</span><p className="font-medium">{selectedRequest.website || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Marketing Consent</span><p className="font-medium">{selectedRequest.marketing_consent ? "✅ Yes" : "❌ No"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Submitted</span><p className="font-medium">{format(new Date(selectedRequest.created_at), "dd MMMM yyyy, HH:mm")}</p></div>
                     </div>
                     {selectedRequest.message && (
                       <div>
-                        <span className="text-muted-foreground text-xs">Messaggio</span>
+                        <span className="text-muted-foreground text-xs">Message</span>
                         <p className="text-sm mt-1 p-3 bg-secondary/50 rounded-lg">{selectedRequest.message}</p>
                       </div>
                     )}
@@ -442,21 +442,21 @@ const AdminRequests = () => {
 
                   {/* RIGHT — Actions */}
                   <div className="md:col-span-2 space-y-4">
-                    <h3 className="text-xs font-heading font-bold text-muted-foreground uppercase tracking-wider">Azioni Admin</h3>
+                    <h3 className="text-xs font-heading font-bold text-muted-foreground uppercase tracking-wider">Admin Actions</h3>
 
                     {/* Admin Notes */}
                     <div>
-                      <Label className="text-xs">Note Admin</Label>
+                      <Label className="text-xs">Admin Notes</Label>
                       <Textarea
                         value={editingNotes}
                         onChange={e => setEditingNotes(e.target.value)}
-                        placeholder="Aggiungi note interne..."
+                        placeholder="Add internal notes..."
                         className="mt-1 bg-secondary border-border rounded-lg min-h-[80px]"
                         disabled={isTerminal}
                       />
                       {!isTerminal && (
                         <Button size="sm" variant="outline" className="mt-2 text-xs" onClick={() => saveAdminNotes.mutate({ id: selectedRequest.id, admin_notes: editingNotes })}>
-                          Salva Note
+                          Save Notes
                         </Button>
                       )}
                     </div>
@@ -464,43 +464,43 @@ const AdminRequests = () => {
                     {/* Action buttons based on status */}
                     {selectedRequest.status === "new" && (
                       <div className="space-y-2 pt-3 border-t border-border">
-                        <Button className="w-full gap-1.5 text-sm" variant="outline" onClick={() => updateStatus.mutate({ id: selectedRequest.id, status: "reviewed" })}>
-                          <Clock size={14} /> Segna in Revisione
-                        </Button>
-                        <Button className="w-full gap-1.5 text-sm bg-success text-success-foreground hover:bg-success/90" onClick={() => openWizard(selectedRequest)}>
-                          <Check size={14} /> Approva
-                        </Button>
-                        <Button className="w-full gap-1.5 text-sm" variant="destructive" onClick={() => { setRejectRequest(selectedRequest); setRejectReason(""); setSendRejectEmail(false); setSelectedRequest(null); }}>
-                          <X size={14} /> Rifiuta
-                        </Button>
-                        <Button className="w-full gap-1.5 text-sm" variant="outline" onClick={() => convertToLead.mutate(selectedRequest)}>
-                          <Target size={14} /> Inserisci in Pipeline
-                        </Button>
+                         <Button className="w-full gap-1.5 text-sm" variant="outline" onClick={() => updateStatus.mutate({ id: selectedRequest.id, status: "reviewed" })}>
+                           <Clock size={14} /> Mark as Under Review
+                         </Button>
+                         <Button className="w-full gap-1.5 text-sm bg-success text-success-foreground hover:bg-success/90" onClick={() => openWizard(selectedRequest)}>
+                           <Check size={14} /> Approve
+                         </Button>
+                         <Button className="w-full gap-1.5 text-sm" variant="destructive" onClick={() => { setRejectRequest(selectedRequest); setRejectReason(""); setSendRejectEmail(false); setSelectedRequest(null); }}>
+                           <X size={14} /> Reject
+                         </Button>
+                         <Button className="w-full gap-1.5 text-sm" variant="outline" onClick={() => convertToLead.mutate(selectedRequest)}>
+                           <Target size={14} /> Add to Pipeline
+                         </Button>
                       </div>
                     )}
 
                     {selectedRequest.status === "reviewed" && (
                       <div className="space-y-2 pt-3 border-t border-border">
-                        <Button className="w-full gap-1.5 text-sm bg-success text-success-foreground hover:bg-success/90" onClick={() => openWizard(selectedRequest)}>
-                          <Check size={14} /> Approva
-                        </Button>
-                        <Button className="w-full gap-1.5 text-sm" variant="destructive" onClick={() => { setRejectRequest(selectedRequest); setRejectReason(""); setSendRejectEmail(false); setSelectedRequest(null); }}>
-                          <X size={14} /> Rifiuta
-                        </Button>
+                         <Button className="w-full gap-1.5 text-sm bg-success text-success-foreground hover:bg-success/90" onClick={() => openWizard(selectedRequest)}>
+                           <Check size={14} /> Approve
+                         </Button>
+                         <Button className="w-full gap-1.5 text-sm" variant="destructive" onClick={() => { setRejectRequest(selectedRequest); setRejectReason(""); setSendRejectEmail(false); setSelectedRequest(null); }}>
+                           <X size={14} /> Reject
+                         </Button>
                       </div>
                     )}
 
                     {isTerminal && (
                       <div className="pt-3 border-t border-border space-y-2">
-                        <div className="p-3 bg-secondary/50 rounded-lg">
-                          <p className="text-xs text-muted-foreground">Stato finale</p>
-                          <Badge className={`mt-1 ${sc.className}`}>{sc.label}</Badge>
-                        </div>
-                        {(selectedRequest as any).admin_notes && (
-                          <div className="p-3 bg-secondary/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Note</p>
-                            <p className="text-sm mt-1">{(selectedRequest as any).admin_notes}</p>
-                          </div>
+                         <div className="p-3 bg-secondary/50 rounded-lg">
+                           <p className="text-xs text-muted-foreground">Final status</p>
+                           <Badge className={`mt-1 ${sc.className}`}>{sc.label}</Badge>
+                         </div>
+                         {(selectedRequest as any).admin_notes && (
+                           <div className="p-3 bg-secondary/50 rounded-lg">
+                             <p className="text-xs text-muted-foreground">Notes</p>
+                             <p className="text-sm mt-1">{(selectedRequest as any).admin_notes}</p>
+                           </div>
                         )}
                       </div>
                     )}
@@ -515,19 +515,19 @@ const AdminRequests = () => {
       {/* Reject Dialog */}
       <Dialog open={!!rejectRequest} onOpenChange={() => setRejectRequest(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle className="font-heading">Rifiuta Richiesta</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Inserisci il motivo del rifiuto per <strong>{rejectRequest?.company_name}</strong>:</p>
-          <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo del rifiuto..." className="bg-secondary border-border min-h-[100px]" />
+          <DialogHeader><DialogTitle className="font-heading">Reject Request</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Enter the rejection reason for <strong>{rejectRequest?.company_name}</strong>:</p>
+          <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Rejection reason..." className="bg-secondary border-border min-h-[100px]" />
           <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
             <Checkbox checked={sendRejectEmail} onCheckedChange={(c) => setSendRejectEmail(!!c)} />
             <div>
-              <p className="text-sm font-medium text-foreground flex items-center gap-1"><Mail size={12} /> Invia email di rifiuto al richiedente</p>
-              <p className="text-xs text-muted-foreground">L'email sarà inviata a {rejectRequest?.email}</p>
+              <p className="text-sm font-medium text-foreground flex items-center gap-1"><Mail size={12} /> Send rejection email to applicant</p>
+              <p className="text-xs text-muted-foreground">Email will be sent to {rejectRequest?.email}</p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectRequest(null)}>Annulla</Button>
-            <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim()}>Conferma Rifiuto</Button>
+            <Button variant="outline" onClick={() => setRejectRequest(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim()}>Confirm Rejection</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -536,7 +536,7 @@ const AdminRequests = () => {
       <Dialog open={!!wizardRequest} onOpenChange={() => setWizardRequest(null)}>
         <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-heading">Approva Richiesta — {wizardRequest?.company_name}</DialogTitle>
+            <DialogTitle className="font-heading">Approve Request — {wizardRequest?.company_name}</DialogTitle>
           </DialogHeader>
 
           {/* Step indicator */}
@@ -560,23 +560,23 @@ const AdminRequests = () => {
           {wizardStep === 0 && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><Label className="text-xs">Nome Azienda *</Label><Input value={wizardData.company_name} onChange={e => setWizardData(d => ({ ...d, company_name: e.target.value }))} className="bg-secondary" /></div>
-                <div><Label className="text-xs">Referente</Label><Input value={wizardData.contact_name} onChange={e => setWizardData(d => ({ ...d, contact_name: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Company Name *</Label><Input value={wizardData.company_name} onChange={e => setWizardData(d => ({ ...d, company_name: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Contact</Label><Input value={wizardData.contact_name} onChange={e => setWizardData(d => ({ ...d, contact_name: e.target.value }))} className="bg-secondary" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label className="text-xs">Email</Label><Input value={wizardData.email} onChange={e => setWizardData(d => ({ ...d, email: e.target.value }))} className="bg-secondary" /></div>
-                <div><Label className="text-xs">Telefono</Label><Input value={wizardData.phone} onChange={e => setWizardData(d => ({ ...d, phone: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Phone</Label><Input value={wizardData.phone} onChange={e => setWizardData(d => ({ ...d, phone: e.target.value }))} className="bg-secondary" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label className="text-xs">Paese</Label><Input value={wizardData.country} onChange={e => setWizardData(d => ({ ...d, country: e.target.value }))} className="bg-secondary" /></div>
-                <div><Label className="text-xs">Zona</Label><Input value={wizardData.zone} onChange={e => setWizardData(d => ({ ...d, zone: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Country</Label><Input value={wizardData.country} onChange={e => setWizardData(d => ({ ...d, country: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Zone</Label><Input value={wizardData.zone} onChange={e => setWizardData(d => ({ ...d, zone: e.target.value }))} className="bg-secondary" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label className="text-xs">Tipo Attività</Label><Input value={wizardData.business_type} onChange={e => setWizardData(d => ({ ...d, business_type: e.target.value }))} className="bg-secondary" /></div>
-                <div><Label className="text-xs">P.IVA</Label><Input value={wizardData.vat_number} onChange={e => setWizardData(d => ({ ...d, vat_number: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Business Type</Label><Input value={wizardData.business_type} onChange={e => setWizardData(d => ({ ...d, business_type: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">VAT Number</Label><Input value={wizardData.vat_number} onChange={e => setWizardData(d => ({ ...d, vat_number: e.target.value }))} className="bg-secondary" /></div>
               </div>
-              <div><Label className="text-xs">Indirizzo</Label><Input value={wizardData.address} onChange={e => setWizardData(d => ({ ...d, address: e.target.value }))} className="bg-secondary" /></div>
-              <div><Label className="text-xs">Sito Web</Label><Input value={wizardData.website} onChange={e => setWizardData(d => ({ ...d, website: e.target.value }))} className="bg-secondary" /></div>
+              <div><Label className="text-xs">Address</Label><Input value={wizardData.address} onChange={e => setWizardData(d => ({ ...d, address: e.target.value }))} className="bg-secondary" /></div>
+              <div><Label className="text-xs">Website</Label><Input value={wizardData.website} onChange={e => setWizardData(d => ({ ...d, website: e.target.value }))} className="bg-secondary" /></div>
             </div>
           )}
 
@@ -584,7 +584,7 @@ const AdminRequests = () => {
           {wizardStep === 1 && (
             <div className="space-y-4">
               <div>
-                <Label className="text-xs font-semibold">Termini di Pagamento *</Label>
+                <Label className="text-xs font-semibold">Payment Terms *</Label>
                 <Select value={wizardData.payment_terms} onValueChange={v => setWizardData(d => ({ ...d, payment_terms: v }))}>
                   <SelectTrigger className="bg-secondary"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -593,26 +593,26 @@ const AdminRequests = () => {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Listino Prezzi</Label>
+                <Label className="text-xs font-semibold">Price List</Label>
                 <Select value={wizardData.price_list_id || "__none__"} onValueChange={v => setWizardData(d => ({ ...d, price_list_id: v === "__none__" ? "" : v }))}>
-                  <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona listino..." /></SelectTrigger>
+                  <SelectTrigger className="bg-secondary"><SelectValue placeholder="Select price list..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">— Nessun listino —</SelectItem>
+                    <SelectItem value="__none__">— No price list —</SelectItem>
                     {priceLists?.map(pl => <SelectItem key={pl.id} value={pl.id}>{pl.name}{pl.description ? ` — ${pl.description}` : ""}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Referente Commerciale</Label>
+                <Label className="text-xs font-semibold">Sales Representative</Label>
                 <Select value={wizardData.assigned_sales_id || "__none__"} onValueChange={v => setWizardData(d => ({ ...d, assigned_sales_id: v === "__none__" ? "" : v }))}>
-                  <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona sales..." /></SelectTrigger>
+                  <SelectTrigger className="bg-secondary"><SelectValue placeholder="Select sales rep..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">— Non assegnato —</SelectItem>
+                    <SelectItem value="__none__">— Not assigned —</SelectItem>
                     {salesUsers?.map(s => <SelectItem key={s.user_id} value={s.user_id}>{s.contact_name || s.email || s.user_id}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label className="text-xs">Note pagamento</Label><Textarea value={wizardData.payment_terms_notes} onChange={e => setWizardData(d => ({ ...d, payment_terms_notes: e.target.value }))} className="bg-secondary" rows={2} /></div>
+              <div><Label className="text-xs">Payment Notes</Label><Textarea value={wizardData.payment_terms_notes} onChange={e => setWizardData(d => ({ ...d, payment_terms_notes: e.target.value }))} className="bg-secondary" rows={2} /></div>
             </div>
           )}
 
@@ -621,7 +621,7 @@ const AdminRequests = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/10">
                 <KeyRound size={16} className="text-primary" />
-                <p className="text-sm text-foreground font-semibold">Credenziali Portale Dealer</p>
+                <p className="text-sm text-foreground font-semibold">Dealer Portal Credentials</p>
               </div>
               <div>
                 <Label className="text-xs">Email *</Label>
@@ -633,20 +633,20 @@ const AdminRequests = () => {
                 <div className="flex gap-2">
                   <Input value={wizardData.account_password} onChange={e => setWizardData(d => ({ ...d, account_password: e.target.value }))} className="bg-secondary font-mono flex-1" />
                   <Button variant="outline" size="sm" onClick={() => setWizardData(d => ({ ...d, account_password: generatePassword() }))} className="gap-1">
-                    <RefreshCw size={12} /> Genera
+                    <RefreshCw size={12} /> Generate
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(wizardData.account_password); toast.success("Password copiata"); }}>
+                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(wizardData.account_password); toast.success("Password copied"); }}>
                     <Copy size={12} />
                   </Button>
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1">La password verrà inviata al dealer tramite email di benvenuto</p>
+                <p className="text-[11px] text-muted-foreground mt-1">The password will be sent to the dealer via welcome email</p>
               </div>
 
               <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
                 <Checkbox checked={wizardData.send_welcome_email} onCheckedChange={(c) => setWizardData(d => ({ ...d, send_welcome_email: !!c }))} />
                 <div>
-                  <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Mail size={12} /> Invia email di benvenuto</p>
-                  <p className="text-xs text-muted-foreground">L'email sarà inviata a {wizardData.account_email}</p>
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Mail size={12} /> Send welcome email</p>
+                  <p className="text-xs text-muted-foreground">Email will be sent to {wizardData.account_email}</p>
                 </div>
               </div>
             </div>
@@ -656,20 +656,20 @@ const AdminRequests = () => {
           {wizardStep === 3 && (
             <div className="space-y-4">
               <div className="p-4 bg-secondary/50 rounded-lg space-y-3 text-sm">
-                <h3 className="font-heading font-bold text-foreground">Riepilogo</h3>
+                <h3 className="font-heading font-bold text-foreground">Summary</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><span className="text-muted-foreground text-xs">Azienda</span><p className="font-semibold">{wizardData.company_name}</p></div>
-                  <div><span className="text-muted-foreground text-xs">Referente</span><p>{wizardData.contact_name}</p></div>
-                  <div><span className="text-muted-foreground text-xs">Paese</span><p>{wizardData.country || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs">P.IVA</span><p>{wizardData.vat_number || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs">Pagamento</span><p>{PAYMENT_TERMS_OPTIONS.find(o => o.value === wizardData.payment_terms)?.label}</p></div>
-                  <div><span className="text-muted-foreground text-xs">Listino</span><p>{priceLists?.find(pl => pl.id === wizardData.price_list_id)?.name || "Nessuno"}</p></div>
-                  <div><span className="text-muted-foreground text-xs">Referente Commerciale</span><p>{salesUsers?.find(s => s.user_id === wizardData.assigned_sales_id)?.contact_name || "Non assegnato"}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Company</span><p className="font-semibold">{wizardData.company_name}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Contact</span><p>{wizardData.contact_name}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Country</span><p>{wizardData.country || "—"}</p></div>
+                  <div><span className="text-muted-foreground text-xs">VAT Number</span><p>{wizardData.vat_number || "—"}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Payment</span><p>{PAYMENT_TERMS_OPTIONS.find(o => o.value === wizardData.payment_terms)?.label}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Price List</span><p>{priceLists?.find(pl => pl.id === wizardData.price_list_id)?.name || "None"}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Sales Rep</span><p>{salesUsers?.find(s => s.user_id === wizardData.assigned_sales_id)?.contact_name || "Not assigned"}</p></div>
                 </div>
                 <div className="border-t border-border pt-3">
-                  <span className="text-muted-foreground text-xs">Email account</span><p className="font-mono text-sm">{wizardData.account_email}</p>
+                  <span className="text-muted-foreground text-xs">Account email</span><p className="font-mono text-sm">{wizardData.account_email}</p>
                   <span className="text-muted-foreground text-xs">Password</span><p className="font-mono text-sm">{wizardData.account_password}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{wizardData.send_welcome_email ? "✅ Email di benvenuto sarà inviata" : "❌ Email non sarà inviata"}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{wizardData.send_welcome_email ? "✅ Welcome email will be sent" : "❌ Email will not be sent"}</p>
                 </div>
               </div>
             </div>
@@ -678,18 +678,18 @@ const AdminRequests = () => {
           {/* Navigation */}
           <div className="flex justify-between pt-4 border-t border-border">
             <Button variant="outline" onClick={() => wizardStep > 0 ? setWizardStep(s => s - 1) : setWizardRequest(null)} className="gap-1">
-              <ChevronLeft size={14} /> {wizardStep > 0 ? "Indietro" : "Annulla"}
+              <ChevronLeft size={14} /> {wizardStep > 0 ? "Back" : "Cancel"}
             </Button>
             {wizardStep < 3 ? (
               <Button onClick={() => setWizardStep(s => s + 1)} className="gap-1" disabled={
                 (wizardStep === 0 && (!wizardData.company_name.trim() || !wizardData.email.trim())) ||
                 (wizardStep === 2 && (!wizardData.account_email.trim() || !wizardData.account_password.trim()))
               }>
-                Avanti <ChevronRight size={14} />
+                Next <ChevronRight size={14} />
               </Button>
             ) : (
               <Button onClick={handleWizardCreate} disabled={wizardCreating} className="gap-1 bg-success text-success-foreground hover:bg-success/90">
-                {wizardCreating ? <><Loader2 size={14} className="animate-spin" /> Creazione...</> : <><Check size={14} /> Crea Account</>}
+                {wizardCreating ? <><Loader2 size={14} className="animate-spin" /> Creating...</> : <><Check size={14} /> Create Account</>}
               </Button>
             )}
           </div>

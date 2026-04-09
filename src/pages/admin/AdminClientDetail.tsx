@@ -22,14 +22,14 @@ import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 
 const NOTIFICATION_TYPES = [
-  { key: "account_credentials", label: "Credenziali Account", description: "Email con credenziali di accesso al portale", category: "Account" },
-  { key: "dealer_request_confirmation", label: "Conferma Richiesta Dealer", description: "Email di conferma invio form 'Become a Dealer'", category: "Account" },
-  { key: "order_received", label: "Ordine Ricevuto", description: "Conferma ricezione ordine dal portale", category: "Ordini" },
-  { key: "order_confirmed", label: "Ordine Confermato", description: "Notifica conferma e approvazione ordine", category: "Ordini" },
-  { key: "order_status_update", label: "Aggiornamento Stato Ordine", description: "Cambio stato dell'ordine (spedito, in lavorazione, ecc.)", category: "Ordini" },
-  { key: "order_documents_ready", label: "Documenti Pronti", description: "Nuovi documenti caricati (fattura, DDT, packing list)", category: "Ordini" },
-  { key: "shipping_update", label: "Aggiornamento Spedizione", description: "Tracking number e notifiche consegna", category: "Spedizioni" },
-  { key: "promotional_updates", label: "Promo & Novità", description: "Comunicazioni su promozioni, nuovi prodotti e offerte", category: "Marketing" },
+  { key: "account_credentials", label: "Account Credentials", description: "Email with portal access credentials", category: "Account" },
+  { key: "dealer_request_confirmation", label: "Dealer Request Confirmation", description: "Confirmation email after submitting 'Become a Dealer' form", category: "Account" },
+  { key: "order_received", label: "Order Received", description: "Order receipt confirmation from portal", category: "Orders" },
+  { key: "order_confirmed", label: "Order Confirmed", description: "Order confirmation and approval notification", category: "Orders" },
+  { key: "order_status_update", label: "Order Status Update", description: "Order status changes (shipped, processing, etc.)", category: "Orders" },
+  { key: "order_documents_ready", label: "Documents Ready", description: "New documents uploaded (invoice, DDT, packing list)", category: "Orders" },
+  { key: "shipping_update", label: "Shipping Update", description: "Tracking number and delivery notifications", category: "Shipping" },
+  { key: "promotional_updates", label: "Promos & News", description: "Promotions, new products, and special offers", category: "Marketing" },
 ];
 
 const ClientNotificationPreferences = ({ clientId }: { clientId: string }) => {
@@ -77,13 +77,13 @@ const ClientNotificationPreferences = ({ clientId }: { clientId: string }) => {
   return (
     <div className="glass-card-solid p-6">
       <h2 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2">
-        <Bell size={16} /> Notifiche
+        <Bell size={16} /> Notifications
       </h2>
       {isLoading ? (
-        <p className="text-xs text-muted-foreground">Caricamento...</p>
+        <p className="text-xs text-muted-foreground">Loading...</p>
       ) : (
         <div className="space-y-4">
-          {["Account", "Ordini", "Spedizioni", "Marketing"].map(cat => {
+          {["Account", "Orders", "Shipping", "Marketing"].map(cat => {
             const items = NOTIFICATION_TYPES.filter(nt => nt.category === cat);
             if (!items.length) return null;
             return (
@@ -282,13 +282,13 @@ const AdminClientDetail = () => {
       await supabase.from("order_events").insert({
         order_id: orderResult.id,
         event_type: "created",
-        title: "Ordine creato manualmente da admin",
+        title: "Order created manually by admin",
       });
 
       queryClient.invalidateQueries({ queryKey: ["admin-client-orders", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       queryClient.invalidateQueries({ queryKey: ["admin-new-orders"] });
-      toast.success("Ordine creato manualmente!");
+      toast.success("Manual order created!");
       setShowCreateOrder(false);
       setOrderItems([]);
       setNewOrderNotes("");
@@ -473,7 +473,7 @@ const AdminClientDetail = () => {
   });
 
   const createDealerAccount = async () => {
-    if (!client?.email) { toast.error("Il cliente deve avere un'email"); return; }
+    if (!client?.email) { toast.error("Client must have an email"); return; }
     setCreatingAccount(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -484,7 +484,7 @@ const AdminClientDetail = () => {
       });
       const result = await res.json();
       if (result.error) throw new Error(result.error);
-      toast.success("Account dealer creato!");
+      toast.success("Dealer account created!");
       queryClient.invalidateQueries({ queryKey: ["admin-client", id] });
       setShowCreateAccount(false);
     } catch (error) { showErrorToast(error, "AdminClientDetail.createDealerAccount"); } finally { setCreatingAccount(false); }
@@ -727,7 +727,7 @@ const AdminClientDetail = () => {
             {client?.user_id ? (
               <div className="space-y-3">
                 <div className="p-3 bg-success/10 rounded-lg border border-success/20">
-                  <p className="text-xs text-success font-semibold mb-2">✅ Account Attivo</p>
+                  <p className="text-xs text-success font-semibold mb-2">✅ Account Active</p>
                   <div className="space-y-2">
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Email</p>
@@ -771,61 +771,61 @@ const AdminClientDetail = () => {
             <h2 className="font-heading font-bold text-foreground mb-4">Pricing & Status</h2>
             <div className="space-y-3">
               <div>
-                <Label className="text-xs text-muted-foreground">Listino Prezzi</Label>
+                <Label className="text-xs text-muted-foreground">Price List</Label>
                 <p className="text-sm font-semibold text-foreground mt-1">
                   {assignedPriceLists && assignedPriceLists.length > 0
                     ? (assignedPriceLists as any[]).map((plc: any) => plc.price_lists?.name).filter(Boolean).join(", ")
-                    : "Nessun listino assegnato"}
+                    : "No price list assigned"}
                 </p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground font-semibold">Termini di Pagamento</Label>
+                <Label className="text-xs text-muted-foreground font-semibold">Payment Terms</Label>
                 <Select value={form.payment_terms || "30_days"} onValueChange={v => setForm(f => ({ ...f, payment_terms: v }))}>
                   <SelectTrigger className="mt-1 bg-secondary border-border rounded-lg"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="prepaid">Anticipato</SelectItem>
-                    <SelectItem value="30_days">30 giorni</SelectItem>
-                    <SelectItem value="60_days">60 giorni</SelectItem>
-                    <SelectItem value="90_days">90 giorni</SelectItem>
-                    <SelectItem value="end_of_month">Fine mese</SelectItem>
+                    <SelectItem value="prepaid">Prepaid</SelectItem>
+                    <SelectItem value="30_days">Net 30</SelectItem>
+                    <SelectItem value="60_days">Net 60</SelectItem>
+                    <SelectItem value="90_days">Net 90</SelectItem>
+                    <SelectItem value="end_of_month">End of Month</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Note pagamento</Label>
-                <Textarea value={form.payment_terms_notes || ""} onChange={e => setForm(f => ({ ...f, payment_terms_notes: e.target.value }))} className="mt-1 bg-secondary border-border rounded-lg" rows={2} placeholder="Condizioni speciali..." />
+                <Label className="text-xs text-muted-foreground">Payment Notes</Label>
+                <Textarea value={form.payment_terms_notes || ""} onChange={e => setForm(f => ({ ...f, payment_terms_notes: e.target.value }))} className="mt-1 bg-secondary border-border rounded-lg" rows={2} placeholder="Special conditions..." />
               </div>
 
               {/* Dealer Portal Visibility */}
               <div className="glass-card-solid p-4 mt-4 space-y-3">
                 <h3 className="font-heading font-bold text-foreground text-sm flex items-center gap-2">
-                  <Eye size={14} /> Visibilità Portale Dealer
+                  <Eye size={14} /> Dealer Portal Visibility
                 </h3>
                 <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Classi di Sconto</p>
-                    <p className="text-xs text-muted-foreground">Mostra le classi di sconto al dealer</p>
+                    <p className="text-sm font-semibold text-foreground">Discount Tiers</p>
+                    <p className="text-xs text-muted-foreground">Show discount tiers to the dealer</p>
                   </div>
                   <Switch
                     checked={client?.show_discount_tiers ?? true}
                     onCheckedChange={async (checked) => {
                       const { error } = await supabase.from("clients").update({ show_discount_tiers: checked } as any).eq("id", id!);
                       if (error) toast.error(error.message);
-                      else { toast.success("Aggiornato"); queryClient.invalidateQueries({ queryKey: ["admin-client", id] }); }
+                      else { toast.success("Updated"); queryClient.invalidateQueries({ queryKey: ["admin-client", id] }); }
                     }}
                   />
                 </div>
                 <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
                   <div>
                     <p className="text-sm font-semibold text-foreground">Goals & Rewards</p>
-                    <p className="text-xs text-muted-foreground">Mostra la pagina Goals & Rewards al dealer</p>
+                    <p className="text-xs text-muted-foreground">Show the Goals & Rewards page to the dealer</p>
                   </div>
                   <Switch
                     checked={client?.show_goals ?? true}
                     onCheckedChange={async (checked) => {
                       const { error } = await supabase.from("clients").update({ show_goals: checked } as any).eq("id", id!);
                       if (error) toast.error(error.message);
-                      else { toast.success("Aggiornato"); queryClient.invalidateQueries({ queryKey: ["admin-client", id] }); }
+                      else { toast.success("Updated"); queryClient.invalidateQueries({ queryKey: ["admin-client", id] }); }
                     }}
                   />
                 </div>
@@ -835,11 +835,11 @@ const AdminClientDetail = () => {
                 <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
                   <SelectTrigger className="mt-1 bg-secondary border-border rounded-lg"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">✅ Attivo</SelectItem>
-                    <SelectItem value="inactive">❌ Non Attivo</SelectItem>
-                    <SelectItem value="onboarding">🔄 In Attivazione</SelectItem>
+                    <SelectItem value="active">✅ Active</SelectItem>
+                    <SelectItem value="inactive">❌ Inactive</SelectItem>
+                    <SelectItem value="onboarding">🔄 Onboarding</SelectItem>
                     <SelectItem value="lead">📋 Lead</SelectItem>
-                    <SelectItem value="suspended">⛔ Sospeso</SelectItem>
+                    <SelectItem value="suspended">⛔ Suspended</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -859,10 +859,10 @@ const AdminClientDetail = () => {
         <div className="lg:col-span-2">
           <Tabs defaultValue="orders" className="w-full">
             <TabsList className="mb-4 bg-secondary flex-wrap">
-              <TabsTrigger value="orders" className="gap-1 text-xs"><ShoppingBag size={14} /> Ordini ({totalOrders})</TabsTrigger>
-              <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Comunicazioni</TabsTrigger>
-              <TabsTrigger value="documents" className="gap-1 text-xs"><FileText size={14} /> Documenti ({clientDocs?.length || 0})</TabsTrigger>
-              <TabsTrigger value="pricing" className="gap-1 text-xs"><Tag size={14} /> Listini</TabsTrigger>
+              <TabsTrigger value="orders" className="gap-1 text-xs"><ShoppingBag size={14} /> Orders ({totalOrders})</TabsTrigger>
+              <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Communications</TabsTrigger>
+              <TabsTrigger value="documents" className="gap-1 text-xs"><FileText size={14} /> Documents ({clientDocs?.length || 0})</TabsTrigger>
+              <TabsTrigger value="pricing" className="gap-1 text-xs"><Tag size={14} /> Price Lists</TabsTrigger>
             </TabsList>
 
             <TabsContent value="orders">
@@ -871,7 +871,7 @@ const AdminClientDetail = () => {
                   <h2 className="font-heading font-bold text-foreground flex items-center gap-2"><ShoppingBag size={16} /> Order History</h2>
                   <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setShowCreateOrder(true)}>
-                      <PackagePlus size={14} /> Crea Ordine Manuale
+                      <PackagePlus size={14} /> Create Manual Order
                     </Button>
                     <Badge variant="outline" className="text-xs">{totalOrders} orders</Badge>
                   </div>
