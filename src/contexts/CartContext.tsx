@@ -104,21 +104,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           removedAny = true;
           continue;
         }
-        const stock = product.stock_quantity ?? 0;
-        if (stock <= 0) {
+        const stock = product.stock_quantity;
+        // NULL stock = unlimited availability
+        if (stock !== null && stock <= 0) {
+          toast.info(`${product.name} is out of stock and was removed from your cart`);
           removedAny = true;
           continue;
         }
-        if (item.quantity > stock) {
-          toast.info(`Quantità di ${product.name} aggiornata a ${stock} per disponibilità limitata`);
+        if (stock !== null && item.quantity > stock) {
+          toast.info(`${product.name} quantity reduced to ${stock} due to limited availability`);
           validated.push({ ...item, quantity: stock, stock });
         } else {
-          validated.push({ ...item, stock });
+          validated.push({ ...item, stock: stock ?? 9999 });
         }
       }
 
       if (removedAny) {
-        toast.warning("Alcuni prodotti non più disponibili sono stati rimossi dal carrello");
+        toast.warning("Some unavailable products were removed from your cart");
       }
 
       setItems(validated);
@@ -145,7 +147,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addItem = useCallback((newItem: Omit<CartItem, "quantity"> & { quantity?: number }) => {
     // Safety net: block items without a valid price from price list
     if (!newItem.b2bPrice || newItem.b2bPrice <= 0) {
-      toast.error("Impossibile aggiungere: prezzo non disponibile");
+      toast.error("Cannot add: price not available");
       return;
     }
 
@@ -212,7 +214,7 @@ export const CartSavedIndicator = () => {
           transition={{ duration: 0.3 }}
           className="text-[10px] text-muted-foreground"
         >
-          Carrello salvato
+           Cart saved
         </motion.span>
       )}
     </AnimatePresence>
