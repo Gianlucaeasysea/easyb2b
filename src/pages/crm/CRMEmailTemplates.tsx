@@ -16,22 +16,21 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Plus, Search, Mail, Pencil, Trash2, Eye, MoreVertical, Variable } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
 
 const CATEGORIES = [
-  { value: "general", label: "Generale", color: "bg-muted text-muted-foreground" },
+  { value: "general", label: "General", color: "bg-muted text-muted-foreground" },
   { value: "onboarding", label: "Onboarding", color: "bg-primary/15 text-primary" },
-  { value: "sales", label: "Vendite", color: "bg-green-500/15 text-green-700" },
+  { value: "sales", label: "Sales", color: "bg-green-500/15 text-green-700" },
   { value: "follow_up", label: "Follow-up", color: "bg-blue-500/15 text-blue-700" },
-  { value: "payment", label: "Pagamento", color: "bg-orange-500/15 text-orange-700" },
+  { value: "payment", label: "Payment", color: "bg-orange-500/15 text-orange-700" },
   { value: "marketing", label: "Marketing", color: "bg-purple-500/15 text-purple-700" },
 ];
 
 const MERGE_VARS = [
-  { key: "{{nome_contatto}}", label: "Nome contatto" },
-  { key: "{{azienda}}", label: "Azienda" },
-  { key: "{{ultimo_ordine}}", label: "Ultimo ordine" },
-  { key: "{{sconto_assegnato}}", label: "Sconto assegnato" },
+  { key: "{{contact_name}}", label: "Contact name" },
+  { key: "{{company}}", label: "Company" },
+  { key: "{{last_order}}", label: "Last order" },
+  { key: "{{assigned_discount}}", label: "Assigned discount" },
 ];
 
 const getCategoryBadge = (cat: string) => {
@@ -88,7 +87,7 @@ export default function CRMEmailTemplates() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["email-templates"] });
-      toast.success(editingId ? "Template aggiornato" : "Template creato");
+      toast.success(editingId ? "Template updated" : "Template created");
       setDialogOpen(false);
       setEditingId(null);
       setForm(emptyForm);
@@ -103,7 +102,7 @@ export default function CRMEmailTemplates() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["email-templates"] });
-      toast.success("Template eliminato");
+      toast.success("Template deleted");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -128,10 +127,10 @@ export default function CRMEmailTemplates() {
 
   const openPreview = (t: any) => {
     const html = t.body
-      .replace(/\{\{nome_contatto\}\}/g, "Mario Rossi")
-      .replace(/\{\{azienda\}\}/g, "Nautica Esempio Srl")
-      .replace(/\{\{ultimo_ordine\}\}/g, "ES-0042")
-      .replace(/\{\{sconto_assegnato\}\}/g, "Gold (-15%)");
+      .replace(/\{\{contact_name\}\}/g, "John Smith")
+      .replace(/\{\{company\}\}/g, "Example Marine Ltd")
+      .replace(/\{\{last_order\}\}/g, "ES-0042")
+      .replace(/\{\{assigned_discount\}\}/g, "Gold (-15%)");
     setPreviewHtml(html);
     setPreviewOpen(true);
   };
@@ -144,11 +143,11 @@ export default function CRMEmailTemplates() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">Template Email</h1>
-          <p className="text-sm text-muted-foreground mt-1">Gestisci i template per le comunicazioni CRM</p>
+          <h1 className="text-2xl font-heading font-bold text-foreground">Email Templates</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage templates for CRM communications</p>
         </div>
         <Button onClick={openNew} className="gap-2">
-          <Plus size={16} /> Nuovo Template
+          <Plus size={16} /> New Template
         </Button>
       </div>
 
@@ -156,14 +155,14 @@ export default function CRMEmailTemplates() {
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca template..." className="pl-9 bg-secondary border-border" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search templates..." className="pl-9 bg-secondary border-border" />
         </div>
         <Select value={filterCat} onValueChange={setFilterCat}>
           <SelectTrigger className="w-48 bg-secondary border-border">
-            <SelectValue placeholder="Categoria" />
+            <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tutte le categorie</SelectItem>
+            <SelectItem value="all">All categories</SelectItem>
             {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -171,11 +170,11 @@ export default function CRMEmailTemplates() {
 
       {/* Template list */}
       {isLoading ? (
-        <div className="py-12 text-center text-muted-foreground text-sm">Caricamento...</div>
+        <div className="py-12 text-center text-muted-foreground text-sm">Loading...</div>
       ) : !filtered.length ? (
         <div className="py-16 text-center">
           <Mail size={40} className="mx-auto mb-3 text-muted-foreground/20" />
-          <p className="text-sm text-muted-foreground">Nessun template trovato</p>
+          <p className="text-sm text-muted-foreground">No templates found</p>
         </div>
       ) : (
         <div className="grid gap-3">
@@ -190,12 +189,12 @@ export default function CRMEmailTemplates() {
                     <h3 className="font-semibold text-sm text-foreground">{t.name}</h3>
                     {getCategoryBadge(t.category)}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">Oggetto: {t.subject}</p>
+                  <p className="text-xs text-muted-foreground truncate">Subject: {t.subject}</p>
                   <p className="text-xs text-muted-foreground/60 truncate mt-0.5">{stripHtml(t.body).slice(0, 120)}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-[10px] text-muted-foreground">
-                    {format(new Date(t.created_at), "dd MMM yyyy", { locale: it })}
+                    {format(new Date(t.created_at), "dd MMM yyyy")}
                   </span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
@@ -205,13 +204,13 @@ export default function CRMEmailTemplates() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={e => { e.stopPropagation(); openPreview(t); }}>
-                        <Eye size={14} className="mr-2" /> Anteprima
+                        <Eye size={14} className="mr-2" /> Preview
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={e => { e.stopPropagation(); openEdit(t); }}>
-                        <Pencil size={14} className="mr-2" /> Modifica
+                        <Pencil size={14} className="mr-2" /> Edit
                       </DropdownMenuItem>
                       <DropdownMenuItem className="text-destructive" onClick={e => { e.stopPropagation(); deleteMutation.mutate(t.id); }}>
-                        <Trash2 size={14} className="mr-2" /> Elimina
+                        <Trash2 size={14} className="mr-2" /> Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -226,16 +225,16 @@ export default function CRMEmailTemplates() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-heading">{editingId ? "Modifica Template" : "Nuovo Template"}</DialogTitle>
+            <DialogTitle className="font-heading">{editingId ? "Edit Template" : "New Template"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs text-muted-foreground">Nome</Label>
-                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Es. Benvenuto dealer" className="mt-1 bg-secondary border-border" />
+                <Label className="text-xs text-muted-foreground">Name</Label>
+                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="E.g. Welcome dealer" className="mt-1 bg-secondary border-border" />
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Categoria</Label>
+                <Label className="text-xs text-muted-foreground">Category</Label>
                 <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
                   <SelectTrigger className="mt-1 bg-secondary border-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -247,25 +246,25 @@ export default function CRMEmailTemplates() {
 
             <div>
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-muted-foreground">Oggetto</Label>
+                <Label className="text-xs text-muted-foreground">Subject</Label>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1"><Variable size={10} /> Variabile</Button>
+                    <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1"><Variable size={10} /> Variable</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     {MERGE_VARS.map(v => <DropdownMenuItem key={v.key} onClick={() => insertVariable(v.key, "subject")}>{v.label} <span className="ml-auto text-muted-foreground text-[10px]">{v.key}</span></DropdownMenuItem>)}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              <Input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="Oggetto email..." className="mt-1 bg-secondary border-border" />
+              <Input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="Email subject..." className="mt-1 bg-secondary border-border" />
             </div>
 
             <div>
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-muted-foreground">Corpo (HTML)</Label>
+                <Label className="text-xs text-muted-foreground">Body (HTML)</Label>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1"><Variable size={10} /> Variabile</Button>
+                    <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1"><Variable size={10} /> Variable</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     {MERGE_VARS.map(v => <DropdownMenuItem key={v.key} onClick={() => insertVariable(v.key, "body")}>{v.label} <span className="ml-auto text-muted-foreground text-[10px]">{v.key}</span></DropdownMenuItem>)}
@@ -273,14 +272,14 @@ export default function CRMEmailTemplates() {
                 </DropdownMenu>
               </div>
               <div className="mt-1">
-                <TiptapEditor content={form.body} onChange={html => setForm(f => ({ ...f, body: html }))} placeholder="Scrivi il corpo del template..." />
+                <TiptapEditor content={form.body} onChange={html => setForm(f => ({ ...f, body: html }))} placeholder="Write the template body..." />
               </div>
             </div>
           </div>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Annulla</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={() => saveMutation.mutate({ ...form, id: editingId || undefined })} disabled={!form.name.trim() || !form.subject.trim() || !form.body.trim() || saveMutation.isPending}>
-              {saveMutation.isPending ? "Salvataggio..." : editingId ? "Salva modifiche" : "Crea template"}
+              {saveMutation.isPending ? "Saving..." : editingId ? "Save changes" : "Create template"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -290,7 +289,7 @@ export default function CRMEmailTemplates() {
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-heading">Anteprima Template</DialogTitle>
+            <DialogTitle className="font-heading">Template Preview</DialogTitle>
           </DialogHeader>
           <SafeHtml html={previewHtml} className="border rounded-lg p-6 bg-white" />
         </DialogContent>
