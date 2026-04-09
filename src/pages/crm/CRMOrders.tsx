@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePaginatedData } from "@/hooks/usePaginatedData";
@@ -8,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { TablePagination } from "@/components/ui/TablePagination";
-import { Package, Clock, Truck, CheckCircle, Search, ShoppingBag } from "lucide-react";
+import { Package, Clock, Truck, CheckCircle, Search, ShoppingBag, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { getOrderStatusLabel, getOrderStatusColor, getPaymentStatusLabel, getPaymentStatusColor } from "@/lib/constants";
