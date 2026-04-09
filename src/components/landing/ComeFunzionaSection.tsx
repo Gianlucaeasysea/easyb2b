@@ -1,5 +1,6 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
+import BorderGlow from "@/components/ui/BorderGlow";
 
 const steps = [
   { step: "01", title: "Apply", desc: "Fill out the dealer application form with your business details." },
@@ -55,28 +56,29 @@ const HowItWorksSection = () => {
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, margin: "-40px" }}
-              className="text-center relative"
+              className="relative"
             >
-              <motion.span
-                className="font-heading text-7xl font-black text-gradient-blue opacity-40 select-none inline-block"
-                whileInView={{ scale: [0.8, 1.05, 1], opacity: [0, 0.4] }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.2, duration: 0.6 }}
+              <BorderGlow
+                borderRadius={16}
+                glowColor="225 100 56"
+                backgroundColor="hsl(0 0% 5%)"
+                colors={['#4f46e5', '#3b82f6', '#06b6d4']}
+                glowRadius={25}
+                edgeSensitivity={30}
               >
-                {s.step}
-              </motion.span>
-              <h3 className="font-heading text-xl font-bold text-foreground -mt-2 mb-3">{s.title}</h3>
-              <p className="text-muted-foreground text-sm max-w-[260px] mx-auto leading-relaxed">{s.desc}</p>
-              {i < 2 && (
-                <motion.div
-                  className="hidden md:block absolute top-10 -right-5 w-10 h-px bg-border"
-                  initial={{ scaleX: 0 }}
-                  whileInView={{ scaleX: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.2 + 0.4, duration: 0.5 }}
-                  style={{ originX: 0 }}
-                />
-              )}
+                <div className="p-8 text-center">
+                  <motion.span
+                    className="font-heading text-7xl font-black text-gradient-blue opacity-40 select-none inline-block"
+                    whileInView={{ scale: [0.8, 1.05, 1], opacity: [0, 0.4] }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.2, duration: 0.6 }}
+                  >
+                    {s.step}
+                  </motion.span>
+                  <h3 className="font-heading text-xl font-bold text-foreground -mt-2 mb-3">{s.title}</h3>
+                  <p className="text-muted-foreground text-sm max-w-[260px] mx-auto leading-relaxed">{s.desc}</p>
+                </div>
+              </BorderGlow>
             </motion.div>
           ))}
         </div>

@@ -1,22 +1,26 @@
 import { Shield, Handshake, Award } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
+import BorderGlow from "@/components/ui/BorderGlow";
 
 const features = [
   {
     icon: Shield,
     title: "Premium Quality",
     desc: "Award-winning nautical accessories, designed and engineered in Italy with cutting-edge materials.",
+    colors: ['#4f46e5', '#3b82f6', '#06b6d4'],
   },
   {
     icon: Handshake,
     title: "Dedicated Support",
     desc: "Personal account manager, real-time stock updates, and priority shipping for all dealers.",
+    colors: ['#06b6d4', '#3b82f6', '#8b5cf6'],
   },
   {
     icon: Award,
     title: "Growth Partnership",
     desc: "Exclusive pricing tiers, gamification rewards, and marketing assets to boost your sales.",
+    colors: ['#3b82f6', '#6366f1', '#06b6d4'],
   },
 ];
 
@@ -70,17 +74,28 @@ const AboutSection = () => {
               whileInView="visible"
               viewport={{ once: true, margin: "-40px" }}
               whileHover={{ y: -6, transition: { duration: 0.3 } }}
-              className="glass-card-solid p-8 md:p-10 hover:border-primary/20 transition-all duration-300 group"
             >
-              <motion.div
-                className="w-12 h-12 rounded-2xl gradient-blue flex items-center justify-center mb-7"
-                whileHover={{ scale: 1.15, rotate: 5 }}
-                transition={{ type: "spring", stiffness: 300 }}
+              <BorderGlow
+                borderRadius={16}
+                glowColor="225 100 56"
+                backgroundColor="hsl(0 0% 6%)"
+                colors={f.colors}
+                glowRadius={30}
+                edgeSensitivity={25}
+                className="h-full"
               >
-                <f.icon className="text-primary-foreground" size={20} />
-              </motion.div>
-              <h3 className="font-heading text-lg font-bold text-foreground mb-3">{f.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{f.desc}</p>
+                <div className="p-8 md:p-10">
+                  <motion.div
+                    className="w-12 h-12 rounded-2xl gradient-blue flex items-center justify-center mb-7"
+                    whileHover={{ scale: 1.15, rotate: 5 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <f.icon className="text-primary-foreground" size={20} />
+                  </motion.div>
+                  <h3 className="font-heading text-lg font-bold text-foreground mb-3">{f.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{f.desc}</p>
+                </div>
+              </BorderGlow>
             </motion.div>
           ))}
         </div>
