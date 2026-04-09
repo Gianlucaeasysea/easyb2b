@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+import { format } from "date-fns";
 import {
   Clock, CheckCircle, Truck, Package, FileText, XCircle, Bell, Mail,
 } from "lucide-react";
@@ -46,8 +46,8 @@ const OrderEventsTimeline = ({ orderId }: { orderId: string }) => {
     },
   });
 
-  if (isLoading) return <p className="text-xs text-muted-foreground">Caricamento...</p>;
-  if (!events?.length) return <p className="text-xs text-muted-foreground italic">Nessun evento registrato.</p>;
+  if (isLoading) return <p className="text-xs text-muted-foreground">Loading...</p>;
+  if (!events?.length) return <p className="text-xs text-muted-foreground italic">No events recorded.</p>;
 
   return (
     <div className="space-y-0">
@@ -70,7 +70,7 @@ const OrderEventsTimeline = ({ orderId }: { orderId: string }) => {
                 <p className="text-xs text-muted-foreground mt-0.5">{event.description}</p>
               )}
               <p className="text-[10px] text-muted-foreground mt-1">
-                {format(new Date(event.created_at), "dd MMM yyyy, HH:mm", { locale: it })}
+                {format(new Date(event.created_at), "dd MMM yyyy, HH:mm")}
               </p>
             </div>
           </div>
