@@ -367,7 +367,7 @@ const AdminOrders = () => {
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/orders/${o.id}`)} className="text-xs text-muted-foreground">{fmtDate(o.delivery_date)}</TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
-                    {o.status === "submitted" && (
+                    {canTransitionTo(o.status || "draft", "confirmed") && (
                       <Button
                         variant="ghost" size="sm"
                         className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
