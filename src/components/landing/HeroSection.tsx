@@ -3,20 +3,27 @@ import { Button } from "@/components/ui/button";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
+import Aurora from "@/components/ui/Aurora";
 
 const HeroSection = () => {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
-  const glowY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const textY = useTransform(scrollYProgress, [0, 1], [0, 80]);
   const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
 
   return (
     <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
-      {/* Parallax radial glow */}
-      <motion.div className="absolute inset-0 pointer-events-none" style={{ y: glowY }}>
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] rounded-full bg-primary/5 blur-[150px]" />
-      </motion.div>
+      {/* Aurora background */}
+      <div className="absolute inset-0 pointer-events-none opacity-40">
+        <Aurora
+          colorStops={['#1e3a5f', '#3b82f6', '#06b6d4']}
+          amplitude={1.2}
+          blend={0.6}
+          speed={0.8}
+        />
+      </div>
+      {/* Fade to background at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent pointer-events-none z-[1]" />
 
       <motion.div className="relative z-10 container mx-auto px-4 text-center pt-20 pb-16" style={{ y: textY, opacity }}>
         <motion.p
@@ -97,7 +104,7 @@ const HeroSection = () => {
       <motion.div
         animate={{ y: [0, 8, 0] }}
         transition={{ repeat: Infinity, duration: 2.5 }}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2"
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10"
       >
         <div className="w-5 h-8 border border-foreground/15 rounded-full flex justify-center pt-1.5">
           <div className="w-1 h-2 bg-foreground/30 rounded-full" />
