@@ -22,9 +22,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const stageConfig: Record<string, { label: string; color: string; prob: number }> = {
-  qualification: { label: "Qualification", color: "bg-primary/20 text-primary", prob: 20 },
-  proposal: { label: "Proposal", color: "bg-warning/20 text-warning", prob: 50 },
-  negotiation: { label: "Negotiation", color: "bg-chart-4/20 text-chart-4", prob: 75 },
+  draft: { label: "Draft", color: "bg-yellow-100 text-yellow-800", prob: 10 },
+  confirmed: { label: "Confirmed", color: "bg-blue-100 text-blue-800", prob: 75 },
   closed_won: { label: "Won", color: "bg-success/20 text-success", prob: 100 },
   closed_lost: { label: "Lost", color: "bg-destructive/20 text-destructive", prob: 0 },
 };
@@ -40,7 +39,7 @@ const fmtCurrency = (v: number | null) =>
 
 const emptyForm = {
   title: "", client_id: "", lead_id: "", contact_id: "",
-  value: "", stage: "qualification", probability: "20",
+  value: "", stage: "draft", probability: "10",
   expected_close_date: "", notes: "",
 };
 
@@ -482,7 +481,7 @@ const CRMDeals = () => {
                 const org = (d as any).clients;
                 const lead = (d as any).leads;
                 const contact = (d as any).contact;
-                const sc = stageConfig[d.stage] || stageConfig.qualification;
+                const sc = stageConfig[d.stage] || stageConfig.draft;
                 return (
                   <TableRow key={d.id} className="cursor-pointer">
                     <TableCell onClick={e => e.stopPropagation()}>
