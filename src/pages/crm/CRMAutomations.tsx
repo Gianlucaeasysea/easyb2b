@@ -41,7 +41,7 @@ const actionTypes: Record<string, string> = {
 };
 
 const leadStages = ["new", "contacted", "qualified", "proposal", "won", "lost"];
-const dealStages = ["qualification", "proposal", "negotiation", "closed_won", "closed_lost"];
+const dealStages = ["draft", "confirmed", "closed_won", "closed_lost"];
 const orderStatuses = ["draft", "pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
 const taskTypes = ["call", "follow_up", "email", "meeting", "task"];
 const priorities = ["low", "medium", "high", "urgent"];

@@ -1412,14 +1412,13 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
 }
 
 const stageColors: Record<string, string> = {
-  qualification: "bg-primary/20 text-primary",
-  proposal: "bg-warning/20 text-warning",
-  negotiation: "bg-chart-4/20 text-chart-4",
+  draft: "bg-yellow-100 text-yellow-800",
+  confirmed: "bg-blue-100 text-blue-800",
   closed_won: "bg-success/20 text-success",
   closed_lost: "bg-destructive/20 text-destructive",
 };
 const stageLabels: Record<string, string> = {
-  qualification: "Qualification", proposal: "Proposal", negotiation: "Negotiation",
+  draft: "Draft", confirmed: "Confirmed",
   closed_won: "Won", closed_lost: "Lost",
 };
 
@@ -1427,7 +1426,7 @@ function DealsTab({ clientId, clientName, contacts, navigate }: { clientId: stri
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", contact_id: "", value: "", stage: "qualification", probability: "20", expected_close_date: "", notes: "" });
+  const [form, setForm] = useState({ title: "", contact_id: "", value: "", stage: "draft", probability: "10", expected_close_date: "", notes: "" });
 
   const { data: deals } = useQuery({
     queryKey: ["crm-org-deals", clientId],
@@ -1453,7 +1452,7 @@ function DealsTab({ clientId, clientName, contacts, navigate }: { clientId: stri
       queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
       toast.success("Deal created");
       setCreateOpen(false);
-      setForm({ title: "", contact_id: "", value: "", stage: "qualification", probability: "20", expected_close_date: "", notes: "" });
+      setForm({ title: "", contact_id: "", value: "", stage: "draft", probability: "10", expected_close_date: "", notes: "" });
     },
   });
 
@@ -1491,7 +1490,7 @@ function DealsTab({ clientId, clientName, contacts, navigate }: { clientId: stri
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-[10px] uppercase text-muted-foreground">Stage</Label>
-                  <Select value={form.stage} onValueChange={v => setForm(f => ({ ...f, stage: v, probability: String({ qualification: 20, proposal: 50, negotiation: 75, closed_won: 100, closed_lost: 0 }[v] ?? 20) }))}>
+                  <Select value={form.stage} onValueChange={v => setForm(f => ({ ...f, stage: v, probability: String({ draft: 10, confirmed: 75, closed_won: 100, closed_lost: 0 }[v] ?? 10) }))}>
                     <SelectTrigger className="h-9 bg-secondary border-border"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {Object.entries(stageLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}

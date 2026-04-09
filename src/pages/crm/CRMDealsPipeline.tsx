@@ -12,23 +12,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
 
-const stages = ["qualification", "proposal", "negotiation", "closed_won", "closed_lost"];
+const stages = ["draft", "confirmed", "closed_won", "closed_lost"];
 
 const stageConfig: Record<string, { label: string; borderColor: string; bgColor: string }> = {
-  qualification: { label: "Qualification", borderColor: "border-t-primary", bgColor: "bg-primary/5" },
-  proposal: { label: "Proposal", borderColor: "border-t-warning", bgColor: "bg-warning/5" },
-  negotiation: { label: "Negotiation", borderColor: "border-t-chart-4", bgColor: "bg-chart-4/5" },
+  draft: { label: "Draft", borderColor: "border-t-yellow-500", bgColor: "bg-yellow-500/5" },
+  confirmed: { label: "Confirmed", borderColor: "border-t-blue-500", bgColor: "bg-blue-500/5" },
   closed_won: { label: "Won", borderColor: "border-t-success", bgColor: "bg-success/5" },
   closed_lost: { label: "Lost", borderColor: "border-t-destructive", bgColor: "bg-destructive/5" },
 };
 
 const cardAccents: Record<string, string> = {
-  qualification: "border-l-primary", proposal: "border-l-warning", negotiation: "border-l-chart-4",
+  draft: "border-l-yellow-500", confirmed: "border-l-blue-500",
   closed_won: "border-l-success", closed_lost: "border-l-destructive",
 };
 
 const stageProbMap: Record<string, number> = {
-  qualification: 20, proposal: 50, negotiation: 75, closed_won: 100, closed_lost: 0,
+  draft: 10, confirmed: 75, closed_won: 100, closed_lost: 0,
 };
 
 const fmtCurrency = (v: number | null) =>
@@ -183,7 +182,7 @@ const CRMDealsPipeline = () => {
       </div>
 
       <DragDropContext onDragEnd={onDragEnd} onDragStart={() => setIsDragging(true)}>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 flex-1">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
           {stages.map(stage => {
             const sc = stageConfig[stage];
             const stageDeals = grouped[stage] || [];

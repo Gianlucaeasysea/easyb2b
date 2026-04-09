@@ -185,10 +185,9 @@ const CRMAnalytics = () => {
   const pipelineFunnel = useMemo(() => {
     if (!deals) return [];
     const stages = [
-      { key: "qualification", label: "Qualificazione", color: "hsl(var(--chart-1))" },
-      { key: "proposal", label: "Proposta", color: "hsl(var(--chart-2))" },
-      { key: "negotiation", label: "Negoziazione", color: "hsl(var(--chart-3))" },
-      { key: "closed_won", label: "Vinto", color: "hsl(var(--chart-4))" },
+      { key: "draft", label: "Draft", color: "hsl(var(--chart-1))" },
+      { key: "confirmed", label: "Confirmed", color: "hsl(var(--chart-2))" },
+      { key: "closed_won", label: "Won", color: "hsl(var(--chart-4))" },
     ];
     return stages.map(s => ({
       ...s,
