@@ -70,6 +70,10 @@ const DealerOrders = () => {
   const [draftItems, setDraftItems] = useState<any[]>([]);
   const [draftNotes, setDraftNotes] = useState("");
   const [submittingDraft, setSubmittingDraft] = useState(false);
+  const [showAddProductsToDraft, setShowAddProductsToDraft] = useState(false);
+  const [addProductSearch, setAddProductSearch] = useState("");
+  const [addProductQtys, setAddProductQtys] = useState<Record<string, number>>({});
+  const [savingDraftItems, setSavingDraftItems] = useState(false);
   const [priceCheckData, setPriceCheckData] = useState<{
     order: any;
     items: { product_id: string; name: string; sku: string; quantity: number; originalPrice: number; currentPrice: number | null; available: boolean }[];
