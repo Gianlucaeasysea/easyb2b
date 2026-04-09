@@ -9,14 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FileText, Check, X, Target, Eye, ChevronRight, ChevronLeft, KeyRound, Copy, RefreshCw, Loader2, Mail } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { FileText, Check, X, Target, Eye, ChevronRight, ChevronLeft, KeyRound, Copy, RefreshCw, Loader2, Mail, Clock, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { format } from "date-fns";
+import { it } from "date-fns/locale";
 import { convertRequestToPipeline } from "@/lib/crmEntityActions";
 import { showErrorToast } from "@/lib/errorHandler";
-import { toast as sonnerToast } from "sonner";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const PAYMENT_TERMS_OPTIONS = [
   { value: "prepaid", label: "Anticipato" },
@@ -26,6 +27,14 @@ const PAYMENT_TERMS_OPTIONS = [
   { value: "end_of_month", label: "Fine mese" },
 ];
 
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  new: { label: "Nuova", className: "bg-primary/15 text-primary border-0" },
+  reviewed: { label: "In Revisione", className: "bg-warning/15 text-warning border-0" },
+  approved: { label: "Approvata", className: "bg-success/15 text-success border-0" },
+  converted: { label: "Approvata", className: "bg-success/15 text-success border-0" },
+  rejected: { label: "Rifiutata", className: "bg-destructive/15 text-destructive border-0" },
+};
+
 const generatePassword = (len = 14): string => {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*";
   return Array.from(crypto.getRandomValues(new Uint8Array(len)))
@@ -34,15 +43,18 @@ const generatePassword = (len = 14): string => {
 };
 
 const AdminRequests = () => {
-  const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Reject
   const [rejectRequest, setRejectRequest] = useState<any>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [sendRejectEmail, setSendRejectEmail] = useState(false);
 
-  // Approval wizard
+  // Wizard
   const [wizardRequest, setWizardRequest] = useState<any>(null);
   const [wizardStep, setWizardStep] = useState(0);
   const [wizardData, setWizardData] = useState({
@@ -51,6 +63,7 @@ const AdminRequests = () => {
     address: "", payment_terms: "30_days", payment_terms_notes: "",
     price_list_id: "", assigned_sales_id: "",
     account_email: "", account_password: "", send_welcome_email: true,
+    credential_mode: "password" as "password" | "magic_link",
   });
   const [wizardCreating, setWizardCreating] = useState(false);
 
@@ -85,17 +98,6 @@ const AdminRequests = () => {
     },
   });
 
-  const updateStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("distributor_requests").update({ status }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
-      toast({ title: "Request updated" });
-    },
-  });
-
   const saveAdminNotes = useMutation({
     mutationFn: async ({ id, admin_notes }: { id: string; admin_notes: string }) => {
       const { error } = await supabase.from("distributor_requests").update({ admin_notes } as any).eq("id", id);
@@ -103,7 +105,25 @@ const AdminRequests = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
-      sonnerToast.success("Note salvate");
+      toast.success("Note salvate");
+    },
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, status, admin_notes }: { id: string; status: string; admin_notes?: string }) => {
+      const update: any = { status };
+      if (admin_notes !== undefined) update.admin_notes = admin_notes;
+      const { error } = await supabase.from("distributor_requests").update(update).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-requests-count"] });
+      if (selectedRequest?.id === variables.id) {
+        setSelectedRequest((prev: any) => prev ? { ...prev, status: variables.status } : prev);
+      }
+      const labels: Record<string, string> = { reviewed: "Richiesta segnata in revisione", rejected: "Richiesta rifiutata" };
+      toast.success(labels[variables.status] || "Stato aggiornato");
     },
   });
 
@@ -113,19 +133,42 @@ const AdminRequests = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       queryClient.invalidateQueries({ queryKey: ["crm-organizations"] });
-      toast({ title: "Lead + Organization creati dalla richiesta!" });
+      toast.success("Lead + Organizzazione creati dalla richiesta!");
       setSelectedRequest(null);
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => showErrorToast(e, "AdminRequests.convertToLead"),
   });
 
   const handleReject = async () => {
     if (!rejectReason.trim()) return;
     await supabase.from("distributor_requests").update({ status: "rejected", admin_notes: rejectReason } as any).eq("id", rejectRequest.id);
     queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
-    toast({ title: "Richiesta rifiutata" });
+    queryClient.invalidateQueries({ queryKey: ["pending-requests-count"] });
+
+    // Optionally send rejection email
+    if (sendRejectEmail) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await supabase.functions.invoke("send-crm-email", {
+          body: {
+            client_id: null,
+            recipient_email: rejectRequest.email,
+            subject: "EasySea — Aggiornamento sulla tua candidatura",
+            body: `Gentile ${rejectRequest.contact_name},\n\nGrazie per il tuo interesse nel diventare distributore EasySea.\n\nDopo un'attenta valutazione, al momento non siamo in grado di procedere con la tua candidatura.\n\nMotivo: ${rejectReason}\n\nTi ringraziamo per la comprensione.\n\nCordiali saluti,\nIl Team EasySea`,
+            sent_by: user?.id,
+            idempotency_key: crypto.randomUUID(),
+          },
+        });
+        toast.success("Email di rifiuto inviata");
+      } catch {
+        toast.error("Errore nell'invio dell'email di rifiuto");
+      }
+    }
+
+    toast.success("Richiesta rifiutata");
     setRejectRequest(null);
     setRejectReason("");
+    setSendRejectEmail(false);
   };
 
   const openWizard = (request: any) => {
@@ -149,7 +192,9 @@ const AdminRequests = () => {
       account_email: request.email || "",
       account_password: generatePassword(),
       send_welcome_email: true,
+      credential_mode: "password",
     });
+    setSelectedRequest(null);
   };
 
   const handleWizardCreate = async () => {
@@ -206,8 +251,10 @@ const AdminRequests = () => {
 
       queryClient.invalidateQueries({ queryKey: ["admin-requests"] });
       queryClient.invalidateQueries({ queryKey: ["admin-clients"] });
-      sonnerToast.success(`Account dealer creato per ${wizardData.company_name}`);
+      queryClient.invalidateQueries({ queryKey: ["pending-requests-count"] });
+      toast.success(`Account dealer creato per ${wizardData.company_name}`);
       setWizardRequest(null);
+      navigate(`/admin/clients/${newClient.id}`);
     } catch (error) {
       showErrorToast(error, "AdminRequests.wizardCreate");
     } finally {
@@ -215,183 +262,235 @@ const AdminRequests = () => {
     }
   };
 
-  const newRequests = requests?.filter(r => r.status === "new") || [];
+  const counts = {
+    all: requests?.length || 0,
+    new: requests?.filter(r => r.status === "new").length || 0,
+    reviewed: requests?.filter(r => r.status === "reviewed").length || 0,
+    approved: requests?.filter(r => r.status === "approved" || r.status === "converted").length || 0,
+    rejected: requests?.filter(r => r.status === "rejected").length || 0,
+  };
+
   const filtered = statusFilter === "all" ? requests : requests?.filter(r => {
     if (statusFilter === "new") return r.status === "new";
+    if (statusFilter === "reviewed") return r.status === "reviewed";
     if (statusFilter === "approved") return r.status === "approved" || r.status === "converted";
     if (statusFilter === "rejected") return r.status === "rejected";
     return true;
   });
 
-  const WIZARD_STEPS = ["Dati Azienda", "Listino & Sales", "Credenziali", "Conferma"];
+  const WIZARD_STEPS = ["Verifica Dati", "Configurazione Account", "Credenziali", "Conferma"];
+
+  const FILTER_TABS = [
+    { value: "all", label: "Tutte", count: counts.all },
+    { value: "new", label: "Nuove", count: counts.new },
+    { value: "reviewed", label: "In Revisione", count: counts.reviewed },
+    { value: "approved", label: "Approvate", count: counts.approved },
+    { value: "rejected", label: "Rifiutate", count: counts.rejected },
+  ];
 
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">Dealer Requests</h1>
-          <p className="text-sm text-muted-foreground">Review and manage incoming dealer applications</p>
+          <h1 className="font-heading text-2xl font-bold text-foreground">Richieste Dealer</h1>
+          <p className="text-sm text-muted-foreground">Gestisci le candidature dei nuovi distributori</p>
         </div>
         <div className="flex items-center gap-2">
-          {newRequests.length > 0 && (
-            <Badge className="bg-warning/20 text-warning border-0">{newRequests.length} new</Badge>
+          {counts.new > 0 && (
+            <Badge className="bg-primary/15 text-primary border-0">{counts.new} nuove</Badge>
           )}
-          <Badge variant="outline" className="text-xs">{requests?.length || 0} total</Badge>
+          <Badge variant="outline" className="text-xs">{counts.all} totali</Badge>
         </div>
       </div>
 
-      {/* Status filter */}
-      <div className="flex gap-2 mb-6">
-        {[
-          { value: "all", label: "Tutte" },
-          { value: "new", label: "In attesa" },
-          { value: "approved", label: "Approvate" },
-          { value: "rejected", label: "Rifiutate" },
-        ].map(f => (
-          <Button key={f.value} variant={statusFilter === f.value ? "default" : "outline"} size="sm" className="text-xs" onClick={() => setStatusFilter(f.value)}>
+      {/* Filter tabs */}
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {FILTER_TABS.map(f => (
+          <Button key={f.value} variant={statusFilter === f.value ? "default" : "outline"} size="sm" className="text-xs gap-1.5" onClick={() => setStatusFilter(f.value)}>
             {f.label}
-            {f.value === "new" && newRequests.length > 0 && (
-              <Badge className="ml-1.5 bg-warning text-warning-foreground text-[10px] h-4 min-w-4 px-1">{newRequests.length}</Badge>
+            {f.count > 0 && f.value !== "all" && (
+              <Badge variant="secondary" className="ml-1 text-[10px] h-4 min-w-4 px-1">{f.count}</Badge>
             )}
           </Button>
         ))}
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">Caricamento...</p>
       ) : !filtered?.length ? (
         <div className="text-center py-20 glass-card-solid">
           <FileText className="mx-auto text-muted-foreground mb-4" size={48} />
-          <p className="text-muted-foreground">No dealer requests yet.</p>
+          <p className="text-muted-foreground">Nessuna richiesta trovata.</p>
         </div>
       ) : (
         <div className="glass-card-solid overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Data</TableHead>
+                <TableHead>Data Richiesta</TableHead>
                 <TableHead>Azienda</TableHead>
-                <TableHead>Contatto</TableHead>
+                <TableHead>Nome Contatto</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Telefono</TableHead>
                 <TableHead>Paese</TableHead>
                 <TableHead>Stato</TableHead>
                 <TableHead className="text-right">Azioni</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered?.map(r => (
-                <TableRow key={r.id} className="cursor-pointer hover:bg-secondary/50" onClick={() => { setSelectedRequest(r); setEditingNotes((r as any).admin_notes || ""); }}>
-                  <TableCell className="text-muted-foreground text-xs">{format(new Date(r.created_at), "dd MMM yyyy")}</TableCell>
-                  <TableCell className="font-heading font-semibold">{r.company_name}</TableCell>
-                  <TableCell className="text-sm">{r.contact_name}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">{r.email}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">{r.phone}</TableCell>
-                  <TableCell className="text-muted-foreground">{(r as any).country || "—"}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={
-                      r.status === "new" ? "border-warning text-warning" :
-                      r.status === "approved" || r.status === "converted" ? "bg-success/20 text-success border-0" :
-                      r.status === "rejected" ? "bg-destructive/20 text-destructive border-0" : ""
-                    }>{r.status}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
-                      <Button size="sm" variant="ghost" className="h-8 px-2 text-xs gap-1" onClick={() => { setSelectedRequest(r); setEditingNotes((r as any).admin_notes || ""); }}>
-                        <Eye size={14} /> Rivedi
-                      </Button>
-                      {r.status === "new" && (
-                        <>
-                          <Button size="sm" variant="ghost" className="text-success hover:text-success h-8 gap-1" onClick={() => openWizard(r)}>
-                            <Check size={14} /> Approva
-                          </Button>
-                          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive h-8 gap-1" onClick={() => { setRejectRequest(r); setRejectReason(""); }}>
-                            <X size={14} /> Rifiuta
-                          </Button>
-                        </>
-                      )}
-                      {r.status === "converted" && <Badge className="bg-success/20 text-success border-0 text-[10px]">In Pipeline</Badge>}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filtered?.map(r => {
+                const sc = STATUS_CONFIG[r.status || "new"] || STATUS_CONFIG.new;
+                return (
+                  <TableRow key={r.id} className="cursor-pointer hover:bg-secondary/50" onClick={() => { setSelectedRequest(r); setEditingNotes((r as any).admin_notes || ""); }}>
+                    <TableCell className="text-muted-foreground text-xs">{format(new Date(r.created_at), "dd MMM yyyy", { locale: it })}</TableCell>
+                    <TableCell className="font-heading font-semibold">{r.company_name}</TableCell>
+                    <TableCell className="text-sm">{r.contact_name}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{r.email}</TableCell>
+                    <TableCell className="text-muted-foreground">{(r as any).country || "—"}</TableCell>
+                    <TableCell><Badge className={sc.className}>{sc.label}</Badge></TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end" onClick={e => e.stopPropagation()}>
+                        <Button size="sm" variant="ghost" className="h-8 px-3 text-xs gap-1.5" onClick={() => { setSelectedRequest(r); setEditingNotes((r as any).admin_notes || ""); }}>
+                          <Eye size={14} /> Gestisci
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
       )}
 
-      {/* Review Detail Modal */}
+      {/* Detail Modal — Split Layout */}
       <Dialog open={!!selectedRequest && !wizardRequest} onOpenChange={() => setSelectedRequest(null)}>
-        <DialogContent className="bg-card border-border max-w-lg max-h-[85vh] overflow-y-auto">
-          {selectedRequest && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="font-heading">{selectedRequest.company_name}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><span className="text-muted-foreground text-xs uppercase">Contact</span><p className="font-medium">{selectedRequest.contact_name}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">Email</span><p className="font-medium">{selectedRequest.email}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">Phone</span><p className="font-medium">{selectedRequest.phone}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">Region</span><p className="font-medium">{selectedRequest.zone || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">Country</span><p className="font-medium">{(selectedRequest as any).country || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">Business Type</span><p className="font-medium">{selectedRequest.business_type || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">Website</span><p className="font-medium">{selectedRequest.website || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">VAT ID</span><p className="font-medium">{(selectedRequest as any).vat_number || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs uppercase">Marketing Consent</span><p className="font-medium">{selectedRequest.marketing_consent ? "✅ Yes" : "❌ No"}</p></div>
-                </div>
-                {selectedRequest.message && (
-                  <div>
-                    <span className="text-muted-foreground text-xs uppercase">Message</span>
-                    <p className="text-sm mt-1 p-3 bg-secondary/50 rounded-lg">{selectedRequest.message}</p>
-                  </div>
-                )}
+        <DialogContent className="bg-card border-border max-w-3xl max-h-[85vh] overflow-y-auto">
+          {selectedRequest && (() => {
+            const sc = STATUS_CONFIG[selectedRequest.status || "new"] || STATUS_CONFIG.new;
+            const isActionable = selectedRequest.status === "new" || selectedRequest.status === "reviewed";
+            const isTerminal = selectedRequest.status === "approved" || selectedRequest.status === "converted" || selectedRequest.status === "rejected";
 
-                {/* Admin Notes */}
-                <div>
-                  <span className="text-muted-foreground text-xs uppercase">Admin Notes</span>
-                  <Textarea
-                    value={editingNotes}
-                    onChange={e => setEditingNotes(e.target.value)}
-                    placeholder="Add internal notes about this request..."
-                    className="mt-1 bg-secondary border-border rounded-lg min-h-[80px]"
-                  />
-                  <Button size="sm" variant="outline" className="mt-2 text-xs" onClick={() => saveAdminNotes.mutate({ id: selectedRequest.id, admin_notes: editingNotes })}>
-                    Save Notes
-                  </Button>
-                </div>
-
-                <div className="text-xs text-muted-foreground">
-                  Received: {format(new Date(selectedRequest.created_at), "dd MMM yyyy HH:mm")}
-                </div>
-                {selectedRequest.status === "new" && (
-                  <div className="flex gap-2 pt-2 border-t border-border">
-                    <Button className="flex-1 gap-1 bg-foreground text-background" onClick={() => openWizard(selectedRequest)}>
-                      <Check size={14} /> Approva & Crea Account
-                    </Button>
-                    <Button variant="outline" className="gap-1" onClick={() => convertToLead.mutate(selectedRequest)}>
-                      <Target size={14} /> Pipeline
-                    </Button>
-                    <Button variant="outline" className="gap-1 text-destructive" onClick={() => { setRejectRequest(selectedRequest); setRejectReason(""); setSelectedRequest(null); }}>
-                      <X size={14} /> Rifiuta
-                    </Button>
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center justify-between">
+                    <DialogTitle className="font-heading text-lg">{selectedRequest.company_name}</DialogTitle>
+                    <Badge className={sc.className}>{sc.label}</Badge>
                   </div>
-                )}
-              </div>
-            </>
-          )}
+                </DialogHeader>
+
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-2">
+                  {/* LEFT — Request Data */}
+                  <div className="md:col-span-3 space-y-4">
+                    <h3 className="text-xs font-heading font-bold text-muted-foreground uppercase tracking-wider">Dati Richiesta</h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div><span className="text-muted-foreground text-xs">Referente</span><p className="font-medium">{selectedRequest.contact_name}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Email</span><p className="font-medium">{selectedRequest.email}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Telefono</span><p className="font-medium">{selectedRequest.phone}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Paese</span><p className="font-medium">{(selectedRequest as any).country || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Zona</span><p className="font-medium">{selectedRequest.zone || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Tipo Attività</span><p className="font-medium">{selectedRequest.business_type || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">P.IVA</span><p className="font-medium">{(selectedRequest as any).vat_number || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Sito Web</span><p className="font-medium">{selectedRequest.website || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Consenso Marketing</span><p className="font-medium">{selectedRequest.marketing_consent ? "✅ Sì" : "❌ No"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Data Invio</span><p className="font-medium">{format(new Date(selectedRequest.created_at), "dd MMMM yyyy, HH:mm", { locale: it })}</p></div>
+                    </div>
+                    {selectedRequest.message && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">Messaggio</span>
+                        <p className="text-sm mt-1 p-3 bg-secondary/50 rounded-lg">{selectedRequest.message}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* RIGHT — Actions */}
+                  <div className="md:col-span-2 space-y-4">
+                    <h3 className="text-xs font-heading font-bold text-muted-foreground uppercase tracking-wider">Azioni Admin</h3>
+
+                    {/* Admin Notes */}
+                    <div>
+                      <Label className="text-xs">Note Admin</Label>
+                      <Textarea
+                        value={editingNotes}
+                        onChange={e => setEditingNotes(e.target.value)}
+                        placeholder="Aggiungi note interne..."
+                        className="mt-1 bg-secondary border-border rounded-lg min-h-[80px]"
+                        disabled={isTerminal}
+                      />
+                      {!isTerminal && (
+                        <Button size="sm" variant="outline" className="mt-2 text-xs" onClick={() => saveAdminNotes.mutate({ id: selectedRequest.id, admin_notes: editingNotes })}>
+                          Salva Note
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Action buttons based on status */}
+                    {selectedRequest.status === "new" && (
+                      <div className="space-y-2 pt-3 border-t border-border">
+                        <Button className="w-full gap-1.5 text-sm" variant="outline" onClick={() => updateStatus.mutate({ id: selectedRequest.id, status: "reviewed" })}>
+                          <Clock size={14} /> Segna in Revisione
+                        </Button>
+                        <Button className="w-full gap-1.5 text-sm bg-success text-success-foreground hover:bg-success/90" onClick={() => openWizard(selectedRequest)}>
+                          <Check size={14} /> Approva
+                        </Button>
+                        <Button className="w-full gap-1.5 text-sm" variant="destructive" onClick={() => { setRejectRequest(selectedRequest); setRejectReason(""); setSendRejectEmail(false); setSelectedRequest(null); }}>
+                          <X size={14} /> Rifiuta
+                        </Button>
+                        <Button className="w-full gap-1.5 text-sm" variant="outline" onClick={() => convertToLead.mutate(selectedRequest)}>
+                          <Target size={14} /> Inserisci in Pipeline
+                        </Button>
+                      </div>
+                    )}
+
+                    {selectedRequest.status === "reviewed" && (
+                      <div className="space-y-2 pt-3 border-t border-border">
+                        <Button className="w-full gap-1.5 text-sm bg-success text-success-foreground hover:bg-success/90" onClick={() => openWizard(selectedRequest)}>
+                          <Check size={14} /> Approva
+                        </Button>
+                        <Button className="w-full gap-1.5 text-sm" variant="destructive" onClick={() => { setRejectRequest(selectedRequest); setRejectReason(""); setSendRejectEmail(false); setSelectedRequest(null); }}>
+                          <X size={14} /> Rifiuta
+                        </Button>
+                      </div>
+                    )}
+
+                    {isTerminal && (
+                      <div className="pt-3 border-t border-border space-y-2">
+                        <div className="p-3 bg-secondary/50 rounded-lg">
+                          <p className="text-xs text-muted-foreground">Stato finale</p>
+                          <Badge className={`mt-1 ${sc.className}`}>{sc.label}</Badge>
+                        </div>
+                        {(selectedRequest as any).admin_notes && (
+                          <div className="p-3 bg-secondary/50 rounded-lg">
+                            <p className="text-xs text-muted-foreground">Note</p>
+                            <p className="text-sm mt-1">{(selectedRequest as any).admin_notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
       {/* Reject Dialog */}
       <Dialog open={!!rejectRequest} onOpenChange={() => setRejectRequest(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Rifiuta Richiesta</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-heading">Rifiuta Richiesta</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">Inserisci il motivo del rifiuto per <strong>{rejectRequest?.company_name}</strong>:</p>
           <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo del rifiuto..." className="bg-secondary border-border min-h-[100px]" />
+          <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+            <Checkbox checked={sendRejectEmail} onCheckedChange={(c) => setSendRejectEmail(!!c)} />
+            <div>
+              <p className="text-sm font-medium text-foreground flex items-center gap-1"><Mail size={12} /> Invia email di rifiuto al richiedente</p>
+              <p className="text-xs text-muted-foreground">L'email sarà inviata a {rejectRequest?.email}</p>
+            </div>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectRequest(null)}>Annulla</Button>
-            <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim()}>Rifiuta</Button>
+            <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim()}>Conferma Rifiuto</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -420,7 +519,7 @@ const AdminRequests = () => {
             ))}
           </div>
 
-          {/* Step 1: Company Data */}
+          {/* Step 1: Verify Data */}
           {wizardStep === 0 && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -436,11 +535,17 @@ const AdminRequests = () => {
                 <div><Label className="text-xs">Zona</Label><Input value={wizardData.zone} onChange={e => setWizardData(d => ({ ...d, zone: e.target.value }))} className="bg-secondary" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label className="text-xs">Tipo</Label><Input value={wizardData.business_type} onChange={e => setWizardData(d => ({ ...d, business_type: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Tipo Attività</Label><Input value={wizardData.business_type} onChange={e => setWizardData(d => ({ ...d, business_type: e.target.value }))} className="bg-secondary" /></div>
                 <div><Label className="text-xs">P.IVA</Label><Input value={wizardData.vat_number} onChange={e => setWizardData(d => ({ ...d, vat_number: e.target.value }))} className="bg-secondary" /></div>
               </div>
               <div><Label className="text-xs">Indirizzo</Label><Input value={wizardData.address} onChange={e => setWizardData(d => ({ ...d, address: e.target.value }))} className="bg-secondary" /></div>
-              <div><Label className="text-xs">Website</Label><Input value={wizardData.website} onChange={e => setWizardData(d => ({ ...d, website: e.target.value }))} className="bg-secondary" /></div>
+              <div><Label className="text-xs">Sito Web</Label><Input value={wizardData.website} onChange={e => setWizardData(d => ({ ...d, website: e.target.value }))} className="bg-secondary" /></div>
+            </div>
+          )}
+
+          {/* Step 2: Account Config */}
+          {wizardStep === 1 && (
+            <div className="space-y-4">
               <div>
                 <Label className="text-xs font-semibold">Termini di Pagamento *</Label>
                 <Select value={wizardData.payment_terms} onValueChange={v => setWizardData(d => ({ ...d, payment_terms: v }))}>
@@ -450,13 +555,6 @@ const AdminRequests = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label className="text-xs">Note pagamento</Label><Textarea value={wizardData.payment_terms_notes} onChange={e => setWizardData(d => ({ ...d, payment_terms_notes: e.target.value }))} className="bg-secondary" rows={2} /></div>
-            </div>
-          )}
-
-          {/* Step 2: Price List & Sales */}
-          {wizardStep === 1 && (
-            <div className="space-y-4">
               <div>
                 <Label className="text-xs font-semibold">Listino Prezzi</Label>
                 <Select value={wizardData.price_list_id || "__none__"} onValueChange={v => setWizardData(d => ({ ...d, price_list_id: v === "__none__" ? "" : v }))}>
@@ -468,7 +566,7 @@ const AdminRequests = () => {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Sales Representative</Label>
+                <Label className="text-xs font-semibold">Referente Commerciale</Label>
                 <Select value={wizardData.assigned_sales_id || "__none__"} onValueChange={v => setWizardData(d => ({ ...d, assigned_sales_id: v === "__none__" ? "" : v }))}>
                   <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona sales..." /></SelectTrigger>
                   <SelectContent>
@@ -477,6 +575,7 @@ const AdminRequests = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div><Label className="text-xs">Note pagamento</Label><Textarea value={wizardData.payment_terms_notes} onChange={e => setWizardData(d => ({ ...d, payment_terms_notes: e.target.value }))} className="bg-secondary" rows={2} /></div>
             </div>
           )}
 
@@ -491,22 +590,47 @@ const AdminRequests = () => {
                 <Label className="text-xs">Email</Label>
                 <Input value={wizardData.account_email} onChange={e => setWizardData(d => ({ ...d, account_email: e.target.value }))} className="bg-secondary font-mono" />
               </div>
-              <div>
-                <Label className="text-xs">Password</Label>
-                <div className="flex gap-2">
-                  <Input value={wizardData.account_password} onChange={e => setWizardData(d => ({ ...d, account_password: e.target.value }))} className="bg-secondary font-mono flex-1" />
-                  <Button variant="outline" size="sm" onClick={() => setWizardData(d => ({ ...d, account_password: generatePassword() }))} className="gap-1">
-                    <RefreshCw size={12} /> Genera
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(wizardData.account_password); sonnerToast.success("Password copiata"); }}>
-                    <Copy size={12} />
-                  </Button>
+
+              {/* Credential mode */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Metodo di accesso</Label>
+                <div className="space-y-2">
+                  <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${wizardData.credential_mode === "magic_link" ? "border-primary bg-primary/5" : "border-border bg-secondary/50"}`}>
+                    <input type="radio" name="cred_mode" checked={wizardData.credential_mode === "magic_link"} onChange={() => setWizardData(d => ({ ...d, credential_mode: "magic_link" }))} className="mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold">Invia Magic Link <Badge variant="secondary" className="ml-1 text-[10px]">Consigliato</Badge></p>
+                      <p className="text-xs text-muted-foreground">Il dealer imposta la propria password</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${wizardData.credential_mode === "password" ? "border-primary bg-primary/5" : "border-border bg-secondary/50"}`}>
+                    <input type="radio" name="cred_mode" checked={wizardData.credential_mode === "password"} onChange={() => setWizardData(d => ({ ...d, credential_mode: "password" }))} className="mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold">Genera Password</p>
+                      <p className="text-xs text-muted-foreground">Genera una password casuale da inviare al dealer</p>
+                    </div>
+                  </label>
                 </div>
               </div>
+
+              {wizardData.credential_mode === "password" && (
+                <div>
+                  <Label className="text-xs">Password</Label>
+                  <div className="flex gap-2">
+                    <Input value={wizardData.account_password} onChange={e => setWizardData(d => ({ ...d, account_password: e.target.value }))} className="bg-secondary font-mono flex-1" />
+                    <Button variant="outline" size="sm" onClick={() => setWizardData(d => ({ ...d, account_password: generatePassword() }))} className="gap-1">
+                      <RefreshCw size={12} /> Genera
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(wizardData.account_password); toast.success("Password copiata"); }}>
+                      <Copy size={12} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
                 <Checkbox checked={wizardData.send_welcome_email} onCheckedChange={(c) => setWizardData(d => ({ ...d, send_welcome_email: !!c }))} />
                 <div>
-                  <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Mail size={12} /> Invia email di benvenuto con credenziali</p>
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Mail size={12} /> Invia email di benvenuto</p>
                   <p className="text-xs text-muted-foreground">L'email sarà inviata a {wizardData.account_email}</p>
                 </div>
               </div>
@@ -525,11 +649,15 @@ const AdminRequests = () => {
                   <div><span className="text-muted-foreground text-xs">P.IVA</span><p>{wizardData.vat_number || "—"}</p></div>
                   <div><span className="text-muted-foreground text-xs">Pagamento</span><p>{PAYMENT_TERMS_OPTIONS.find(o => o.value === wizardData.payment_terms)?.label}</p></div>
                   <div><span className="text-muted-foreground text-xs">Listino</span><p>{priceLists?.find(pl => pl.id === wizardData.price_list_id)?.name || "Nessuno"}</p></div>
-                  <div><span className="text-muted-foreground text-xs">Sales</span><p>{salesUsers?.find(s => s.user_id === wizardData.assigned_sales_id)?.contact_name || "Non assegnato"}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Referente Commerciale</span><p>{salesUsers?.find(s => s.user_id === wizardData.assigned_sales_id)?.contact_name || "Non assegnato"}</p></div>
                 </div>
                 <div className="border-t border-border pt-3">
                   <span className="text-muted-foreground text-xs">Email account</span><p className="font-mono text-sm">{wizardData.account_email}</p>
-                  <span className="text-muted-foreground text-xs">Password</span><p className="font-mono text-sm">{wizardData.account_password}</p>
+                  {wizardData.credential_mode === "password" ? (
+                    <><span className="text-muted-foreground text-xs">Password</span><p className="font-mono text-sm">{wizardData.account_password}</p></>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1">🔗 Verrà inviato un Magic Link</p>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1">{wizardData.send_welcome_email ? "✅ Email di benvenuto sarà inviata" : "❌ Email non sarà inviata"}</p>
                 </div>
               </div>
@@ -542,7 +670,7 @@ const AdminRequests = () => {
               <ChevronLeft size={14} /> {wizardStep > 0 ? "Indietro" : "Annulla"}
             </Button>
             {wizardStep < 3 ? (
-              <Button onClick={() => setWizardStep(s => s + 1)} className="gap-1 bg-foreground text-background">
+              <Button onClick={() => setWizardStep(s => s + 1)} className="gap-1" disabled={wizardStep === 0 && !wizardData.company_name.trim()}>
                 Avanti <ChevronRight size={14} />
               </Button>
             ) : (
