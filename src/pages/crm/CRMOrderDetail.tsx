@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Clock, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+
 import { useState } from "react";
 import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
@@ -95,7 +95,7 @@ const CRMOrderDetail = () => {
             Ordine {order.order_code || `#${order.id.slice(0, 8).toUpperCase()}`}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {client?.company_name} · {format(new Date(order.created_at), "dd MMM yyyy, HH:mm", { locale: it })}
+            {client?.company_name} · {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
           </p>
         </div>
         <Badge className={`border-0 text-xs ${getOrderStatusColor(order.status || "draft")}`}>

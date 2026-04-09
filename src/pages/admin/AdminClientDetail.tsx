@@ -552,7 +552,7 @@ const AdminClientDetail = () => {
             <TrendingUp size={16} className="text-primary" />
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-heading">Total Revenue</span>
           </div>
-          <p className="font-heading text-xl font-bold text-foreground">€{totalSpent.toLocaleString("it-IT", { minimumFractionDigits: 2 })}</p>
+          <p className="font-heading text-xl font-bold text-foreground">€{totalSpent.toLocaleString("en-US", { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
 
@@ -903,7 +903,7 @@ const AdminClientDetail = () => {
                             ) : <span className="text-xs text-muted-foreground">—</span>}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">{(o.order_items as any[])?.length || 0}</TableCell>
-                          <TableCell className="text-right font-mono text-sm font-semibold">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
+                          <TableCell className="text-right font-mono text-sm font-semibold">€{Number(o.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Eye size={14} className="text-muted-foreground" />
@@ -1134,7 +1134,7 @@ const AdminClientDetail = () => {
               </Table>
               <div className="flex justify-between items-center pt-3 border-t border-border mt-2">
                 <span className="text-sm text-muted-foreground">Products Total</span>
-                <span className="font-heading text-lg font-bold">€{Number(selectedOrder.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</span>
+                <span className="font-heading text-lg font-bold">€{Number(selectedOrder.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
               </div>
               {Number((selectedOrder as any).shipping_cost_client || 0) > 0 && (
                 <div className="flex justify-between items-center">

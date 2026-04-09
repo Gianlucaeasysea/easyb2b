@@ -12,7 +12,7 @@ import { ClipboardList, Plus, Pencil, Trash2, CheckCircle, AlertTriangle, Info, 
 import { useState } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+
 
 const categories = [
   { value: "ui", label: "UI / Design" },
@@ -188,7 +188,7 @@ const AdminChangelog = () => {
                 {entries.map(entry => (
                   <TableRow key={entry.id}>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {format(new Date(entry.created_at), "dd MMM yyyy HH:mm", { locale: it })}
+                      {format(new Date(entry.created_at), "dd MMM yyyy HH:mm")}
                     </TableCell>
                     <TableCell>
                       <p className="text-sm font-medium text-foreground">{entry.title}</p>

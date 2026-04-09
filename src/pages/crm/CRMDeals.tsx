@@ -36,7 +36,7 @@ const fmtDate = (d: string | null | undefined) => {
 };
 
 const fmtCurrency = (v: number | null) =>
-  `€${(v || 0).toLocaleString("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  `€${(v || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
 const emptyForm = {
   title: "", client_id: "", lead_id: "", contact_id: "",

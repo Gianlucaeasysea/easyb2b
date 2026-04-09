@@ -386,7 +386,7 @@ const DealerOrders = () => {
                       <div className="flex items-center gap-3">
                         <Badge className="border-0 text-xs bg-muted text-muted-foreground">Draft</Badge>
                         <span className="font-heading font-bold text-foreground">
-                          €{Number(order.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+                          €{Number(order.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                         </span>
                         <Button size="sm" onClick={() => openDraftEditor(order)}>
                           Complete Order
@@ -462,7 +462,7 @@ const DealerOrders = () => {
                     {isSubmitted && <Badge className="border-0 text-xs bg-blue-100 text-blue-700">Submitted - Awaiting confirmation</Badge>}
                     {!isDraft && !isSubmitted && <Badge className={`border-0 text-xs ${statusColor}`}>{statusLabel}</Badge>}
                     <span className="font-heading font-bold text-foreground text-lg">
-                      €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+                      €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </span>
                     {isSubmitted && (
                       <Button

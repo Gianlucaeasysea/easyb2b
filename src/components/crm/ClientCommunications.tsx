@@ -11,7 +11,7 @@ import {
   RefreshCw, Link2, CheckCircle2, Filter, ChevronDown, ChevronRight, MessageSquare, Reply, User
 } from "lucide-react";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+
 import { useState, useMemo } from "react";
 import { ComposeEmailDialog } from "./ComposeEmailDialog";
 import { toast } from "sonner";
@@ -236,7 +236,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
               <div className="flex items-center gap-2 justify-between">
                 <h4 className="text-sm font-semibold text-foreground truncate">{comm.subject}</h4>
                 <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                  {format(new Date(comm.created_at), "dd MMM yyyy, HH:mm", { locale: it })}
+                  {format(new Date(comm.created_at), "dd MMM yyyy, HH:mm")}
                 </span>
               </div>
               {/* From / To / CC metadata */}
@@ -379,7 +379,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
                     </div>
                   </div>
                   <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                    {format(new Date(lastMsg.created_at), "dd MMM, HH:mm", { locale: it })}
+                    {format(new Date(lastMsg.created_at), "dd MMM, HH:mm")}
                   </span>
                   {isExpanded ? <ChevronDown size={14} className="text-muted-foreground shrink-0" /> : <ChevronRight size={14} className="text-muted-foreground shrink-0" />}
                 </div>
@@ -433,7 +433,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
           <div className="rounded-lg bg-secondary/30 border border-border p-3 space-y-1.5 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Clock size={12} />
-              <span>{openEmail && format(new Date(openEmail.created_at), "dd MMMM yyyy, HH:mm", { locale: it })}</span>
+              <span>{openEmail && format(new Date(openEmail.created_at), "dd MMMM yyyy, HH:mm")}</span>
             </div>
             <Separator />
             {(() => {
