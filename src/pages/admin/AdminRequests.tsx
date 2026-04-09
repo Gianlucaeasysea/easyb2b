@@ -419,22 +419,22 @@ const AdminRequests = () => {
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-2">
                   {/* LEFT — Request Data */}
                   <div className="md:col-span-3 space-y-4">
-                    <h3 className="text-xs font-heading font-bold text-muted-foreground uppercase tracking-wider">Dati Richiesta</h3>
+                    <h3 className="text-xs font-heading font-bold text-muted-foreground uppercase tracking-wider">Request Data</h3>
                     <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div><span className="text-muted-foreground text-xs">Referente</span><p className="font-medium">{selectedRequest.contact_name}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Contact</span><p className="font-medium">{selectedRequest.contact_name}</p></div>
                       <div><span className="text-muted-foreground text-xs">Email</span><p className="font-medium">{selectedRequest.email}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Telefono</span><p className="font-medium">{selectedRequest.phone}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Paese</span><p className="font-medium">{(selectedRequest as any).country || "—"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Zona</span><p className="font-medium">{selectedRequest.zone || "—"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Tipo Attività</span><p className="font-medium">{selectedRequest.business_type || "—"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">P.IVA</span><p className="font-medium">{(selectedRequest as any).vat_number || "—"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Sito Web</span><p className="font-medium">{selectedRequest.website || "—"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Consenso Marketing</span><p className="font-medium">{selectedRequest.marketing_consent ? "✅ Sì" : "❌ No"}</p></div>
-                      <div><span className="text-muted-foreground text-xs">Data Invio</span><p className="font-medium">{format(new Date(selectedRequest.created_at), "dd MMMM yyyy, HH:mm", { locale: it })}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Phone</span><p className="font-medium">{selectedRequest.phone}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Country</span><p className="font-medium">{(selectedRequest as any).country || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Zone</span><p className="font-medium">{selectedRequest.zone || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Business Type</span><p className="font-medium">{selectedRequest.business_type || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">VAT Number</span><p className="font-medium">{(selectedRequest as any).vat_number || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Website</span><p className="font-medium">{selectedRequest.website || "—"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Marketing Consent</span><p className="font-medium">{selectedRequest.marketing_consent ? "✅ Yes" : "❌ No"}</p></div>
+                      <div><span className="text-muted-foreground text-xs">Submitted</span><p className="font-medium">{format(new Date(selectedRequest.created_at), "dd MMMM yyyy, HH:mm")}</p></div>
                     </div>
                     {selectedRequest.message && (
                       <div>
-                        <span className="text-muted-foreground text-xs">Messaggio</span>
+                        <span className="text-muted-foreground text-xs">Message</span>
                         <p className="text-sm mt-1 p-3 bg-secondary/50 rounded-lg">{selectedRequest.message}</p>
                       </div>
                     )}
@@ -442,21 +442,21 @@ const AdminRequests = () => {
 
                   {/* RIGHT — Actions */}
                   <div className="md:col-span-2 space-y-4">
-                    <h3 className="text-xs font-heading font-bold text-muted-foreground uppercase tracking-wider">Azioni Admin</h3>
+                    <h3 className="text-xs font-heading font-bold text-muted-foreground uppercase tracking-wider">Admin Actions</h3>
 
                     {/* Admin Notes */}
                     <div>
-                      <Label className="text-xs">Note Admin</Label>
+                      <Label className="text-xs">Admin Notes</Label>
                       <Textarea
                         value={editingNotes}
                         onChange={e => setEditingNotes(e.target.value)}
-                        placeholder="Aggiungi note interne..."
+                        placeholder="Add internal notes..."
                         className="mt-1 bg-secondary border-border rounded-lg min-h-[80px]"
                         disabled={isTerminal}
                       />
                       {!isTerminal && (
                         <Button size="sm" variant="outline" className="mt-2 text-xs" onClick={() => saveAdminNotes.mutate({ id: selectedRequest.id, admin_notes: editingNotes })}>
-                          Salva Note
+                          Save Notes
                         </Button>
                       )}
                     </div>
@@ -464,43 +464,43 @@ const AdminRequests = () => {
                     {/* Action buttons based on status */}
                     {selectedRequest.status === "new" && (
                       <div className="space-y-2 pt-3 border-t border-border">
-                        <Button className="w-full gap-1.5 text-sm" variant="outline" onClick={() => updateStatus.mutate({ id: selectedRequest.id, status: "reviewed" })}>
-                          <Clock size={14} /> Segna in Revisione
-                        </Button>
-                        <Button className="w-full gap-1.5 text-sm bg-success text-success-foreground hover:bg-success/90" onClick={() => openWizard(selectedRequest)}>
-                          <Check size={14} /> Approva
-                        </Button>
-                        <Button className="w-full gap-1.5 text-sm" variant="destructive" onClick={() => { setRejectRequest(selectedRequest); setRejectReason(""); setSendRejectEmail(false); setSelectedRequest(null); }}>
-                          <X size={14} /> Rifiuta
-                        </Button>
-                        <Button className="w-full gap-1.5 text-sm" variant="outline" onClick={() => convertToLead.mutate(selectedRequest)}>
-                          <Target size={14} /> Inserisci in Pipeline
-                        </Button>
+                         <Button className="w-full gap-1.5 text-sm" variant="outline" onClick={() => updateStatus.mutate({ id: selectedRequest.id, status: "reviewed" })}>
+                           <Clock size={14} /> Mark as Under Review
+                         </Button>
+                         <Button className="w-full gap-1.5 text-sm bg-success text-success-foreground hover:bg-success/90" onClick={() => openWizard(selectedRequest)}>
+                           <Check size={14} /> Approve
+                         </Button>
+                         <Button className="w-full gap-1.5 text-sm" variant="destructive" onClick={() => { setRejectRequest(selectedRequest); setRejectReason(""); setSendRejectEmail(false); setSelectedRequest(null); }}>
+                           <X size={14} /> Reject
+                         </Button>
+                         <Button className="w-full gap-1.5 text-sm" variant="outline" onClick={() => convertToLead.mutate(selectedRequest)}>
+                           <Target size={14} /> Add to Pipeline
+                         </Button>
                       </div>
                     )}
 
                     {selectedRequest.status === "reviewed" && (
                       <div className="space-y-2 pt-3 border-t border-border">
-                        <Button className="w-full gap-1.5 text-sm bg-success text-success-foreground hover:bg-success/90" onClick={() => openWizard(selectedRequest)}>
-                          <Check size={14} /> Approva
-                        </Button>
-                        <Button className="w-full gap-1.5 text-sm" variant="destructive" onClick={() => { setRejectRequest(selectedRequest); setRejectReason(""); setSendRejectEmail(false); setSelectedRequest(null); }}>
-                          <X size={14} /> Rifiuta
-                        </Button>
+                         <Button className="w-full gap-1.5 text-sm bg-success text-success-foreground hover:bg-success/90" onClick={() => openWizard(selectedRequest)}>
+                           <Check size={14} /> Approve
+                         </Button>
+                         <Button className="w-full gap-1.5 text-sm" variant="destructive" onClick={() => { setRejectRequest(selectedRequest); setRejectReason(""); setSendRejectEmail(false); setSelectedRequest(null); }}>
+                           <X size={14} /> Reject
+                         </Button>
                       </div>
                     )}
 
                     {isTerminal && (
                       <div className="pt-3 border-t border-border space-y-2">
-                        <div className="p-3 bg-secondary/50 rounded-lg">
-                          <p className="text-xs text-muted-foreground">Stato finale</p>
-                          <Badge className={`mt-1 ${sc.className}`}>{sc.label}</Badge>
-                        </div>
-                        {(selectedRequest as any).admin_notes && (
-                          <div className="p-3 bg-secondary/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Note</p>
-                            <p className="text-sm mt-1">{(selectedRequest as any).admin_notes}</p>
-                          </div>
+                         <div className="p-3 bg-secondary/50 rounded-lg">
+                           <p className="text-xs text-muted-foreground">Final status</p>
+                           <Badge className={`mt-1 ${sc.className}`}>{sc.label}</Badge>
+                         </div>
+                         {(selectedRequest as any).admin_notes && (
+                           <div className="p-3 bg-secondary/50 rounded-lg">
+                             <p className="text-xs text-muted-foreground">Notes</p>
+                             <p className="text-sm mt-1">{(selectedRequest as any).admin_notes}</p>
+                           </div>
                         )}
                       </div>
                     )}
@@ -515,19 +515,19 @@ const AdminRequests = () => {
       {/* Reject Dialog */}
       <Dialog open={!!rejectRequest} onOpenChange={() => setRejectRequest(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle className="font-heading">Rifiuta Richiesta</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Inserisci il motivo del rifiuto per <strong>{rejectRequest?.company_name}</strong>:</p>
-          <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Motivo del rifiuto..." className="bg-secondary border-border min-h-[100px]" />
+          <DialogHeader><DialogTitle className="font-heading">Reject Request</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Enter the rejection reason for <strong>{rejectRequest?.company_name}</strong>:</p>
+          <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Rejection reason..." className="bg-secondary border-border min-h-[100px]" />
           <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
             <Checkbox checked={sendRejectEmail} onCheckedChange={(c) => setSendRejectEmail(!!c)} />
             <div>
-              <p className="text-sm font-medium text-foreground flex items-center gap-1"><Mail size={12} /> Invia email di rifiuto al richiedente</p>
-              <p className="text-xs text-muted-foreground">L'email sarà inviata a {rejectRequest?.email}</p>
+              <p className="text-sm font-medium text-foreground flex items-center gap-1"><Mail size={12} /> Send rejection email to applicant</p>
+              <p className="text-xs text-muted-foreground">Email will be sent to {rejectRequest?.email}</p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectRequest(null)}>Annulla</Button>
-            <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim()}>Conferma Rifiuto</Button>
+            <Button variant="outline" onClick={() => setRejectRequest(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim()}>Confirm Rejection</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -536,7 +536,7 @@ const AdminRequests = () => {
       <Dialog open={!!wizardRequest} onOpenChange={() => setWizardRequest(null)}>
         <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-heading">Approva Richiesta — {wizardRequest?.company_name}</DialogTitle>
+            <DialogTitle className="font-heading">Approve Request — {wizardRequest?.company_name}</DialogTitle>
           </DialogHeader>
 
           {/* Step indicator */}
@@ -560,23 +560,23 @@ const AdminRequests = () => {
           {wizardStep === 0 && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><Label className="text-xs">Nome Azienda *</Label><Input value={wizardData.company_name} onChange={e => setWizardData(d => ({ ...d, company_name: e.target.value }))} className="bg-secondary" /></div>
-                <div><Label className="text-xs">Referente</Label><Input value={wizardData.contact_name} onChange={e => setWizardData(d => ({ ...d, contact_name: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Company Name *</Label><Input value={wizardData.company_name} onChange={e => setWizardData(d => ({ ...d, company_name: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Contact</Label><Input value={wizardData.contact_name} onChange={e => setWizardData(d => ({ ...d, contact_name: e.target.value }))} className="bg-secondary" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label className="text-xs">Email</Label><Input value={wizardData.email} onChange={e => setWizardData(d => ({ ...d, email: e.target.value }))} className="bg-secondary" /></div>
-                <div><Label className="text-xs">Telefono</Label><Input value={wizardData.phone} onChange={e => setWizardData(d => ({ ...d, phone: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Phone</Label><Input value={wizardData.phone} onChange={e => setWizardData(d => ({ ...d, phone: e.target.value }))} className="bg-secondary" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label className="text-xs">Paese</Label><Input value={wizardData.country} onChange={e => setWizardData(d => ({ ...d, country: e.target.value }))} className="bg-secondary" /></div>
-                <div><Label className="text-xs">Zona</Label><Input value={wizardData.zone} onChange={e => setWizardData(d => ({ ...d, zone: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Country</Label><Input value={wizardData.country} onChange={e => setWizardData(d => ({ ...d, country: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Zone</Label><Input value={wizardData.zone} onChange={e => setWizardData(d => ({ ...d, zone: e.target.value }))} className="bg-secondary" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label className="text-xs">Tipo Attività</Label><Input value={wizardData.business_type} onChange={e => setWizardData(d => ({ ...d, business_type: e.target.value }))} className="bg-secondary" /></div>
-                <div><Label className="text-xs">P.IVA</Label><Input value={wizardData.vat_number} onChange={e => setWizardData(d => ({ ...d, vat_number: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">Business Type</Label><Input value={wizardData.business_type} onChange={e => setWizardData(d => ({ ...d, business_type: e.target.value }))} className="bg-secondary" /></div>
+                <div><Label className="text-xs">VAT Number</Label><Input value={wizardData.vat_number} onChange={e => setWizardData(d => ({ ...d, vat_number: e.target.value }))} className="bg-secondary" /></div>
               </div>
-              <div><Label className="text-xs">Indirizzo</Label><Input value={wizardData.address} onChange={e => setWizardData(d => ({ ...d, address: e.target.value }))} className="bg-secondary" /></div>
-              <div><Label className="text-xs">Sito Web</Label><Input value={wizardData.website} onChange={e => setWizardData(d => ({ ...d, website: e.target.value }))} className="bg-secondary" /></div>
+              <div><Label className="text-xs">Address</Label><Input value={wizardData.address} onChange={e => setWizardData(d => ({ ...d, address: e.target.value }))} className="bg-secondary" /></div>
+              <div><Label className="text-xs">Website</Label><Input value={wizardData.website} onChange={e => setWizardData(d => ({ ...d, website: e.target.value }))} className="bg-secondary" /></div>
             </div>
           )}
 
@@ -584,7 +584,7 @@ const AdminRequests = () => {
           {wizardStep === 1 && (
             <div className="space-y-4">
               <div>
-                <Label className="text-xs font-semibold">Termini di Pagamento *</Label>
+                <Label className="text-xs font-semibold">Payment Terms *</Label>
                 <Select value={wizardData.payment_terms} onValueChange={v => setWizardData(d => ({ ...d, payment_terms: v }))}>
                   <SelectTrigger className="bg-secondary"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -593,26 +593,26 @@ const AdminRequests = () => {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Listino Prezzi</Label>
+                <Label className="text-xs font-semibold">Price List</Label>
                 <Select value={wizardData.price_list_id || "__none__"} onValueChange={v => setWizardData(d => ({ ...d, price_list_id: v === "__none__" ? "" : v }))}>
-                  <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona listino..." /></SelectTrigger>
+                  <SelectTrigger className="bg-secondary"><SelectValue placeholder="Select price list..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">— Nessun listino —</SelectItem>
+                    <SelectItem value="__none__">— No price list —</SelectItem>
                     {priceLists?.map(pl => <SelectItem key={pl.id} value={pl.id}>{pl.name}{pl.description ? ` — ${pl.description}` : ""}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Referente Commerciale</Label>
+                <Label className="text-xs font-semibold">Sales Representative</Label>
                 <Select value={wizardData.assigned_sales_id || "__none__"} onValueChange={v => setWizardData(d => ({ ...d, assigned_sales_id: v === "__none__" ? "" : v }))}>
-                  <SelectTrigger className="bg-secondary"><SelectValue placeholder="Seleziona sales..." /></SelectTrigger>
+                  <SelectTrigger className="bg-secondary"><SelectValue placeholder="Select sales rep..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">— Non assegnato —</SelectItem>
+                    <SelectItem value="__none__">— Not assigned —</SelectItem>
                     {salesUsers?.map(s => <SelectItem key={s.user_id} value={s.user_id}>{s.contact_name || s.email || s.user_id}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label className="text-xs">Note pagamento</Label><Textarea value={wizardData.payment_terms_notes} onChange={e => setWizardData(d => ({ ...d, payment_terms_notes: e.target.value }))} className="bg-secondary" rows={2} /></div>
+              <div><Label className="text-xs">Payment Notes</Label><Textarea value={wizardData.payment_terms_notes} onChange={e => setWizardData(d => ({ ...d, payment_terms_notes: e.target.value }))} className="bg-secondary" rows={2} /></div>
             </div>
           )}
 
@@ -621,7 +621,7 @@ const AdminRequests = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/10">
                 <KeyRound size={16} className="text-primary" />
-                <p className="text-sm text-foreground font-semibold">Credenziali Portale Dealer</p>
+                <p className="text-sm text-foreground font-semibold">Dealer Portal Credentials</p>
               </div>
               <div>
                 <Label className="text-xs">Email *</Label>
@@ -633,20 +633,20 @@ const AdminRequests = () => {
                 <div className="flex gap-2">
                   <Input value={wizardData.account_password} onChange={e => setWizardData(d => ({ ...d, account_password: e.target.value }))} className="bg-secondary font-mono flex-1" />
                   <Button variant="outline" size="sm" onClick={() => setWizardData(d => ({ ...d, account_password: generatePassword() }))} className="gap-1">
-                    <RefreshCw size={12} /> Genera
+                    <RefreshCw size={12} /> Generate
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(wizardData.account_password); toast.success("Password copiata"); }}>
+                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(wizardData.account_password); toast.success("Password copied"); }}>
                     <Copy size={12} />
                   </Button>
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1">La password verrà inviata al dealer tramite email di benvenuto</p>
+                <p className="text-[11px] text-muted-foreground mt-1">The password will be sent to the dealer via welcome email</p>
               </div>
 
               <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
                 <Checkbox checked={wizardData.send_welcome_email} onCheckedChange={(c) => setWizardData(d => ({ ...d, send_welcome_email: !!c }))} />
                 <div>
-                  <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Mail size={12} /> Invia email di benvenuto</p>
-                  <p className="text-xs text-muted-foreground">L'email sarà inviata a {wizardData.account_email}</p>
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Mail size={12} /> Send welcome email</p>
+                  <p className="text-xs text-muted-foreground">Email will be sent to {wizardData.account_email}</p>
                 </div>
               </div>
             </div>
@@ -656,20 +656,20 @@ const AdminRequests = () => {
           {wizardStep === 3 && (
             <div className="space-y-4">
               <div className="p-4 bg-secondary/50 rounded-lg space-y-3 text-sm">
-                <h3 className="font-heading font-bold text-foreground">Riepilogo</h3>
+                <h3 className="font-heading font-bold text-foreground">Summary</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><span className="text-muted-foreground text-xs">Azienda</span><p className="font-semibold">{wizardData.company_name}</p></div>
-                  <div><span className="text-muted-foreground text-xs">Referente</span><p>{wizardData.contact_name}</p></div>
-                  <div><span className="text-muted-foreground text-xs">Paese</span><p>{wizardData.country || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs">P.IVA</span><p>{wizardData.vat_number || "—"}</p></div>
-                  <div><span className="text-muted-foreground text-xs">Pagamento</span><p>{PAYMENT_TERMS_OPTIONS.find(o => o.value === wizardData.payment_terms)?.label}</p></div>
-                  <div><span className="text-muted-foreground text-xs">Listino</span><p>{priceLists?.find(pl => pl.id === wizardData.price_list_id)?.name || "Nessuno"}</p></div>
-                  <div><span className="text-muted-foreground text-xs">Referente Commerciale</span><p>{salesUsers?.find(s => s.user_id === wizardData.assigned_sales_id)?.contact_name || "Non assegnato"}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Company</span><p className="font-semibold">{wizardData.company_name}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Contact</span><p>{wizardData.contact_name}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Country</span><p>{wizardData.country || "—"}</p></div>
+                  <div><span className="text-muted-foreground text-xs">VAT Number</span><p>{wizardData.vat_number || "—"}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Payment</span><p>{PAYMENT_TERMS_OPTIONS.find(o => o.value === wizardData.payment_terms)?.label}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Price List</span><p>{priceLists?.find(pl => pl.id === wizardData.price_list_id)?.name || "None"}</p></div>
+                  <div><span className="text-muted-foreground text-xs">Sales Rep</span><p>{salesUsers?.find(s => s.user_id === wizardData.assigned_sales_id)?.contact_name || "Not assigned"}</p></div>
                 </div>
                 <div className="border-t border-border pt-3">
-                  <span className="text-muted-foreground text-xs">Email account</span><p className="font-mono text-sm">{wizardData.account_email}</p>
+                  <span className="text-muted-foreground text-xs">Account email</span><p className="font-mono text-sm">{wizardData.account_email}</p>
                   <span className="text-muted-foreground text-xs">Password</span><p className="font-mono text-sm">{wizardData.account_password}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{wizardData.send_welcome_email ? "✅ Email di benvenuto sarà inviata" : "❌ Email non sarà inviata"}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{wizardData.send_welcome_email ? "✅ Welcome email will be sent" : "❌ Email will not be sent"}</p>
                 </div>
               </div>
             </div>
@@ -678,18 +678,18 @@ const AdminRequests = () => {
           {/* Navigation */}
           <div className="flex justify-between pt-4 border-t border-border">
             <Button variant="outline" onClick={() => wizardStep > 0 ? setWizardStep(s => s - 1) : setWizardRequest(null)} className="gap-1">
-              <ChevronLeft size={14} /> {wizardStep > 0 ? "Indietro" : "Annulla"}
+              <ChevronLeft size={14} /> {wizardStep > 0 ? "Back" : "Cancel"}
             </Button>
             {wizardStep < 3 ? (
               <Button onClick={() => setWizardStep(s => s + 1)} className="gap-1" disabled={
                 (wizardStep === 0 && (!wizardData.company_name.trim() || !wizardData.email.trim())) ||
                 (wizardStep === 2 && (!wizardData.account_email.trim() || !wizardData.account_password.trim()))
               }>
-                Avanti <ChevronRight size={14} />
+                Next <ChevronRight size={14} />
               </Button>
             ) : (
               <Button onClick={handleWizardCreate} disabled={wizardCreating} className="gap-1 bg-success text-success-foreground hover:bg-success/90">
-                {wizardCreating ? <><Loader2 size={14} className="animate-spin" /> Creazione...</> : <><Check size={14} /> Crea Account</>}
+                {wizardCreating ? <><Loader2 size={14} className="animate-spin" /> Creating...</> : <><Check size={14} /> Create Account</>}
               </Button>
             )}
           </div>
