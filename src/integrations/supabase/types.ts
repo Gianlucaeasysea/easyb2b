@@ -1239,6 +1239,7 @@ export type Database = {
           order_type: string | null
           payed_date: string | null
           payment_due_date: string | null
+          payment_reminder_sent_at: string | null
           payment_status: string | null
           payment_terms: string | null
           pickup_date: string | null
@@ -1261,6 +1262,7 @@ export type Database = {
           order_type?: string | null
           payed_date?: string | null
           payment_due_date?: string | null
+          payment_reminder_sent_at?: string | null
           payment_status?: string | null
           payment_terms?: string | null
           pickup_date?: string | null
@@ -1283,6 +1285,7 @@ export type Database = {
           order_type?: string | null
           payed_date?: string | null
           payment_due_date?: string | null
+          payment_reminder_sent_at?: string | null
           payment_status?: string | null
           payment_terms?: string | null
           pickup_date?: string | null

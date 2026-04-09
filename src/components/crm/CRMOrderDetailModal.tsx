@@ -21,9 +21,10 @@ interface CRMOrderDetailModalProps {
 }
 
 const DOC_TYPE_LABELS: Record<string, string> = {
+  order_confirmation: "Order Confirmation",
   invoice: "Invoice", ddt: "DDT", credit_note: "Credit Note",
-  proforma: "Proforma", order_confirmation: "Order Confirmation",
-  delivery_note: "Delivery Note", warranty: "Warranty", other: "Other",
+  proforma: "Proforma", delivery_note: "Delivery Note",
+  warranty: "Warranty", other: "Other",
 };
 const docTypeLabel = (type: string) => DOC_TYPE_LABELS[type] || type;
 

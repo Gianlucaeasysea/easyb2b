@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,7 @@ const AdminOrderDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -206,7 +208,13 @@ const AdminOrderDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       setStatus("confirmed");
-      toast.success("Order confirmed");
+      toast.success("Order confirmed! Don't forget to upload the Order Confirmation document.", {
+        action: { label: "Upload Now", onClick: () => {
+          // Scroll to documents section
+          document.querySelector('[data-documents-section]')?.scrollIntoView({ behavior: 'smooth' });
+        }},
+        duration: 8000,
+      });
     } catch (error) {
       showErrorToast(error, "AdminOrderDetail.confirmOrder");
     } finally {
@@ -399,7 +407,54 @@ const AdminOrderDetail = () => {
             )}
           </div>
 
-          <div className="glass-card-solid p-5">
+          {/* Payment due warning */}
+          {order.payment_due_date && order.payment_status !== "paid" && (
+            <div className={`p-4 rounded-lg flex items-center justify-between ${
+              new Date(order.payment_due_date) < new Date() ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
+            }`}>
+              <div className="flex items-center gap-2 text-sm">
+                <CalendarClock size={16} />
+                <span>Payment due: <strong>{format(new Date(order.payment_due_date), "dd MMM yyyy")}</strong></span>
+                {new Date(order.payment_due_date) < new Date() && <Badge variant="destructive" className="text-[10px]">OVERDUE</Badge>}
+              </div>
+              {order.status === "delivered" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={async () => {
+                    if (!client?.email) { toast.error("No client email"); return; }
+                    try {
+                      await supabase.functions.invoke("send-crm-email", {
+                        body: {
+                          to: client.email,
+                          subject: `Payment reminder — Order ${order.order_code || order.id.slice(0, 8)}`,
+                          body: `This is a friendly reminder that payment for order ${order.order_code || order.id.slice(0, 8)} (€${Number(order.total_amount || 0).toFixed(2)}) was due on ${format(new Date(order.payment_due_date!), "dd MMM yyyy")}. Please arrange payment at your earliest convenience.\n\nBest regards,\nEasysea B2B Team`,
+                        },
+                      });
+                      // Log in communications
+                      await supabase.from("client_communications").insert({
+                        client_id: order.client_id,
+                        recipient_email: client.email,
+                        subject: `Payment reminder — Order ${order.order_code || order.id.slice(0, 8)}`,
+                        body: `Payment reminder sent for €${Number(order.total_amount || 0).toFixed(2)}`,
+                        sent_by: user?.id || "",
+                        template_type: "payment_reminder",
+                        order_id: order.id,
+                      } as any);
+                      toast.success("Payment reminder sent");
+                    } catch (err) {
+                      showErrorToast(err, "sendPaymentReminder");
+                    }
+                  }}
+                >
+                  <Mail size={12} /> Send Payment Reminder
+                </Button>
+              )}
+            </div>
+          )}
+
+          <div className="glass-card-solid p-5" data-documents-section>
             <OrderDocuments orderId={order.id} />
           </div>
 
