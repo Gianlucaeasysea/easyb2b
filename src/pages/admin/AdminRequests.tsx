@@ -378,7 +378,7 @@ const AdminRequests = () => {
                 const sc = STATUS_CONFIG[r.status || "new"] || STATUS_CONFIG.new;
                 return (
                   <TableRow key={r.id} className="cursor-pointer hover:bg-secondary/50" onClick={() => { setSelectedRequest(r); setEditingNotes((r as any).admin_notes || ""); }}>
-                    <TableCell className="text-muted-foreground text-xs">{format(new Date(r.created_at), "dd MMM yyyy", { locale: it })}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{format(new Date(r.created_at), "dd MMM yyyy")}</TableCell>
                     <TableCell className="font-heading font-semibold">{r.company_name}</TableCell>
                     <TableCell className="text-sm">{r.contact_name}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{r.email}</TableCell>
