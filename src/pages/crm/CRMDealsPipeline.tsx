@@ -32,7 +32,7 @@ const stageProbMap: Record<string, number> = {
 };
 
 const fmtCurrency = (v: number | null) =>
-  `€${(v || 0).toLocaleString("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  `€${(v || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
 const fmtDate = (d: string | null | undefined) => {
   if (!d) return "";

@@ -301,17 +301,17 @@ const AdminClients = () => {
                       const stats = clientOrderStats?.[c.id];
                       if (!stats?.lastOrder) return <span className="text-xs text-muted-foreground">Mai</span>;
                       const days = differenceInDays(new Date(), new Date(stats.lastOrder));
-                      const dateStr = new Date(stats.lastOrder).toLocaleDateString("it-IT");
+                      const dateStr = new Date(stats.lastOrder).toLocaleDateString("en-US");
                       return (
                         <div>
                           <span className="text-xs">{dateStr}</span>
-                          <p className="text-[10px] text-muted-foreground">{days} giorni fa</p>
+                          <p className="text-[10px] text-muted-foreground">{days} days ago</p>
                         </div>
                       );
                     })()}
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)} className="text-right">
-                    <span className="font-mono text-sm">€{(clientOrderStats?.[c.id]?.totalSpent || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</span>
+                    <span className="font-mono text-sm">€{(clientOrderStats?.[c.id]?.totalSpent || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/clients/${c.id}`)}>
                     <Badge className={`border-0 text-[10px] ${

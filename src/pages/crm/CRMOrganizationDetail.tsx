@@ -21,7 +21,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { isPast } from "date-fns";
 import { format, differenceInDays, isValid } from "date-fns";
-import { it } from "date-fns/locale";
+
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,7 +58,7 @@ const fmtDate = (d: string | null | undefined) => {
   if (!d) return "—";
   try {
     const date = new Date(d);
-    return isValid(date) ? format(date, "dd MMM yyyy", { locale: it }) : "—";
+    return isValid(date) ? format(date, "dd MMM yyyy") : "—";
   } catch { return "—"; }
 };
 
@@ -92,7 +92,7 @@ const CRMOrganizationDetail = () => {
 
   const handleCreateCredentials = async () => {
     if (!client?.email) {
-      toast.error("Questa organizzazione non ha un'email configurata");
+      toast.error("This organization has no email configured");
       return;
     }
     setCreatingCredentials(true);
@@ -100,13 +100,13 @@ const CRMOrganizationDetail = () => {
       const password = generatePassword();
       const result = await invokeDealerAccountAction<{ email_sent?: boolean }>({ client_id: id!, email: client.email, password });
       if (result?.email_sent) {
-        toast.success("Credenziali create e inviate via email al dealer");
+        toast.success("Credentials created and sent via email to the dealer");
       } else {
-        toast.success("Credenziali create (email non inviata — controlla la configurazione Gmail)");
+        toast.success("Credentials created (email not sent — check Gmail configuration)");
       }
       queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
     } catch (err: any) {
-      toast.error(err.message || "Errore nella creazione delle credenziali");
+      toast.error(err.message || "Failed to create credentials");
     } finally {
       setCreatingCredentials(false);
     }
@@ -115,14 +115,14 @@ const CRMOrganizationDetail = () => {
   const [deletingCredentials, setDeletingCredentials] = useState(false);
 
   const handleDeleteCredentials = async () => {
-    if (!confirm("Sei sicuro di voler eliminare le credenziali dealer? L'account verrà rimosso definitivamente.")) return;
+    if (!confirm("Are you sure you want to delete the dealer credentials? The account will be permanently removed.")) return;
     setDeletingCredentials(true);
     try {
       await invokeDealerAccountAction<{ success: boolean }>({ client_id: id!, action: "delete" });
-      toast.success("Credenziali dealer eliminate");
+      toast.success("Dealer credentials deleted");
       queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
     } catch (err: any) {
-      toast.error(err.message || "Errore nell'eliminazione delle credenziali");
+      toast.error(err.message || "Failed to delete credentials");
     } finally {
       setDeletingCredentials(false);
     }
@@ -259,18 +259,18 @@ const CRMOrganizationDetail = () => {
   const assignPriceList = async (priceListId: string) => {
     const { error } = await supabase.from("price_list_clients").insert({ price_list_id: priceListId, client_id: id! } as any);
     if (error) {
-      if (error.code === "23505") toast.info("Listino già assegnato");
+      if (error.code === "23505") toast.info("Price list already assigned");
       else toast.error(error.message);
     } else {
-      const plName = allPriceLists?.find(pl => pl.id === priceListId)?.name || "Listino";
-      toast.success(`Listino "${plName}" assegnato a ${client?.company_name}`);
+      const plName = allPriceLists?.find(pl => pl.id === priceListId)?.name || "Price list";
+      toast.success(`Price list "${plName}" assigned to ${client?.company_name}`);
       refetchAssignedLists();
       // Notify dealer
       if (client?.id) {
         await supabase.from("client_notifications").insert({
           client_id: client.id,
-          title: "Listino prezzi aggiornato",
-          body: "Il tuo listino prezzi è stato aggiornato. Visita il catalogo per vedere i nuovi prezzi.",
+          title: "Price list updated",
+          body: "Your price list has been updated. Visit the catalog to see the new prices.",
           type: "info",
           target_role: "dealer",
         } as any);
@@ -281,7 +281,7 @@ const CRMOrganizationDetail = () => {
   const removePriceList = async (plcId: string) => {
     const { error } = await supabase.from("price_list_clients").delete().eq("id", plcId);
     if (error) toast.error(error.message);
-    else { toast.success("Listino rimosso"); refetchAssignedLists(); }
+    else { toast.success("Price list removed"); refetchAssignedLists(); }
   };
 
   // discount_class deprecated - use price lists instead
@@ -291,7 +291,7 @@ const CRMOrganizationDetail = () => {
 
   // Contact mutations
   const saveContact = async () => {
-    if (!contactForm.contact_name.trim()) { toast.error("Il nome è obbligatorio"); return; }
+    if (!contactForm.contact_name.trim()) { toast.error("Name is required"); return; }
     const payload = {
       client_id: id!,
       contact_name: contactForm.contact_name.trim(),
@@ -310,12 +310,12 @@ const CRMOrganizationDetail = () => {
 
     if (editContactId) {
       const { error } = await supabase.from("client_contacts").update(payload).eq("id", editContactId);
-      if (error) { toast.error("Errore aggiornamento"); return; }
-      toast.success("Contatto aggiornato");
+      if (error) { toast.error("Failed to update contact"); return; }
+      toast.success("Contact updated");
     } else {
       const { error } = await supabase.from("client_contacts").insert(payload);
-      if (error) { toast.error("Errore salvataggio"); return; }
-      toast.success("Contatto aggiunto");
+      if (error) { toast.error("Failed to save contact"); return; }
+      toast.success("Contact added");
     }
     setAddContactOpen(false);
     setEditContactId(null);
@@ -327,10 +327,10 @@ const CRMOrganizationDetail = () => {
   const deleteContact = async (contactId: string) => {
     try {
       await deleteContactsCascade([contactId]);
-      toast.success("Contatto rimosso");
+      toast.success("Contact removed");
       refetchContacts();
     } catch (err: any) {
-      toast.error(err.message || "Errore eliminazione");
+      toast.error(err.message || "Failed to delete contact");
     }
   };
 
@@ -375,8 +375,8 @@ const CRMOrganizationDetail = () => {
       contact_id: actForm.contact_id || null,
       created_by: user?.id,
     } as any);
-    if (error) { toast.error("Errore"); return; }
-    toast.success("Attività aggiunta");
+    if (error) { toast.error("Error"); return; }
+    toast.success("Activity added");
     setAddActivityOpen(false);
     setActForm({ title: "", type: "call", body: "", contact_id: "" });
     queryClient.invalidateQueries({ queryKey: ["crm-org-activities", id] });
@@ -384,11 +384,11 @@ const CRMOrganizationDetail = () => {
 
   const openWhatsApp = (phone: string, name: string) => {
     const clean = phone.replace(/[^+\d]/g, "");
-    window.open(`https://wa.me/${clean.replace("+", "")}?text=${encodeURIComponent(`Buongiorno ${name}, sono il team commerciale EasySea.`)}`, "_blank");
+    window.open(`https://wa.me/${clean.replace("+", "")}?text=${encodeURIComponent(`Hello ${name}, this is the EasySea commercial team.`)}`, "_blank");
   };
 
-  if (isLoading) return <div className="text-muted-foreground p-6">Caricamento...</div>;
-  if (!client) return <div className="text-muted-foreground p-6">Organizzazione non trovata</div>;
+  if (isLoading) return <div className="text-muted-foreground p-6">Loading...</div>;
+  if (!client) return <div className="text-muted-foreground p-6">Organization not found</div>;
 
   const lastOrderDate = client.last_order_date;
   const daysSinceLastOrder = client.days_since_last_order;
@@ -434,7 +434,7 @@ const CRMOrganizationDetail = () => {
             <TrendingUp size={14} className="text-primary" />
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Fatturato</span>
           </div>
-          <p className="font-heading text-xl font-bold text-foreground">€{(client.total_orders_value || totalSpent).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</p>
+          <p className="font-heading text-xl font-bold text-foreground">€{(client.total_orders_value || totalSpent).toLocaleString("en-US", { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="glass-card-solid p-4">
           <div className="flex items-center gap-2 mb-1">
@@ -461,7 +461,7 @@ const CRMOrganizationDetail = () => {
               <p className={`font-heading text-sm font-bold ${nextReorderDays !== null && nextReorderDays < 0 ? "text-destructive" : nextReorderDays !== null && nextReorderDays <= 7 ? "text-warning" : "text-success"}`}>
                 {fmtDate(nextReorder)}
               </p>
-              <p className="text-[10px] text-muted-foreground">{nextReorderDays !== null && nextReorderDays < 0 ? `${Math.abs(nextReorderDays)}d scaduto` : `tra ${nextReorderDays}d`}</p>
+              <p className="text-[10px] text-muted-foreground">{nextReorderDays !== null && nextReorderDays < 0 ? `${Math.abs(nextReorderDays)}d overdue` : `in ${nextReorderDays}d`}</p>
             </>
           ) : (
             <p className="font-heading text-sm font-bold text-muted-foreground">—</p>
@@ -473,14 +473,14 @@ const CRMOrganizationDetail = () => {
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="mb-4 bg-secondary flex-wrap">
           <TabsTrigger value="overview" className="gap-1 text-xs"><Building2 size={14} /> Overview</TabsTrigger>
-          <TabsTrigger value="contacts" className="gap-1 text-xs"><Users size={14} /> Contatti ({contacts?.length || 0})</TabsTrigger>
+          <TabsTrigger value="contacts" className="gap-1 text-xs"><Users size={14} /> Contacts ({contacts?.length || 0})</TabsTrigger>
           <TabsTrigger value="deals" className="gap-1 text-xs"><Handshake size={14} /> Deals</TabsTrigger>
-          <TabsTrigger value="orders" className="gap-1 text-xs"><ShoppingBag size={14} /> Ordini ({totalOrders})</TabsTrigger>
-          <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Comunicazioni</TabsTrigger>
-          <TabsTrigger value="activities" className="gap-1 text-xs"><Clock size={14} /> Attività</TabsTrigger>
-          <TabsTrigger value="documents" className="gap-1 text-xs"><FileText size={14} /> Documenti ({documents?.length || 0})</TabsTrigger>
-          <TabsTrigger value="pricing" className="gap-1 text-xs"><Tag size={14} /> Listini & Sconti</TabsTrigger>
-          <TabsTrigger value="notes" className="gap-1 text-xs"><StickyNote size={14} /> Note</TabsTrigger>
+          <TabsTrigger value="orders" className="gap-1 text-xs"><ShoppingBag size={14} /> Orders ({totalOrders})</TabsTrigger>
+          <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Communications</TabsTrigger>
+          <TabsTrigger value="activities" className="gap-1 text-xs"><Clock size={14} /> Activities</TabsTrigger>
+          <TabsTrigger value="documents" className="gap-1 text-xs"><FileText size={14} /> Documents ({documents?.length || 0})</TabsTrigger>
+          <TabsTrigger value="pricing" className="gap-1 text-xs"><Tag size={14} /> Pricing & Discounts</TabsTrigger>
+          <TabsTrigger value="notes" className="gap-1 text-xs"><StickyNote size={14} /> Notes</TabsTrigger>
         </TabsList>
 
         {/* OVERVIEW */}
@@ -501,7 +501,7 @@ const CRMOrganizationDetail = () => {
                   {client.phone && (
                     <>
                       <Button variant="outline" size="sm" className="flex-1 text-xs gap-1" onClick={() => openWhatsApp(client.phone!, client.contact_name || client.company_name)}><MessageCircle size={12} /> WhatsApp</Button>
-                      <Button variant="outline" size="sm" className="flex-1 text-xs gap-1" onClick={() => window.open(`tel:${client.phone}`)}><Phone size={12} /> Chiama</Button>
+                      <Button variant="outline" size="sm" className="flex-1 text-xs gap-1" onClick={() => window.open(`tel:${client.phone}`)}><Phone size={12} /> Call</Button>
                     </>
                   )}
                 </div>
@@ -523,7 +523,7 @@ const CRMOrganizationDetail = () => {
                         <span className="text-xs text-muted-foreground">Email</span>
                         <div className="flex items-center gap-1">
                           <span className="text-xs font-mono text-foreground">{client.email}</span>
-                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { navigator.clipboard.writeText(client.email || ""); toast.success("Email copiata"); }}>
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { navigator.clipboard.writeText(client.email || ""); toast.success("Email copied"); }}>
                             <Copy size={10} />
                           </Button>
                         </div>
@@ -533,23 +533,23 @@ const CRMOrganizationDetail = () => {
                           try {
                             const { error } = await supabase.functions.invoke("reset-dealer-password", { body: { email: client.email } });
                             if (error) throw error;
-                            toast.success(`Email di reset password inviata a ${client.email}`);
-                          } catch (e: any) { toast.error(e.message || "Errore invio reset"); }
+                            toast.success(`Password reset email sent to ${client.email}`);
+                          } catch (e: any) { toast.error(e.message || "Failed to send reset"); }
                         }}>
                           <KeyRound size={10} /> Reset Password
                         </Button>
                         <Button variant="destructive" size="sm" className="gap-1 text-xs h-7" disabled={deletingCredentials} onClick={handleDeleteCredentials}>
                           {deletingCredentials ? <RefreshCw size={10} className="animate-spin" /> : <Trash2 size={10} />}
-                          Elimina Account
+                          Delete Account
                         </Button>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-xs text-muted-foreground">Nessun account dealer collegato. Crea le credenziali per abilitare l'accesso al portale.</p>
+                    <p className="text-xs text-muted-foreground">No dealer account linked. Create credentials to enable portal access.</p>
                     {!client.email && (
-                      <p className="text-xs text-destructive">⚠️ Configura prima un'email per questa organizzazione.</p>
+                      <p className="text-xs text-destructive">⚠️ Configure an email for this organization first.</p>
                     )}
                     <Button
                       size="sm"
@@ -558,7 +558,7 @@ const CRMOrganizationDetail = () => {
                       onClick={handleCreateCredentials}
                     >
                       {creatingCredentials ? <RefreshCw size={12} className="animate-spin" /> : <UserCheck size={12} />}
-                      Crea Credenziali & Invia Email
+                      Create Credentials & Send Email
                     </Button>
                   </div>
                 )}
@@ -591,7 +591,7 @@ const CRMOrganizationDetail = () => {
                           <p className="text-[10px] text-muted-foreground">{(d as any).contact?.contact_name || "—"}</p>
                         </div>
                         <div className="text-right shrink-0 ml-2">
-                          <p className="text-xs font-mono font-bold text-foreground">€{Number(d.value || 0).toLocaleString("it-IT")}</p>
+                          <p className="text-xs font-mono font-bold text-foreground">€{Number(d.value || 0).toLocaleString("en-US")}</p>
                           <Badge className={`border-0 text-[10px] ${stageColors[d.stage] || "bg-muted text-muted-foreground"}`}>
                             {stageLabels[d.stage] || d.stage}
                           </Badge>
@@ -600,8 +600,8 @@ const CRMOrganizationDetail = () => {
                     ))}
                   </div>
                   <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
-                    <span>Pipeline: €{orgDeals.filter((d: any) => !["closed_won", "closed_lost"].includes(d.stage)).reduce((s: number, d: any) => s + Number(d.value || 0), 0).toLocaleString("it-IT")}</span>
-                    <span>{orgDeals.filter((d: any) => d.stage === "closed_won").length} vinti · {orgDeals.filter((d: any) => d.stage === "closed_lost").length} persi</span>
+                    <span>Pipeline: €{orgDeals.filter((d: any) => !["closed_won", "closed_lost"].includes(d.stage)).reduce((s: number, d: any) => s + Number(d.value || 0), 0).toLocaleString("en-US")}</span>
+                    <span>{orgDeals.filter((d: any) => d.stage === "closed_won").length} won · {orgDeals.filter((d: any) => d.stage === "closed_lost").length} lost</span>
                   </div>
                 </div>
               )}
@@ -613,7 +613,7 @@ const CRMOrganizationDetail = () => {
                 <h3 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2 text-sm"><Clock size={14} /> Ultimi Eventi</h3>
                 {(() => {
                   const events = [
-                    ...(orders?.slice(0, 3).map(o => ({ type: "order", date: o.created_at, title: `Ordine ${(o as any).order_code || "#" + o.id.slice(0, 8)}`, sub: `€${Number(o.total_amount || 0).toLocaleString("it-IT")}` })) || []),
+                    ...(orders?.slice(0, 3).map(o => ({ type: "order", date: o.created_at, title: `Ordine ${(o as any).order_code || "#" + o.id.slice(0, 8)}`, sub: `€${Number(o.total_amount || 0).toLocaleString("en-US")}` })) || []),
                     ...(activities?.slice(0, 3).map(a => ({ type: "activity", date: a.created_at, title: a.title, sub: a.type })) || []),
                   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
@@ -645,13 +645,13 @@ const CRMOrganizationDetail = () => {
         <TabsContent value="contacts">
           <div className="glass-card-solid p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><Users size={16} /> Contatti dell'Organizzazione</h3>
+              <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><Users size={16} /> Organization Contacts</h3>
               <Button size="sm" onClick={() => { resetContactForm(); setEditContactId(null); setAddContactOpen(true); }} className="gap-1">
-                <Plus size={14} /> Aggiungi Contatto
+                <Plus size={14} /> Add Contact
               </Button>
             </div>
             {!contacts?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nessun contatto registrato. Aggiungi il primo contatto.</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No contacts registered. Add the first contact.</p>
             ) : (
               <div className="grid sm:grid-cols-2 gap-3">
                 {contacts.map((c: any) => (
@@ -669,11 +669,11 @@ const CRMOrganizationDetail = () => {
                         {c.job_title && <p className="text-xs text-muted-foreground mt-1">{c.job_title}{c.department ? ` · ${c.department}` : ""}</p>}
                         {c.email && <p className="text-xs text-muted-foreground mt-0.5"><Mail size={10} className="inline mr-1" />{c.email}</p>}
                         {c.phone && <p className="text-xs text-muted-foreground mt-0.5"><Phone size={10} className="inline mr-1" />{c.phone}</p>}
-                        <p className="text-[10px] text-muted-foreground mt-1">Canale: {c.preferred_channel || "email"}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Channel: {c.preferred_channel || "email"}</p>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => editContact(c)}><Pencil size={12} /></Button>
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => { if (confirm("Eliminare questo contatto?")) deleteContact(c.id); }}><Trash2 size={12} /></Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => { if (confirm("Delete this contact?")) deleteContact(c.id); }}><Trash2 size={12} /></Button>
                       </div>
                     </div>
                   </div>
@@ -694,17 +694,17 @@ const CRMOrganizationDetail = () => {
             {!orders?.length ? (
               <div className="p-8 text-center text-muted-foreground text-sm">
                 <ShoppingBag size={32} className="mx-auto mb-2 opacity-30" />
-                <p>Nessun ordine — il cliente è in {getClientStatusLabel(client.status || "lead")}</p>
+                <p>No orders — client is in {getClientStatusLabel(client.status || "lead")}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Codice</TableHead>
-                    <TableHead className="text-xs">Data</TableHead>
-                    <TableHead className="text-xs">Stato</TableHead>
-                    <TableHead className="text-xs">Pagamento</TableHead>
-                    <TableHead className="text-xs text-right">Totale</TableHead>
+                    <TableHead className="text-xs">Code</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Payment</TableHead>
+                    <TableHead className="text-xs text-right">Total</TableHead>
                     <TableHead className="text-xs"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -719,7 +719,7 @@ const CRMOrganizationDetail = () => {
                           <Badge className={`border-0 text-[10px] ${getPaymentStatusColor((o as any).payment_status)}`}>{getPaymentStatusLabel((o as any).payment_status)}</Badge>
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm font-semibold">€{Number(o.total_amount || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</TableCell>
+                      <TableCell className="text-right font-mono text-sm font-semibold">€{Number(o.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => {
                           e.stopPropagation();
@@ -751,11 +751,11 @@ const CRMOrganizationDetail = () => {
         <TabsContent value="activities">
           <div className="glass-card-solid p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><Clock size={16} /> Attività</h3>
-              <Button size="sm" onClick={() => setAddActivityOpen(true)} className="gap-1"><Plus size={14} /> Nuova Attività</Button>
+              <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><Clock size={16} /> Activities</h3>
+              <Button size="sm" onClick={() => setAddActivityOpen(true)} className="gap-1"><Plus size={14} /> New Activity</Button>
             </div>
             {!activities?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nessuna attività registrata</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No activities recorded</p>
             ) : (
               <div className="relative border-l-2 border-border ml-3 space-y-3">
                 {activities.map((a: any) => (
@@ -783,10 +783,10 @@ const CRMOrganizationDetail = () => {
           <div className="glass-card-solid p-6 mt-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><CheckSquare size={16} /> Task</h3>
-              <Button size="sm" onClick={() => setAddTaskOpen(true)} className="gap-1"><Plus size={14} /> Nuovo Task</Button>
+              <Button size="sm" onClick={() => setAddTaskOpen(true)} className="gap-1"><Plus size={14} /> New Task</Button>
             </div>
             {!orgTasks?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nessun task collegato</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No linked tasks</p>
             ) : (
               <div className="space-y-2">
                 {orgTasks.map((t: any) => {
@@ -806,7 +806,7 @@ const CRMOrganizationDetail = () => {
                           await supabase.from("tasks").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", t.id);
                           refetchTasks();
                           queryClient.invalidateQueries({ queryKey: ["crm-overdue-tasks-count"] });
-                          toast.success("Task completato");
+                          toast.success("Task completed");
                         }}><Check size={14} /></Button>
                       )}
                     </div>
@@ -821,14 +821,14 @@ const CRMOrganizationDetail = () => {
           <div className="glass-card-solid p-6">
             <h3 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2"><FileText size={16} /> Documenti</h3>
             {!documents?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nessun documento caricato</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No documents uploaded</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Nome File</TableHead>
-                    <TableHead className="text-xs">Tipo</TableHead>
-                    <TableHead className="text-xs">Data</TableHead>
+                    <TableHead className="text-xs">File Name</TableHead>
+                    <TableHead className="text-xs">Type</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -867,7 +867,7 @@ const CRMOrganizationDetail = () => {
               <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><StickyNote size={16} /> Note Azienda</h3>
               {!editingNotes ? (
                 <Button size="sm" variant="ghost" onClick={() => { setEditingNotes(true); setNotesValue(client.notes || ""); }}>
-                  {client.notes ? "Modifica" : "Aggiungi"}
+                  {client.notes ? "Edit" : "Add"}
                 </Button>
               ) : (
                 <div className="flex gap-1">
@@ -877,30 +877,30 @@ const CRMOrganizationDetail = () => {
                     const trimmed = notesValue.trim() || null;
                     const { error } = await supabase.from("clients").update({ notes: trimmed }).eq("id", id!);
                     setSavingNotes(false);
-                    if (error) { toast.error("Errore salvataggio"); return; }
-                    toast.success("Note salvate");
+                    if (error) { toast.error("Failed to save"); return; }
+                    toast.success("Notes saved");
                     setEditingNotes(false);
                     queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
                   }}>
-                    {savingNotes ? "..." : "Salva"}
+                    {savingNotes ? "..." : "Save"}
                   </Button>
                 </div>
               )}
             </div>
             {editingNotes ? (
-              <Textarea value={notesValue} onChange={e => setNotesValue(e.target.value)} placeholder="Scrivi note sull'azienda..." className="text-sm min-h-[150px] resize-none" />
+              <Textarea value={notesValue} onChange={e => setNotesValue(e.target.value)} placeholder="Write company notes..." className="text-sm min-h-[150px] resize-none" />
             ) : client.notes ? (
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{client.notes}</p>
             ) : (
-              <p className="text-xs text-muted-foreground italic">Nessuna nota.</p>
+              <p className="text-xs text-muted-foreground italic">No notes.</p>
             )}
 
             {/* Note activities (type = note) */}
             <div className="mt-6">
-              <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-3">Note dal Team Sales</h4>
+              <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-3">Sales Team Notes</h4>
               {(() => {
                 const noteActs = activities?.filter((a: any) => a.type === "note") || [];
-                if (!noteActs.length) return <p className="text-xs text-muted-foreground italic">Nessuna nota dal team.</p>;
+                if (!noteActs.length) return <p className="text-xs text-muted-foreground italic">No notes from the team.</p>;
                 return (
                   <div className="space-y-2">
                     {noteActs.map((a: any) => (
@@ -924,16 +924,16 @@ const CRMOrganizationDetail = () => {
       <Dialog open={addContactOpen} onOpenChange={setAddContactOpen}>
         <DialogContent className="bg-card border-border max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-heading">{editContactId ? "Modifica Contatto" : "Nuovo Contatto"}</DialogTitle>
+            <DialogTitle className="font-heading">{editContactId ? "Edit Contact" : "New Contact"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Nome *</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Name *</Label>
                 <Input className="h-9 text-sm bg-secondary border-border" value={contactForm.contact_name} onChange={e => setContactForm(f => ({ ...f, contact_name: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Tipo Contatto</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Contact Type</Label>
                 <Select value={contactForm.contact_type} onValueChange={v => setContactForm(f => ({ ...f, contact_type: v }))}>
                   <SelectTrigger className="h-9 text-sm bg-secondary border-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -946,7 +946,7 @@ const CRMOrganizationDetail = () => {
                 <Input className="h-9 text-sm bg-secondary border-border" value={contactForm.email} onChange={e => setContactForm(f => ({ ...f, email: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Telefono</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Phone</Label>
                 <Input className="h-9 text-sm bg-secondary border-border" value={contactForm.phone} onChange={e => setContactForm(f => ({ ...f, phone: e.target.value }))} />
               </div>
               <div className="space-y-1">
@@ -954,16 +954,16 @@ const CRMOrganizationDetail = () => {
                 <Input className="h-9 text-sm bg-secondary border-border" value={contactForm.job_title} onChange={e => setContactForm(f => ({ ...f, job_title: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Dipartimento</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Department</Label>
                 <Input className="h-9 text-sm bg-secondary border-border" value={contactForm.department} onChange={e => setContactForm(f => ({ ...f, department: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Canale Preferito</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Preferred Channel</Label>
                 <Select value={contactForm.preferred_channel} onValueChange={v => setContactForm(f => ({ ...f, preferred_channel: v }))}>
                   <SelectTrigger className="h-9 text-sm bg-secondary border-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="phone">Telefono</SelectItem>
+                    <SelectItem value="phone">Phone</SelectItem>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
                     <SelectItem value="linkedin">LinkedIn</SelectItem>
                   </SelectContent>
@@ -977,7 +977,7 @@ const CRMOrganizationDetail = () => {
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox checked={contactForm.is_primary} onCheckedChange={v => setContactForm(f => ({ ...f, is_primary: !!v }))} />
-                <Star size={12} className="text-warning" /> Contatto Principale
+                <Star size={12} className="text-warning" /> Primary Contact
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox checked={contactForm.is_decision_maker} onCheckedChange={v => setContactForm(f => ({ ...f, is_decision_maker: !!v }))} />
@@ -988,7 +988,7 @@ const CRMOrganizationDetail = () => {
               <Label className="text-[10px] uppercase text-muted-foreground">Note</Label>
               <Textarea className="text-sm bg-secondary border-border min-h-[60px]" value={contactForm.notes} onChange={e => setContactForm(f => ({ ...f, notes: e.target.value }))} />
             </div>
-            <Button onClick={saveContact} className="w-full">{editContactId ? "Aggiorna Contatto" : "Aggiungi Contatto"}</Button>
+            <Button onClick={saveContact} className="w-full">{editContactId ? "Update Contact" : "Add Contact"}</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -996,32 +996,32 @@ const CRMOrganizationDetail = () => {
       {/* Add Activity Dialog */}
       <Dialog open={addActivityOpen} onOpenChange={setAddActivityOpen}>
         <DialogContent className="bg-card border-border">
-          <DialogHeader><DialogTitle className="font-heading">Nuova Attività</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-heading">New Activity</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label className="text-[10px] uppercase text-muted-foreground">Titolo *</Label>
+              <Label className="text-[10px] uppercase text-muted-foreground">Title *</Label>
               <Input className="h-9 text-sm bg-secondary border-border" value={actForm.title} onChange={e => setActForm(f => ({ ...f, title: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Tipo</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Type</Label>
                 <Select value={actForm.type} onValueChange={v => setActForm(f => ({ ...f, type: v }))}>
                   <SelectTrigger className="h-9 text-sm bg-secondary border-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="call">📞 Chiamata</SelectItem>
+                    <SelectItem value="call">📞 Call</SelectItem>
                     <SelectItem value="email">📧 Email</SelectItem>
                     <SelectItem value="whatsapp">💬 WhatsApp</SelectItem>
                     <SelectItem value="meeting">📹 Meeting</SelectItem>
-                    <SelectItem value="note">📝 Nota</SelectItem>
+                    <SelectItem value="note">📝 Note</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Contatto</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Contact</Label>
                 <Select value={actForm.contact_id || "__none__"} onValueChange={v => setActForm(f => ({ ...f, contact_id: v === "__none__" ? "" : v }))}>
-                  <SelectTrigger className="h-9 text-sm bg-secondary border-border"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-sm bg-secondary border-border"><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">Nessuno</SelectItem>
+                    <SelectItem value="__none__">None</SelectItem>
                     {contacts?.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.contact_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -1039,15 +1039,15 @@ const CRMOrganizationDetail = () => {
       {/* Add Task Dialog */}
       <Dialog open={addTaskOpen} onOpenChange={setAddTaskOpen}>
         <DialogContent className="bg-card border-border">
-          <DialogHeader><DialogTitle className="font-heading">Nuovo Task</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-heading">New Task</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label className="text-xs uppercase text-muted-foreground">Titolo *</Label>
+              <Label className="text-xs uppercase text-muted-foreground">Title *</Label>
               <Input className="bg-secondary border-border" value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs uppercase text-muted-foreground">Tipo</Label>
+                <Label className="text-xs uppercase text-muted-foreground">Type</Label>
                 <Select value={taskForm.type} onValueChange={v => setTaskForm(f => ({ ...f, type: v }))}>
                   <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -1098,7 +1098,7 @@ const CRMOrganizationDetail = () => {
               refetchTasks();
               queryClient.invalidateQueries({ queryKey: ["crm-tasks"] });
               queryClient.invalidateQueries({ queryKey: ["crm-overdue-tasks-count"] });
-            }}>Crea Task</Button>
+            }}>Create Task</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1174,7 +1174,7 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
   const updateItemPrice = async (itemId: string, newPrice: number) => {
     const { error } = await supabase.from("price_list_items").update({ custom_price: newPrice }).eq("id", itemId);
     if (error) toast.error(error.message);
-    else { toast.success("Prezzo aggiornato"); refetchEditItems(); }
+    else { toast.success("Price updated"); refetchEditItems(); }
   };
 
   const unassignedLists = allPriceLists.filter(pl => !assignedPriceLists.some(a => a.price_list_id === pl.id));
@@ -1185,34 +1185,34 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
       {/* Dealer Portal Visibility */}
       <div className="glass-card-solid p-5">
         <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2 text-sm">
-          <Eye size={14} /> Visibilità Portale Dealer
+          <Eye size={14} /> Dealer Portal Visibility
         </h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
             <div>
-              <p className="text-sm font-semibold text-foreground">Classi di Sconto</p>
-              <p className="text-xs text-muted-foreground">Mostra le classi di sconto al dealer</p>
+              <p className="text-sm font-semibold text-foreground">Discount Tiers</p>
+              <p className="text-xs text-muted-foreground">Show discount tiers to the dealer</p>
             </div>
             <Switch
               checked={client.show_discount_tiers ?? true}
               onCheckedChange={async (checked) => {
                 const { error } = await supabase.from("clients").update({ show_discount_tiers: checked } as any).eq("id", clientId);
                 if (error) toast.error(error.message);
-                else { toast.success("Aggiornato"); queryClient.invalidateQueries({ queryKey: ["crm-org", clientId] }); }
+                else { toast.success("Updated"); queryClient.invalidateQueries({ queryKey: ["crm-org", clientId] }); }
               }}
             />
           </div>
           <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
             <div>
               <p className="text-sm font-semibold text-foreground">Goals & Rewards</p>
-              <p className="text-xs text-muted-foreground">Mostra la pagina Goals & Rewards al dealer</p>
+              <p className="text-xs text-muted-foreground">Show Goals & Rewards page to the dealer</p>
             </div>
             <Switch
               checked={client.show_goals ?? true}
               onCheckedChange={async (checked) => {
                 const { error } = await supabase.from("clients").update({ show_goals: checked } as any).eq("id", clientId);
                 if (error) toast.error(error.message);
-                else { toast.success("Aggiornato"); queryClient.invalidateQueries({ queryKey: ["crm-org", clientId] }); }
+                else { toast.success("Updated"); queryClient.invalidateQueries({ queryKey: ["crm-org", clientId] }); }
               }}
             />
           </div>
@@ -1223,10 +1223,10 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
       <div className="glass-card-solid p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-heading font-bold text-foreground flex items-center gap-2 text-sm">
-            <Tag size={14} /> Listini Assegnati
+            <Tag size={14} /> Assigned Price Lists
           </h3>
           <Button size="sm" className="gap-1" onClick={() => setAssignDialogOpen(true)}>
-            <Plus size={14} /> Assegna Listino
+            <Plus size={14} /> Assign Price List
           </Button>
         </div>
 
@@ -1243,13 +1243,13 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
                     <div className="flex items-center gap-2 mt-0.5">
                       {plc.price_lists?.description && <p className="text-xs text-muted-foreground">{plc.price_lists.description}</p>}
                       {tier && <Badge variant="outline" className="text-[10px]">-{tier.discount_pct}%</Badge>}
-                      <span className="text-[10px] text-muted-foreground">{itemCount} prodotti</span>
-                      <span className="text-[10px] text-muted-foreground">· Assegnato il: {fmtDate(plc.created_at)}</span>
+                      <span className="text-[10px] text-muted-foreground">{itemCount} products</span>
+                      <span className="text-[10px] text-muted-foreground">· Assigned on: {fmtDate(plc.created_at)}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => { setEditingListId(plc.price_list_id); setCustomPricesOpen(true); }}>
-                      <Pencil size={12} /> Modifica Sconti
+                      <Pencil size={12} /> Edit Discounts
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/20" onClick={() => removePriceList(plc.id)}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -1261,8 +1261,8 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
           </div>
         ) : (
           <div className="p-4 bg-warning/10 border border-warning/30 rounded-lg mb-4">
-            <p className="text-sm font-semibold text-warning">⚠️ Nessun listino prezzi assegnato</p>
-            <p className="text-xs text-muted-foreground mt-1">Il cliente non può visualizzare i prezzi nel portale. Assegna un listino per abilitare gli ordini.</p>
+            <p className="text-sm font-semibold text-warning">⚠️ No price lists assigned</p>
+            <p className="text-xs text-muted-foreground mt-1">The client cannot view prices in the portal. Assign a price list to enable orders.</p>
           </div>
         )}
       </div>
@@ -1270,19 +1270,19 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
       {/* Assign Price List Dialog */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
         <DialogContent className="bg-card border-border max-w-lg">
-          <DialogHeader><DialogTitle className="font-heading">Assegna Listino a {client.company_name}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-heading">Assign Price List a {client.company_name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
-              <Label className="text-[10px] uppercase text-muted-foreground">Seleziona Listino</Label>
+              <Label className="text-[10px] uppercase text-muted-foreground">Select Price List</Label>
               <Select value={selectedListId} onValueChange={setSelectedListId}>
-                <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Scegli un listino..." /></SelectTrigger>
+                <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Choose a price list..." /></SelectTrigger>
                 <SelectContent>
                   {unassignedLists.map(pl => {
                     const tier = discountTiers.find(t => t.id === pl.discount_tier_id);
                     const itemCount = priceListItemCounts[pl.id] || 0;
                     return (
                       <SelectItem key={pl.id} value={pl.id}>
-                        {pl.name} {tier ? `(-${tier.discount_pct}%)` : ""} · {itemCount} prodotti
+                        {pl.name} {tier ? `(-${tier.discount_pct}%)` : ""} · {itemCount} products
                       </SelectItem>
                     );
                   })}
@@ -1293,7 +1293,7 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
             {/* Current assignment note */}
             {assignedPriceLists.length > 0 && (
               <p className="text-xs text-muted-foreground bg-secondary/50 p-2 rounded">
-                Listino attuale: <strong>{assignedPriceLists.map(a => a.price_lists?.name).join(", ")}</strong>. Il nuovo listino verrà aggiunto.
+                Current list: <strong>{assignedPriceLists.map(a => a.price_lists?.name).join(", ")}</strong>. The new list will be added.
               </p>
             )}
 
@@ -1306,7 +1306,7 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
                 <div className="p-3 bg-secondary/50 rounded-lg text-xs space-y-1">
                   <p className="font-semibold text-foreground">{sel.name}</p>
                   {sel.description && <p className="text-muted-foreground">{sel.description}</p>}
-                  <p className="text-muted-foreground">{count} prodotti inclusi {tier ? `· Sconto base: -${tier.discount_pct}%` : ""}</p>
+                  <p className="text-muted-foreground">{count} products included {tier ? `· Base discount: -${tier.discount_pct}%` : ""}</p>
                 </div>
               ) : null;
             })()}
@@ -1317,10 +1317,10 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs">Prodotto</TableHead>
-                      <TableHead className="text-xs">Categoria</TableHead>
-                      <TableHead className="text-xs text-right">Prezzo Base</TableHead>
-                      <TableHead className="text-xs text-right">Prezzo Listino</TableHead>
+                      <TableHead className="text-xs">Product</TableHead>
+                      <TableHead className="text-xs">Category</TableHead>
+                      <TableHead className="text-xs text-right">Base Price</TableHead>
+                      <TableHead className="text-xs text-right">List Price</TableHead>
                       <TableHead className="text-xs text-right">Sconto</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1341,7 +1341,7 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
                       );
                     })}
                     {previewItems?.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-4">Nessun prodotto nel listino</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-4">No products in list</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
@@ -1349,7 +1349,7 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
             )}
 
             <Button onClick={handleAssign} disabled={!selectedListId} className="w-full">
-              <Check size={14} className="mr-1" /> Conferma
+              <Check size={14} className="mr-1" /> Confirm
             </Button>
           </div>
         </DialogContent>
@@ -1358,16 +1358,16 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
       {/* Custom Prices Dialog */}
       <Dialog open={customPricesOpen} onOpenChange={(open) => { setCustomPricesOpen(open); if (!open) setEditingListId(null); }}>
         <DialogContent className="bg-card border-border max-w-2xl">
-          <DialogHeader><DialogTitle className="font-heading">Modifica Sconti Personalizzati</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-heading">Edit Discounts Personalizzati</DialogTitle></DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">Prodotto</TableHead>
-                  <TableHead className="text-xs">Categoria</TableHead>
-                  <TableHead className="text-xs text-right">Prezzo Base</TableHead>
-                  <TableHead className="text-xs text-right">Sconto %</TableHead>
-                  <TableHead className="text-xs text-right">Prezzo Personalizzato (€)</TableHead>
+                  <TableHead className="text-xs">Product</TableHead>
+                  <TableHead className="text-xs">Category</TableHead>
+                  <TableHead className="text-xs text-right">Base Price</TableHead>
+                  <TableHead className="text-xs text-right">Discount %</TableHead>
+                  <TableHead className="text-xs text-right">Custom Price (€)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1400,7 +1400,7 @@ function PricingTab({ clientId, client, discountTiers, allPriceLists, assignedPr
                   );
                 })}
                 {editItems?.length === 0 && (
-                  <TableRow><TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-4">Nessun prodotto nel listino</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-4">No products in list</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -1451,7 +1451,7 @@ function DealsTab({ clientId, clientName, contacts, navigate }: { clientId: stri
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-org-deals", clientId] });
       queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
-      toast.success("Deal creato");
+      toast.success("Deal created");
       setCreateOpen(false);
       setForm({ title: "", contact_id: "", value: "", stage: "qualification", probability: "20", expected_close_date: "", notes: "" });
     },
@@ -1463,26 +1463,26 @@ function DealsTab({ clientId, clientName, contacts, navigate }: { clientId: stri
         <h3 className="font-heading font-bold text-foreground">Deals ({deals?.length || 0})</h3>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <Button size="sm" className="gap-1 bg-foreground text-background" onClick={() => setCreateOpen(true)}>
-            <Plus size={14} /> Nuovo Deal
+            <Plus size={14} /> New Deal
           </Button>
           <DialogContent className="bg-card border-border">
-            <DialogHeader><DialogTitle className="font-heading">Nuovo Deal per {clientName}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle className="font-heading">New Deal for {clientName}</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Titolo *</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Title *</Label>
                 <Input className="h-9 bg-secondary border-border" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase text-muted-foreground">Valore (€)</Label>
+                  <Label className="text-[10px] uppercase text-muted-foreground">Value (€)</Label>
                   <Input type="number" className="h-9 bg-secondary border-border" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase text-muted-foreground">Contatto</Label>
+                  <Label className="text-[10px] uppercase text-muted-foreground">Contact</Label>
                   <Select value={form.contact_id || "__none__"} onValueChange={v => setForm(f => ({ ...f, contact_id: v === "__none__" ? "" : v }))}>
-                    <SelectTrigger className="h-9 bg-secondary border-border"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
+                    <SelectTrigger className="h-9 bg-secondary border-border"><SelectValue placeholder="Select..." /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Nessuno</SelectItem>
+                      <SelectItem value="__none__">None</SelectItem>
                       {contacts.map(c => <SelectItem key={c.id} value={c.id}>{c.contact_name}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -1499,11 +1499,11 @@ function DealsTab({ clientId, clientName, contacts, navigate }: { clientId: stri
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase text-muted-foreground">Chiusura prevista</Label>
+                  <Label className="text-[10px] uppercase text-muted-foreground">Expected close</Label>
                   <Input type="date" className="h-9 bg-secondary border-border" value={form.expected_close_date} onChange={e => setForm(f => ({ ...f, expected_close_date: e.target.value }))} />
                 </div>
               </div>
-              <Button onClick={() => createDeal.mutate()} disabled={!form.title} className="w-full bg-foreground text-background">Crea Deal</Button>
+              <Button onClick={() => createDeal.mutate()} disabled={!form.title} className="w-full bg-foreground text-background">Create Deal</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -1511,18 +1511,18 @@ function DealsTab({ clientId, clientName, contacts, navigate }: { clientId: stri
       {!deals?.length ? (
         <div className="text-center py-10 glass-card-solid">
           <Handshake className="mx-auto text-muted-foreground mb-3 opacity-30" size={36} />
-          <p className="text-sm text-muted-foreground">Nessun deal per questa organizzazione</p>
+          <p className="text-sm text-muted-foreground">No deals for this organization</p>
         </div>
       ) : (
         <div className="glass-card-solid overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Titolo</TableHead>
+                <TableHead>Title</TableHead>
                 <TableHead>Stage</TableHead>
-                <TableHead className="text-right">Valore</TableHead>
-                <TableHead>Contatto</TableHead>
-                <TableHead>Chiusura</TableHead>
+                <TableHead className="text-right">Value</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Close</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1534,7 +1534,7 @@ function DealsTab({ clientId, clientName, contacts, navigate }: { clientId: stri
                       {stageLabels[d.stage] || d.stage}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-mono">€{Number(d.value || 0).toLocaleString("it-IT")}</TableCell>
+                  <TableCell className="text-right font-mono">€{Number(d.value || 0).toLocaleString("en-US")}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{(d as any).contact?.contact_name || "—"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{fmtDate(d.expected_close_date)}</TableCell>
                 </TableRow>

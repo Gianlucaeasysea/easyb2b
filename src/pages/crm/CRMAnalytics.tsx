@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import OrderDetailsTable from "@/components/crm/OrderDetailsTable";
 import { BarChart3, TrendingUp, Users, Target, Euro, Clock, ArrowUpRight, ArrowDownRight, Calendar } from "lucide-react";
 import { format, subDays, subMonths, startOfMonth, endOfMonth, startOfYear, eachMonthOfInterval, differenceInDays } from "date-fns";
-import { it } from "date-fns/locale";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -177,7 +177,7 @@ const CRMAnalytics = () => {
         .reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
       const pipe = deals.filter(d => !["closed_won", "closed_lost"].includes(d.stage) && inRange(d.created_at, start, end))
         .reduce((s, d) => s + (Number(d.value) || 0) * ((d.probability || 20) / 100), 0);
-      return { month: format(m, "MMM yy", { locale: it }), revenue: Math.round(rev), pipeline: Math.round(pipe) };
+      return { month: format(m, "MMM yy"), revenue: Math.round(rev), pipeline: Math.round(pipe) };
     });
   }, [orders, deals]);
 
@@ -207,7 +207,7 @@ const CRMAnalytics = () => {
       const end = endOfMonth(m);
       const won = deals.filter(d => d.stage === "closed_won" && inRange(d.closed_at, start, end)).length;
       const lost = deals.filter(d => d.stage === "closed_lost" && inRange(d.closed_at, start, end)).length;
-      return { month: format(m, "MMM yy", { locale: it }), won, lost };
+      return { month: format(m, "MMM yy"), won, lost };
     });
   }, [deals]);
 
@@ -313,7 +313,7 @@ const CRMAnalytics = () => {
         <Card>
           <CardContent className="pt-5 pb-4">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Revenue Chiuso</p>
-            <p className="text-xl font-bold font-heading mt-1">€{Math.round(revenueChiuso.current).toLocaleString("it-IT")}</p>
+            <p className="text-xl font-bold font-heading mt-1">€{Math.round(revenueChiuso.current).toLocaleString("en-US")}</p>
             <div className={`flex items-center gap-0.5 text-xs mt-1 ${revGrowth >= 0 ? "text-chart-4" : "text-destructive"}`}>
               {revGrowth >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
               {Math.abs(revGrowth)}%
@@ -324,7 +324,7 @@ const CRMAnalytics = () => {
         <Card>
           <CardContent className="pt-5 pb-4">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Revenue Pipeline</p>
-            <p className="text-xl font-bold font-heading mt-1">€{Math.round(revenuePipeline).toLocaleString("it-IT")}</p>
+            <p className="text-xl font-bold font-heading mt-1">€{Math.round(revenuePipeline).toLocaleString("en-US")}</p>
             <p className="text-[10px] text-muted-foreground mt-1">ponderato per probabilità</p>
           </CardContent>
         </Card>
@@ -351,7 +351,7 @@ const CRMAnalytics = () => {
         <Card>
           <CardContent className="pt-5 pb-4">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Deal Size Medio</p>
-            <p className="text-xl font-bold font-heading mt-1">€{avgDealSize.toLocaleString("it-IT")}</p>
+            <p className="text-xl font-bold font-heading mt-1">€{avgDealSize.toLocaleString("en-US")}</p>
             <p className="text-[10px] text-muted-foreground mt-1">closed_won nel periodo</p>
           </CardContent>
         </Card>
@@ -401,7 +401,7 @@ const CRMAnalytics = () => {
                   <div key={stage.key} className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span className="font-medium">{stage.label}</span>
-                      <span className="text-muted-foreground">{stage.count} deals · €{stage.value.toLocaleString("it-IT")}</span>
+                      <span className="text-muted-foreground">{stage.count} deals · €{stage.value.toLocaleString("en-US")}</span>
                     </div>
                     <div className="h-6 bg-muted rounded-md overflow-hidden">
                       <div className="h-full rounded-md transition-all" style={{ width: `${pct}%`, backgroundColor: stage.color }} />
@@ -444,7 +444,7 @@ const CRMAnalytics = () => {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
                 <XAxis type="number" className="text-xs" tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
                 <YAxis type="category" dataKey="name" className="text-xs" width={120} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => `€${v.toLocaleString("it-IT")}`} />
+                <Tooltip formatter={(v: number) => `€${v.toLocaleString("en-US")}`} />
                 <Bar
                   dataKey="value"
                   fill="hsl(var(--chart-2))"

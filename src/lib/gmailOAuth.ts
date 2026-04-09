@@ -126,7 +126,7 @@ export async function loadGoogleIdentityScript() {
 
       if (existingScript) {
         existingScript.addEventListener("load", () => resolve(), { once: true });
-        existingScript.addEventListener("error", () => reject(new Error("Impossibile caricare Google Identity Services.")), { once: true });
+        existingScript.addEventListener("error", () => reject(new Error("Failed to load Google Identity Services.")), { once: true });
         return;
       }
 
@@ -135,7 +135,7 @@ export async function loadGoogleIdentityScript() {
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Impossibile caricare Google Identity Services."));
+      script.onerror = () => reject(new Error("Failed to load Google Identity Services."));
       document.head.appendChild(script);
     });
   }

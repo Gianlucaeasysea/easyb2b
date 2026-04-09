@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { format, isPast, isToday, isValid, addDays, addWeeks, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
-import { it } from "date-fns/locale";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -52,7 +51,7 @@ const calTypeColors: Record<string, string> = {
 const fmtDate = (d: string | null) => {
   if (!d) return "—";
   const dt = new Date(d);
-  return isValid(dt) ? format(dt, "dd MMM, HH:mm", { locale: it }) : "—";
+  return isValid(dt) ? format(dt, "dd MMM, HH:mm") : "—";
 };
 
 const emptyForm = {
@@ -140,7 +139,7 @@ const CRMTasks = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-tasks"] });
-      toast.success(editTask ? "Task aggiornato" : "Task creato");
+      toast.success(editTask ? "Task updated" : "Task created");
       setOpen(false);
       setEditTask(null);
       setForm(emptyForm);
@@ -155,7 +154,7 @@ const CRMTasks = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-tasks"] });
-      toast.success("Task completato");
+      toast.success("Task completed");
     },
   });
 
@@ -169,7 +168,7 @@ const CRMTasks = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-tasks"] });
-      toast.success("Scadenza posticipata");
+      toast.success("Deadline postponed");
     },
   });
 
@@ -207,7 +206,6 @@ const CRMTasks = () => {
     if (typeFilter !== "all" && t.type !== typeFilter) return false;
     return true;
   }).sort((a, b) => {
-    // Overdue first, then by due_date
     const aOverdue = a.status === "pending" && a.due_date && isPast(new Date(a.due_date));
     const bOverdue = b.status === "pending" && b.due_date && isPast(new Date(b.due_date));
     if (aOverdue && !bOverdue) return -1;
@@ -230,19 +228,19 @@ const CRMTasks = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">Task & Reminders</h1>
-          <p className="text-sm text-muted-foreground">Gestisci task, scadenze e follow-up del team sales</p>
+          <p className="text-sm text-muted-foreground">Manage tasks, deadlines and follow-ups for the sales team</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-border overflow-hidden">
             <Button variant={view === "list" ? "default" : "ghost"} size="sm" className="rounded-none text-xs" onClick={() => setView("list")}>
-              <ListTodo size={14} className="mr-1" /> Lista
+              <ListTodo size={14} className="mr-1" /> List
             </Button>
             <Button variant={view === "calendar" ? "default" : "ghost"} size="sm" className="rounded-none text-xs" onClick={() => setView("calendar")}>
-              <CalendarDays size={14} className="mr-1" /> Calendario
+              <CalendarDays size={14} className="mr-1" /> Calendar
             </Button>
           </div>
           <Button onClick={() => openCreate()} className="rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">
-            <Plus size={16} className="mr-2" /> Nuovo Task
+            <Plus size={16} className="mr-2" /> New Task
           </Button>
         </div>
       </div>
@@ -252,9 +250,9 @@ const CRMTasks = () => {
           {/* Filters */}
           <div className="flex gap-2 mb-6 flex-wrap">
             {[
-              { key: "all", label: "Tutti" }, { key: "active", label: "Attivi" },
-              { key: "today", label: "Oggi" }, { key: "overdue", label: "Scaduti" },
-              { key: "completed", label: "Completati" },
+              { key: "all", label: "All" }, { key: "active", label: "Active" },
+              { key: "today", label: "Today" }, { key: "overdue", label: "Overdue" },
+              { key: "completed", label: "Completed" },
             ].map(f => (
               <Button key={f.key} variant={filter === f.key ? "default" : "outline"} size="sm" className="rounded-full text-xs" onClick={() => setFilter(f.key)}>
                 {f.label}
@@ -263,14 +261,14 @@ const CRMTasks = () => {
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-32 h-8 text-xs rounded-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tutti i tipi</SelectItem>
+                <SelectItem value="all">All types</SelectItem>
                 {Object.entries(typeConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
               <SelectTrigger className="w-32 h-8 text-xs rounded-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tutte le priorità</SelectItem>
+                <SelectItem value="all">All priorities</SelectItem>
                 {Object.entries(priorityConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -281,7 +279,7 @@ const CRMTasks = () => {
           ) : !filtered?.length ? (
             <div className="text-center py-20 glass-card-solid">
               <CheckSquare className="mx-auto text-muted-foreground mb-4" size={48} />
-              <p className="text-muted-foreground">Nessun task trovato.</p>
+              <p className="text-muted-foreground">No tasks found.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -329,7 +327,7 @@ const CRMTasks = () => {
                     <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                       {t.status !== "completed" && t.status !== "cancelled" && (
                         <>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-success" onClick={() => completeMutation.mutate(t.id)} title="Completa">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-success" onClick={() => completeMutation.mutate(t.id)} title="Complete">
                             <Check size={14} />
                           </Button>
                           <DropdownMenu>
@@ -338,13 +336,13 @@ const CRMTasks = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
                               <DropdownMenuItem onClick={() => postponeMutation.mutate({ id: t.id, days: 1 })}>
-                                <Clock size={12} className="mr-2" /> +1 giorno
+                                <Clock size={12} className="mr-2" /> +1 day
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => postponeMutation.mutate({ id: t.id, days: 3 })}>
-                                <Clock size={12} className="mr-2" /> +3 giorni
+                                <Clock size={12} className="mr-2" /> +3 days
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => postponeMutation.mutate({ id: t.id, days: 7 })}>
-                                <Clock size={12} className="mr-2" /> +1 settimana
+                                <Clock size={12} className="mr-2" /> +1 week
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -361,13 +359,13 @@ const CRMTasks = () => {
         /* Calendar View */
         <div>
           <div className="flex items-center justify-between mb-4">
-            <Button variant="outline" size="sm" onClick={() => setCalWeekOffset(o => o - 1)}>← Sett. precedente</Button>
+            <Button variant="outline" size="sm" onClick={() => setCalWeekOffset(o => o - 1)}>← Previous week</Button>
             <h2 className="font-heading font-bold text-foreground">
-              {format(weekStart, "d MMM", { locale: it })} — {format(weekEnd, "d MMM yyyy", { locale: it })}
+              {format(weekStart, "d MMM")} — {format(weekEnd, "d MMM yyyy")}
             </h2>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setCalWeekOffset(0)}>Oggi</Button>
-              <Button variant="outline" size="sm" onClick={() => setCalWeekOffset(o => o + 1)}>Sett. successiva →</Button>
+              <Button variant="outline" size="sm" onClick={() => setCalWeekOffset(0)}>Today</Button>
+              <Button variant="outline" size="sm" onClick={() => setCalWeekOffset(o => o + 1)}>Next week →</Button>
             </div>
           </div>
           <div className="grid grid-cols-7 gap-2">
@@ -381,7 +379,7 @@ const CRMTasks = () => {
                   onClick={() => openCreate({ due_date: format(day, "yyyy-MM-dd'T'09:00") })}
                 >
                   <p className={`text-xs font-heading font-bold mb-2 ${isCurrentDay ? "text-primary" : "text-muted-foreground"}`}>
-                    {format(day, "EEE d", { locale: it })}
+                    {format(day, "EEE d")}
                   </p>
                   <div className="space-y-1">
                     {dayTasks.map(t => (
@@ -406,16 +404,16 @@ const CRMTasks = () => {
       <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) { setEditTask(null); setForm(emptyForm); } }}>
         <DialogContent className="bg-card border-border max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-heading">{editTask ? "Modifica Task" : "Nuovo Task"}</DialogTitle>
+            <DialogTitle className="font-heading">{editTask ? "Edit Task" : "New Task"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Titolo *</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Title *</Label>
               <Input className="rounded-lg bg-secondary border-border" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tipo</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type</Label>
                 <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
                   <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -424,7 +422,7 @@ const CRMTasks = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Priorità</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Priority</Label>
                 <Select value={form.priority} onValueChange={v => setForm(f => ({ ...f, priority: v }))}>
                   <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -435,7 +433,7 @@ const CRMTasks = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Scadenza</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Due Date</Label>
                 <Input type="datetime-local" className="rounded-lg bg-secondary border-border" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
               </div>
               <div className="space-y-2">
@@ -445,21 +443,21 @@ const CRMTasks = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Organizzazione</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Organization</Label>
                 <Select value={form.client_id || "__none__"} onValueChange={v => setForm(f => ({ ...f, client_id: v === "__none__" ? "" : v, contact_id: "", deal_id: "" }))}>
-                  <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Nessuna" /></SelectTrigger>
+                  <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">Nessuna</SelectItem>
+                    <SelectItem value="__none__">None</SelectItem>
                     {orgOptions?.map(o => <SelectItem key={o.id} value={o.id}>{o.company_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Contatto</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Contact</Label>
                 <Select value={form.contact_id || "__none__"} onValueChange={v => setForm(f => ({ ...f, contact_id: v === "__none__" ? "" : v }))} disabled={!form.client_id}>
-                  <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Nessuno" /></SelectTrigger>
+                  <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">Nessuno</SelectItem>
+                    <SelectItem value="__none__">None</SelectItem>
                     {contactOptions?.map(c => <SelectItem key={c.id} value={c.id}>{c.contact_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -468,19 +466,19 @@ const CRMTasks = () => {
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Deal</Label>
               <Select value={form.deal_id || "__none__"} onValueChange={v => setForm(f => ({ ...f, deal_id: v === "__none__" ? "" : v }))}>
-                <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="Nessuno" /></SelectTrigger>
+                <SelectTrigger className="rounded-lg bg-secondary border-border"><SelectValue placeholder="None" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Nessuno</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {dealOptions?.map(d => <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Descrizione</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description</Label>
               <Textarea className="rounded-lg bg-secondary border-border" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
             </div>
             <Button onClick={() => saveMutation.mutate()} disabled={!form.title || saveMutation.isPending} className="w-full rounded-lg bg-foreground text-background font-heading font-semibold">
-              {editTask ? "Salva modifiche" : "Crea Task"}
+              {editTask ? "Save changes" : "Create Task"}
             </Button>
           </div>
         </DialogContent>
