@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Clock, CheckCircle, Truck, Package, Mail, AlertTriangle, XCircle } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle, Truck, Package, Mail, AlertTriangle, XCircle, CalendarClock } from "lucide-react";
+import { addDays, lastDayOfMonth, addMonths, differenceInDays } from "date-fns";
 import { format } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -21,6 +22,25 @@ import {
   ORDER_STATUSES, PAYMENT_STATUSES, getOrderStatusLabel, getOrderStatusColor,
   getPaymentStatusLabel, getPaymentStatusColor, getAvailableTransitions, canTransitionTo,
 } from "@/lib/constants";
+
+const PAYMENT_TERMS_LABELS: Record<string, string> = {
+  prepaid: "Pagamento anticipato",
+  "30_days": "30 giorni data fattura",
+  "60_days": "60 giorni data fattura",
+  "90_days": "90 giorni data fattura",
+  end_of_month: "Fine mese",
+};
+
+const calculateDueDate = (paymentTerms: string | null, confirmedDate: Date): Date => {
+  switch (paymentTerms) {
+    case "prepaid": return confirmedDate;
+    case "30_days": return addDays(confirmedDate, 30);
+    case "60_days": return addDays(confirmedDate, 60);
+    case "90_days": return addDays(confirmedDate, 90);
+    case "end_of_month": return lastDayOfMonth(addMonths(confirmedDate, 1));
+    default: return addDays(confirmedDate, 30);
+  }
+};
 import type { Tables } from "@/integrations/supabase/types";
 
 type OrderRow = Tables<"orders">;
