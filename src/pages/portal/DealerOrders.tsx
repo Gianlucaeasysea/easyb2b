@@ -806,7 +806,7 @@ const DealerOrders = () => {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Completa Ordine — {editingDraft?.order_code || `#${editingDraft?.id?.slice(0, 8).toUpperCase()}`}
+              Complete Order — {editingDraft?.order_code || `#${editingDraft?.id?.slice(0, 8).toUpperCase()}`}
             </DialogTitle>
           </DialogHeader>
           {editingDraft && (
@@ -817,10 +817,10 @@ const DealerOrders = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs">Prodotto</TableHead>
-                      <TableHead className="text-xs text-right">Prezzo</TableHead>
-                      <TableHead className="text-xs text-center w-[130px]">Quantità</TableHead>
-                      <TableHead className="text-xs text-right">Subtotale</TableHead>
+                      <TableHead className="text-xs">Product</TableHead>
+                      <TableHead className="text-xs text-right">Price</TableHead>
+                      <TableHead className="text-xs text-center w-[130px]">Quantity</TableHead>
+                      <TableHead className="text-xs text-right">Subtotal</TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
@@ -860,11 +860,11 @@ const DealerOrders = () => {
                   </TableBody>
                 </Table>
               )}
-              <div className="flex justify-end text-lg font-bold">Totale: €{draftTotal.toFixed(2)}</div>
+               <div className="flex justify-end text-lg font-bold">Total: €{draftTotal.toFixed(2)}</div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Note (opzionale)</label>
+                <label className="text-sm font-medium mb-1 block">Notes (optional)</label>
                 <Textarea
-                  placeholder="Aggiungi note all'ordine..."
+                  placeholder="Add notes to your order..."
                   value={draftNotes}
                   onChange={(e) => setDraftNotes(e.target.value)}
                   rows={3}
