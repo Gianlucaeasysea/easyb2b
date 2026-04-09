@@ -4,17 +4,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ShoppingBag, ExternalLink, Clock, CheckCircle, Truck, Package,
   ChevronDown, ChevronUp, FileText, Download, Bell, Loader2, Send,
+  Copy, DollarSign, XCircle, Trash2, Minus, Plus, Edit3,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
-
-import { Copy, DollarSign, XCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
