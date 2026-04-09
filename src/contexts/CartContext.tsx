@@ -147,7 +147,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addItem = useCallback((newItem: Omit<CartItem, "quantity"> & { quantity?: number }) => {
     // Safety net: block items without a valid price from price list
     if (!newItem.b2bPrice || newItem.b2bPrice <= 0) {
-      toast.error("Impossibile aggiungere: prezzo non disponibile");
+      toast.error("Cannot add: price not available");
       return;
     }
 
