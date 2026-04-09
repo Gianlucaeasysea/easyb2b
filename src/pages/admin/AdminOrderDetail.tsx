@@ -183,7 +183,12 @@ const AdminOrderDetail = () => {
     if (!id || !order) return;
     setSaving(true);
     try {
-      await supabase.from("orders").update({ status: "confirmed" }).eq("id", id);
+      const confirmedDate = new Date();
+      const dueDate = calculateDueDate(order.payment_terms, confirmedDate);
+      await supabase.from("orders").update({
+        status: "confirmed",
+        payment_due_date: format(dueDate, "yyyy-MM-dd"),
+      }).eq("id", id);
       await supabase.from("order_events").insert({
         order_id: id, event_type: "status_change", title: "Stato aggiornato: Confermato",
       });
