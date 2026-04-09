@@ -25,11 +25,11 @@ interface OrderItem {
 }
 
 const PAYMENT_TERMS_LABELS: Record<string, string> = {
-  prepaid: "Prepagato",
-  "30_days": "30 giorni",
-  "60_days": "60 giorni",
-  "90_days": "90 giorni",
-  end_of_month: "Fine mese",
+  prepaid: "Prepaid",
+  "30_days": "30 days",
+  "60_days": "60 days",
+  "90_days": "90 days",
+  end_of_month: "End of month",
 };
 
 const CRMCreateOrder = () => {
@@ -204,8 +204,8 @@ const CRMCreateOrder = () => {
         // Notify dealer
         await supabase.from("client_notifications").insert({
           client_id: selectedClientId,
-          title: "Nuovo ordine creato",
-          body: `Il tuo referente commerciale ha creato l'ordine #${orderCode || orderId.slice(0, 8)} per te. Controlla i dettagli nel portale.`,
+          title: "New order created",
+          body: `Your sales representative created order #${orderCode || orderId.slice(0, 8)} for you. Check the details in the portal.`,
           type: "order",
           order_id: orderId,
         });
@@ -220,10 +220,10 @@ const CRMCreateOrder = () => {
         }
       }
 
-      toast.success("Ordine creato con successo");
+      toast.success("Order created successfully");
       navigate("/crm/orders");
     } catch (err: any) {
-      toast.error("Errore nella creazione dell'ordine: " + (err.message || "errore sconosciuto"));
+      toast.error("Error creating order: " + (err.message || "unknown error"));
     } finally {
       setSubmitting(false);
     }
@@ -237,17 +237,17 @@ const CRMCreateOrder = () => {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Crea Ordine</h1>
-          <p className="text-muted-foreground text-sm">Crea un ordine per conto del cliente</p>
+          <h1 className="text-2xl font-bold">Create Order</h1>
+          <p className="text-muted-foreground text-sm">Create an order on behalf of the client</p>
         </div>
       </div>
 
       {/* Step indicators */}
       <div className="flex items-center gap-2">
         {[
-          { n: 1, label: "Cliente", icon: User },
-          { n: 2, label: "Prodotti", icon: Package },
-          { n: 3, label: "Riepilogo", icon: Check },
+          { n: 1, label: "Client", icon: User },
+          { n: 2, label: "Products", icon: Package },
+          { n: 3, label: "Summary", icon: Check },
         ].map(({ n, label, icon: Icon }) => (
           <div key={n} className="flex items-center gap-2">
             {n > 1 && <div className={`h-px w-8 ${step >= n ? "bg-primary" : "bg-border"}`} />}
@@ -269,7 +269,7 @@ const CRMCreateOrder = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Cerca cliente per nome, contatto o zona..."
+              placeholder="Search client by name, contact or zone..."
               value={clientSearch}
               onChange={(e) => setClientSearch(e.target.value)}
               className="pl-10"
@@ -295,7 +295,7 @@ const CRMCreateOrder = () => {
               </Card>
             ))}
             {filteredClients.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">Nessun cliente trovato</p>
+              <p className="text-center text-muted-foreground py-8">No clients found</p>
             )}
           </div>
 
@@ -306,15 +306,15 @@ const CRMCreateOrder = () => {
                 <p className="text-sm text-muted-foreground">{selectedClient.contact_name}</p>
                 <div className="flex gap-4 text-sm mt-2">
                   <span>
-                    <strong>Termini:</strong>{" "}
+                    <strong>Terms:</strong>{" "}
                     {PAYMENT_TERMS_LABELS[selectedClient.payment_terms || ""] || selectedClient.payment_terms || "—"}
                   </span>
                   <span>
-                    <strong>Listino:</strong>{" "}
+                     <strong>Price List:</strong>{" "}
                     {clientPriceList ? (
                       <Badge variant="outline">{clientPriceList.name}</Badge>
                     ) : (
-                      <span className="text-destructive font-medium">Non assegnato</span>
+                      <span className="text-destructive font-medium">Not assigned</span>
                     )}
                   </span>
                 </div>
@@ -326,14 +326,14 @@ const CRMCreateOrder = () => {
             <div className="flex items-start gap-2 p-3 bg-destructive/10 rounded-lg text-sm text-destructive">
               <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
               <div>
-                <p className="font-medium">Questo cliente non ha un listino prezzi.</p>
+                 <p className="font-medium">This client has no price list assigned.</p>
                 <p>
-                  Assegna un listino prima di creare l'ordine.{" "}
+                  Assign a price list before creating the order.{" "}
                   <button
                     className="underline font-medium"
                     onClick={() => navigate(`/crm/organizations/${selectedClientId}`)}
                   >
-                    Vai al profilo organizzazione
+                    Go to organization profile
                   </button>
                 </p>
               </div>
@@ -342,7 +342,7 @@ const CRMCreateOrder = () => {
 
           <div className="flex justify-end">
             <Button onClick={() => setStep(2)} disabled={!selectedClientId || !clientPriceList}>
-              Avanti <ArrowRight className="h-4 w-4 ml-1" />
+              Next <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>
@@ -354,11 +354,11 @@ const CRMCreateOrder = () => {
           {/* Product search & grid */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Catalogo Prodotti</CardTitle>
+              <CardTitle className="text-lg">Product Catalog</CardTitle>
               <div className="relative mt-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Cerca prodotto per nome o SKU..."
+                  placeholder="Search product by name or SKU..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
                   className="pl-10"
@@ -384,12 +384,12 @@ const CRMCreateOrder = () => {
                           {p.sku || "—"} • €{price.toFixed(2)} •{" "}
                           {p.stock_quantity !== null ? (
                             p.stock_quantity > 0 ? (
-                              <span className="text-green-600">{p.stock_quantity} disp.</span>
+                             <span className="text-green-600">{p.stock_quantity} avail.</span>
                             ) : (
-                              <span className="text-destructive">Esaurito</span>
+                              <span className="text-destructive">Out of stock</span>
                             )
                           ) : (
-                            "Stock N/D"
+                            "Stock N/A"
                           )}
                         </p>
                       </div>
@@ -405,7 +405,7 @@ const CRMCreateOrder = () => {
                   );
                 })}
                 {filteredProducts.length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">Nessun prodotto trovato</p>
+                  <p className="text-center text-muted-foreground py-4">No products found</p>
                 )}
               </div>
             </CardContent>
@@ -416,22 +416,22 @@ const CRMCreateOrder = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <ShoppingBag className="h-5 w-5" />
-                Prodotti nell'ordine ({items.length})
+                Products in order ({items.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               {items.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6">Aggiungi prodotti dal catalogo sopra</p>
+                <p className="text-center text-muted-foreground py-6">Add products from the catalog above</p>
               ) : (
                 <>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Prodotto</TableHead>
+                         <TableHead>Product</TableHead>
                         <TableHead>SKU</TableHead>
-                        <TableHead className="text-right">Prezzo</TableHead>
-                        <TableHead className="text-center w-[120px]">Quantità</TableHead>
-                        <TableHead className="text-right">Subtotale</TableHead>
+                        <TableHead className="text-right">Price</TableHead>
+                        <TableHead className="text-center w-[120px]">Quantity</TableHead>
+                        <TableHead className="text-right">Subtotal</TableHead>
                         <TableHead className="w-10" />
                       </TableRow>
                     </TableHeader>
@@ -471,7 +471,7 @@ const CRMCreateOrder = () => {
                               </div>
                               {stockError && (
                                 <p className="text-xs text-destructive text-center mt-1">
-                                  Disponibili solo {item.stock} unità
+                                  Only {item.stock} units available
                                 </p>
                               )}
                             </TableCell>
@@ -489,7 +489,7 @@ const CRMCreateOrder = () => {
                     </TableBody>
                   </Table>
                   <div className="flex justify-end mt-4 text-lg font-semibold">
-                    Subtotale: €{orderTotal.toFixed(2)}
+                    Subtotal: €{orderTotal.toFixed(2)}
                   </div>
                 </>
               )}
@@ -497,11 +497,11 @@ const CRMCreateOrder = () => {
           </Card>
 
           <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(1)}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Indietro
+             <Button variant="outline" onClick={() => setStep(1)}>
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back
             </Button>
             <Button onClick={() => setStep(3)} disabled={items.length === 0}>
-              Avanti <ArrowRight className="h-4 w-4 ml-1" />
+              Next <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>
@@ -513,32 +513,32 @@ const CRMCreateOrder = () => {
           {/* Client summary */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Cliente</CardTitle>
+               <CardTitle className="text-lg">Client</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1">
               <p className="font-semibold">{selectedClient?.company_name}</p>
               <p className="text-sm text-muted-foreground">{selectedClient?.contact_name}</p>
               <p className="text-sm">
-                Termini di pagamento:{" "}
+                Payment terms:{" "}
                 {PAYMENT_TERMS_LABELS[selectedClient?.payment_terms || ""] || selectedClient?.payment_terms || "—"}
               </p>
-              <p className="text-sm">Listino: {clientPriceList?.name}</p>
+              <p className="text-sm">Price List: {clientPriceList?.name}</p>
             </CardContent>
           </Card>
 
           {/* Items summary */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Prodotti ({items.length})</CardTitle>
+              <CardTitle className="text-lg">Products ({items.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Prodotto</TableHead>
-                    <TableHead className="text-right">Prezzo</TableHead>
-                    <TableHead className="text-center">Qtà</TableHead>
-                    <TableHead className="text-right">Subtotale</TableHead>
+                     <TableHead>Product</TableHead>
+                    <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-center">Qty</TableHead>
+                    <TableHead className="text-right">Subtotal</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -552,25 +552,25 @@ const CRMCreateOrder = () => {
                   ))}
                 </TableBody>
               </Table>
-              <div className="flex justify-end mt-4 text-xl font-bold">Totale: €{orderTotal.toFixed(2)}</div>
+              <div className="flex justify-end mt-4 text-xl font-bold">Total: €{orderTotal.toFixed(2)}</div>
             </CardContent>
           </Card>
 
           {/* Notes */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Note per il cliente</label>
+               <label className="text-sm font-medium">Notes for client</label>
               <Textarea
-                placeholder="Visibili al dealer nel dettaglio ordine..."
+                placeholder="Visible to the dealer in order detail..."
                 value={clientNotes}
                 onChange={(e) => setClientNotes(e.target.value)}
                 rows={3}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Note interne</label>
+              <label className="text-sm font-medium">Internal notes</label>
               <Textarea
-                placeholder="Visibili solo ad admin e sales..."
+                placeholder="Visible only to admin and sales..."
                 value={internalNotes}
                 onChange={(e) => setInternalNotes(e.target.value)}
                 rows={3}
@@ -581,20 +581,20 @@ const CRMCreateOrder = () => {
           {hasStockErrors && (
             <div className="flex items-start gap-2 p-3 bg-destructive/10 rounded-lg text-sm text-destructive">
               <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
-              <p>Alcuni prodotti superano la disponibilità. Torna indietro e correggi le quantità prima di inviare.</p>
+              <p>Some products exceed available stock. Go back and adjust quantities before submitting.</p>
             </div>
           )}
 
           <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(2)}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Indietro
+             <Button variant="outline" onClick={() => setStep(2)}>
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back
             </Button>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => submitOrder("draft")} disabled={submitting}>
-                Salva come Bozza
+                Save as Draft
               </Button>
               <Button onClick={() => submitOrder("submitted")} disabled={submitting || hasStockErrors}>
-                Invia Ordine
+                Submit Order
               </Button>
             </div>
           </div>
