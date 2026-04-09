@@ -225,9 +225,7 @@ const DealerProfile = () => {
               <div><span className="text-muted-foreground text-xs">Email</span><p className="text-foreground">{client?.email || "—"}</p></div>
               <div><span className="text-muted-foreground text-xs">Phone</span><p className="text-foreground">{client?.phone || "—"}</p></div>
               <div><span className="text-muted-foreground text-xs">Address</span><p className="text-foreground">{client?.address || "—"}</p></div>
-              <div><span className="text-muted-foreground text-xs">Discount Class</span>
-                <Badge variant="outline" className="mt-1">{client?.discount_class || "D"}</Badge>
-              </div>
+              <div><span className="text-muted-foreground text-xs">Payment Terms</span><p className="text-foreground font-medium">{(client as any)?.payment_terms || "100% upfront"}</p></div>
             </div>
           </div>
 

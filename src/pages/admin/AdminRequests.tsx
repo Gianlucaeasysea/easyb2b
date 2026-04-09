@@ -20,11 +20,11 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 const PAYMENT_TERMS_OPTIONS = [
-  { value: "prepaid", label: "Prepaid" },
-  { value: "30_days", label: "Net 30" },
-  { value: "60_days", label: "Net 60" },
-  { value: "90_days", label: "Net 90" },
-  { value: "end_of_month", label: "End of Month" },
+  { value: "100% upfront", label: "100% Upfront — Full payment in advance" },
+  { value: "Net 30", label: "Net 30 — Payment within 30 days" },
+  { value: "Net 60", label: "Net 60 — Payment within 60 days" },
+  { value: "50/50", label: "50/50 — 50% upfront, 50% on delivery" },
+  { value: "Custom", label: "Custom — Specify in notes" },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -184,7 +184,7 @@ const AdminRequests = () => {
       website: request.website || "",
       vat_number: request.vat_number || "",
       address: "",
-      payment_terms: "30_days",
+      payment_terms: "100% upfront",
       payment_terms_notes: "",
       price_list_id: "",
       assigned_sales_id: "",

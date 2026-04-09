@@ -496,6 +496,26 @@ const CRMOrganizationDetail = () => {
                   {client.address && <p className="text-muted-foreground flex items-center gap-2"><MapPin size={12} /> {client.address}</p>}
                   {client.vat_number && <p className="text-muted-foreground text-xs">P.IVA: {client.vat_number}</p>}
                   {client.business_type && <p className="text-muted-foreground text-xs">Tipo: {client.business_type}</p>}
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading mb-1">Payment Terms</p>
+                    <Select
+                      value={(client as any).payment_terms || "100% upfront"}
+                      onValueChange={async (v) => {
+                        const { error } = await supabase.from("clients").update({ payment_terms: v } as any).eq("id", id!);
+                        if (error) toast.error(error.message);
+                        else { toast.success("Payment terms updated"); queryClient.invalidateQueries({ queryKey: ["crm-org", id] }); }
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-sm bg-secondary border-border"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="100% upfront">100% Upfront</SelectItem>
+                        <SelectItem value="Net 30">Net 30</SelectItem>
+                        <SelectItem value="Net 60">Net 60</SelectItem>
+                        <SelectItem value="50/50">50/50</SelectItem>
+                        <SelectItem value="Custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="flex gap-2 mt-4">
                   {client.phone && (
@@ -613,7 +633,7 @@ const CRMOrganizationDetail = () => {
                 <h3 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2 text-sm"><Clock size={14} /> Ultimi Eventi</h3>
                 {(() => {
                   const events = [
-                    ...(orders?.slice(0, 3).map(o => ({ type: "order", date: o.created_at, title: `Ordine ${(o as any).order_code || "#" + o.id.slice(0, 8)}`, sub: `€${Number(o.total_amount || 0).toLocaleString("en-US")}` })) || []),
+                    ...(orders?.slice(0, 3).map(o => ({ type: "order", date: o.created_at, title: `Ordine ${(o as any).order_code || "#" + o.id.slice(0, 8)}${o.status === "draft" ? " (Draft)" : ""}`, sub: `€${Number(o.total_amount || 0).toLocaleString("en-US")}`, status: o.status })) || []),
                     ...(activities?.slice(0, 3).map(a => ({ type: "activity", date: a.created_at, title: a.title, sub: a.type })) || []),
                   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 

@@ -149,7 +149,10 @@ const OrderDetailsTable = ({ limit, showFilters = true, title = "Order Details" 
                       <TableCell className="w-8 px-2">
                         {items.length > 0 && (isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
                       </TableCell>
-                      <TableCell className="font-mono text-sm font-medium">{o.order_code || `#${o.id.slice(0, 8)}`}</TableCell>
+                      <TableCell className="font-mono text-sm font-medium">
+                        {o.order_code || `#${o.id.slice(0, 8)}`}
+                        {o.status === "draft" && <span className="text-yellow-600 ml-1">(Draft)</span>}
+                      </TableCell>
                       <TableCell>
                         <div>
                           <span className="text-sm font-medium">{client?.company_name || "—"}</span>
@@ -159,9 +162,13 @@ const OrderDetailsTable = ({ limit, showFilters = true, title = "Order Details" 
                       <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{productSummary}</TableCell>
                       <TableCell className="text-right font-bold text-sm">€{Number(o.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</TableCell>
                       <TableCell>
-                        <Badge className={`border-0 text-[10px] ${getOrderStatusColor(o.status || "draft")}`}>
-                          {getOrderStatusLabel(o.status || "draft")}
-                        </Badge>
+                        {o.status === "draft" ? (
+                          <Badge variant="outline" className="text-[10px] text-yellow-600 border-yellow-300 bg-yellow-50">Draft</Badge>
+                        ) : (
+                          <Badge className={`border-0 text-[10px] ${getOrderStatusColor(o.status || "draft")}`}>
+                            {getOrderStatusLabel(o.status || "draft")}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{fmt(o.created_at, "dd/MM/yy")}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{fmt(o.payed_date, "dd/MM/yy")}</TableCell>

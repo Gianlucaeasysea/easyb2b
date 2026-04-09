@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ShoppingBag, ExternalLink, Clock, CheckCircle, Truck, Package,
   ChevronDown, ChevronUp, FileText, Download, Bell, Loader2, Send,
-  Copy, DollarSign, XCircle, Trash2, Minus, Plus, Edit3,
+  Copy, DollarSign, XCircle, Trash2, Minus, Plus, Edit3, Search, PackagePlus,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -70,6 +70,10 @@ const DealerOrders = () => {
   const [draftItems, setDraftItems] = useState<any[]>([]);
   const [draftNotes, setDraftNotes] = useState("");
   const [submittingDraft, setSubmittingDraft] = useState(false);
+  const [showAddProductsToDraft, setShowAddProductsToDraft] = useState(false);
+  const [addProductSearch, setAddProductSearch] = useState("");
+  const [addProductQtys, setAddProductQtys] = useState<Record<string, number>>({});
+  const [savingDraftItems, setSavingDraftItems] = useState(false);
   const [priceCheckData, setPriceCheckData] = useState<{
     order: any;
     items: { product_id: string; name: string; sku: string; quantity: number; originalPrice: number; currentPrice: number | null; available: boolean }[];
@@ -84,6 +88,25 @@ const DealerOrders = () => {
       return data;
     },
     enabled: !!user,
+  });
+
+  // Price list products for "Add Products" to draft
+  const { data: priceListProducts } = useQuery({
+    queryKey: ["my-price-list-products", client?.id],
+    queryFn: async () => {
+      const { data: assignments } = await supabase
+        .from("price_list_clients")
+        .select("price_list_id")
+        .eq("client_id", client!.id);
+      if (!assignments?.length) return [];
+      const plIds = assignments.map(a => a.price_list_id);
+      const { data: items } = await supabase
+        .from("price_list_items")
+        .select("*, products!inner(*)")
+        .in("price_list_id", plIds);
+      return (items || []).filter((item: any) => item.products && item.products.active_b2b === true);
+    },
+    enabled: !!client?.id && !!showAddProductsToDraft,
   });
 
   const { data: orders, isLoading } = useQuery({
@@ -296,6 +319,61 @@ const DealerOrders = () => {
   };
 
   const draftTotal = draftItems.reduce((s, i) => s + Number(i.subtotal || 0), 0);
+
+  const handleAddProductsToDraft = async () => {
+    if (!editingDraft) return;
+    setSavingDraftItems(true);
+    try {
+      const selectedProducts = Object.entries(addProductQtys).filter(([, qty]) => qty > 0);
+      if (!selectedProducts.length) { toast.error("Select at least one product"); setSavingDraftItems(false); return; }
+
+      for (const [productId, qty] of selectedProducts) {
+        // Check if already in draft
+        const existing = draftItems.find(i => i.product_id === productId);
+        if (existing) {
+          // Update quantity
+          const newQty = existing.quantity + qty;
+          const newSubtotal = newQty * Number(existing.unit_price);
+          await supabase.from("order_items").update({ quantity: newQty, subtotal: newSubtotal }).eq("id", existing.id);
+          setDraftItems(prev => prev.map(i => i.id === existing.id ? { ...i, quantity: newQty, subtotal: newSubtotal } : i));
+        } else {
+          // Find price from price list
+          const plItem = priceListProducts?.find((p: any) => p.product_id === productId);
+          if (!plItem) continue;
+          const product = (plItem as any).products;
+          const unitPrice = plItem.custom_price;
+          const subtotal = unitPrice * qty;
+          const { data: newItem, error } = await supabase.from("order_items").insert({
+            order_id: editingDraft.id,
+            product_id: productId,
+            quantity: qty,
+            unit_price: unitPrice,
+            discount_pct: 0,
+            subtotal,
+          }).select("*").single();
+          if (error) throw error;
+          setDraftItems(prev => [...prev, { ...newItem, name: product.name, sku: product.sku }]);
+        }
+      }
+
+      // Recalculate total
+      const newTotal = draftItems.reduce((s, i) => s + Number(i.subtotal || 0), 0) + selectedProducts.reduce((s, [productId, qty]) => {
+        const plItem = priceListProducts?.find((p: any) => p.product_id === productId);
+        return s + (plItem ? plItem.custom_price * qty : 0);
+      }, 0);
+      await supabase.from("orders").update({ total_amount: newTotal }).eq("id", editingDraft.id);
+
+      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+      setAddProductQtys({});
+      setAddProductSearch("");
+      setShowAddProductsToDraft(false);
+      toast.success("Products added to draft");
+    } catch (error) {
+      showErrorToast(error, "DealerOrders.addProductsToDraft");
+    } finally {
+      setSavingDraftItems(false);
+    }
+  };
 
   const submitDraft = async () => {
     if (!editingDraft || draftItems.length === 0) return;
@@ -859,7 +937,12 @@ const DealerOrders = () => {
                   </TableBody>
                 </Table>
               )}
-               <div className="flex justify-end text-lg font-bold">Total: €{draftTotal.toFixed(2)}</div>
+              <div className="flex items-center justify-between">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShowAddProductsToDraft(true)}>
+                  <PackagePlus className="h-4 w-4" /> Add Products
+                </Button>
+                <div className="text-lg font-bold">Total: €{draftTotal.toFixed(2)}</div>
+              </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Notes (optional)</label>
                 <Textarea
@@ -877,6 +960,79 @@ const DealerOrders = () => {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Products to Draft Dialog */}
+      <Dialog open={showAddProductsToDraft} onOpenChange={v => { if (!v) { setShowAddProductsToDraft(false); setAddProductSearch(""); setAddProductQtys({}); } }}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Products to Draft</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+              <Input
+                placeholder="Search products..."
+                value={addProductSearch}
+                onChange={e => setAddProductSearch(e.target.value)}
+                className="pl-9 text-sm"
+              />
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto space-y-1">
+              {(() => {
+                const existingIds = new Set(draftItems.map(i => i.product_id));
+                const available = (priceListProducts || [])
+                  .filter((p: any) => {
+                    const product = p.products;
+                    if (!product) return false;
+                    const q = addProductSearch.toLowerCase();
+                    return !q || product.name.toLowerCase().includes(q) || (product.sku || "").toLowerCase().includes(q);
+                  });
+                if (!available.length) return <p className="text-sm text-muted-foreground text-center py-4">No products found</p>;
+                return available.map((plItem: any) => {
+                  const product = plItem.products;
+                  const isAlreadyInDraft = existingIds.has(product.id);
+                  const qty = addProductQtys[product.id] || 0;
+                  return (
+                    <div key={product.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{product.name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{product.sku} · €{Number(plItem.custom_price).toFixed(2)}</p>
+                        {isAlreadyInDraft && <Badge variant="outline" className="text-[10px]">Already in draft</Badge>}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" disabled={qty <= 0}
+                          onClick={() => setAddProductQtys(prev => ({ ...prev, [product.id]: Math.max(0, qty - 1) }))}>
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={qty}
+                          onChange={e => setAddProductQtys(prev => ({ ...prev, [product.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                          className="w-14 h-7 text-center text-sm"
+                        />
+                        <Button variant="ghost" size="icon" className="h-7 w-7"
+                          onClick={() => setAddProductQtys(prev => ({ ...prev, [product.id]: qty + 1 }))}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowAddProductsToDraft(false); setAddProductQtys({}); }}>Cancel</Button>
+            <Button
+              onClick={handleAddProductsToDraft}
+              disabled={savingDraftItems || Object.values(addProductQtys).every(q => q === 0)}
+            >
+              {savingDraftItems ? "Adding..." : `Add ${Object.values(addProductQtys).filter(q => q > 0).length} Products`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
