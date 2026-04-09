@@ -1019,9 +1019,9 @@ const AdminClientDetail = () => {
                           <Badge variant="outline" className="text-[10px]">
                             {DOC_CATEGORIES.find(c => c.value === doc.doc_category)?.label || doc.doc_category}
                           </Badge>
-                          <a href={getDocUrl(doc.file_path)} target="_blank" rel="noopener noreferrer">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Download size={12} /></Button>
-                          </a>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={() => handleDocDownload(doc.file_path)}>
+                            <Download size={12} />
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteDoc(doc)}>
                             <Trash2 size={12} />
                           </Button>
