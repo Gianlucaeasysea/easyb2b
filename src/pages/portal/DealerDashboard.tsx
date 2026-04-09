@@ -111,9 +111,9 @@ const DealerDashboard = () => {
             <div>
               <p className="text-foreground font-heading font-bold">{priceList.name}</p>
               {priceList.description && <p className="text-[11px] text-muted-foreground mt-1">{priceList.description}</p>}
-              {(priceList as any).discount_tiers && (
+              {(priceList as any).discount_tiers?.[0] && (
                 <Badge variant="outline" className="mt-2 text-[10px] font-heading rounded-full">
-                  {(priceList as any).discount_tiers.label} — {(priceList as any).discount_tiers.discount_pct}% discount
+                  {(priceList as any).discount_tiers[0].label} — {(priceList as any).discount_tiers[0].discount_pct}% discount
                 </Badge>
               )}
             </div>
