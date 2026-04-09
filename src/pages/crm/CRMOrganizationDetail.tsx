@@ -461,7 +461,7 @@ const CRMOrganizationDetail = () => {
               <p className={`font-heading text-sm font-bold ${nextReorderDays !== null && nextReorderDays < 0 ? "text-destructive" : nextReorderDays !== null && nextReorderDays <= 7 ? "text-warning" : "text-success"}`}>
                 {fmtDate(nextReorder)}
               </p>
-              <p className="text-[10px] text-muted-foreground">{nextReorderDays !== null && nextReorderDays < 0 ? `${Math.abs(nextReorderDays)}d scaduto` : `tra ${nextReorderDays}d`}</p>
+              <p className="text-[10px] text-muted-foreground">{nextReorderDays !== null && nextReorderDays < 0 ? `${Math.abs(nextReorderDays)}d overdue` : `in ${nextReorderDays}d`}</p>
             </>
           ) : (
             <p className="font-heading text-sm font-bold text-muted-foreground">—</p>
@@ -473,14 +473,14 @@ const CRMOrganizationDetail = () => {
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="mb-4 bg-secondary flex-wrap">
           <TabsTrigger value="overview" className="gap-1 text-xs"><Building2 size={14} /> Overview</TabsTrigger>
-          <TabsTrigger value="contacts" className="gap-1 text-xs"><Users size={14} /> Contatti ({contacts?.length || 0})</TabsTrigger>
+          <TabsTrigger value="contacts" className="gap-1 text-xs"><Users size={14} /> Contacts ({contacts?.length || 0})</TabsTrigger>
           <TabsTrigger value="deals" className="gap-1 text-xs"><Handshake size={14} /> Deals</TabsTrigger>
-          <TabsTrigger value="orders" className="gap-1 text-xs"><ShoppingBag size={14} /> Ordini ({totalOrders})</TabsTrigger>
-          <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Comunicazioni</TabsTrigger>
-          <TabsTrigger value="activities" className="gap-1 text-xs"><Clock size={14} /> Attività</TabsTrigger>
-          <TabsTrigger value="documents" className="gap-1 text-xs"><FileText size={14} /> Documenti ({documents?.length || 0})</TabsTrigger>
-          <TabsTrigger value="pricing" className="gap-1 text-xs"><Tag size={14} /> Listini & Sconti</TabsTrigger>
-          <TabsTrigger value="notes" className="gap-1 text-xs"><StickyNote size={14} /> Note</TabsTrigger>
+          <TabsTrigger value="orders" className="gap-1 text-xs"><ShoppingBag size={14} /> Orders ({totalOrders})</TabsTrigger>
+          <TabsTrigger value="communications" className="gap-1 text-xs"><Mail size={14} /> Communications</TabsTrigger>
+          <TabsTrigger value="activities" className="gap-1 text-xs"><Clock size={14} /> Activities</TabsTrigger>
+          <TabsTrigger value="documents" className="gap-1 text-xs"><FileText size={14} /> Documents ({documents?.length || 0})</TabsTrigger>
+          <TabsTrigger value="pricing" className="gap-1 text-xs"><Tag size={14} /> Pricing & Discounts</TabsTrigger>
+          <TabsTrigger value="notes" className="gap-1 text-xs"><StickyNote size={14} /> Notes</TabsTrigger>
         </TabsList>
 
         {/* OVERVIEW */}
@@ -501,7 +501,7 @@ const CRMOrganizationDetail = () => {
                   {client.phone && (
                     <>
                       <Button variant="outline" size="sm" className="flex-1 text-xs gap-1" onClick={() => openWhatsApp(client.phone!, client.contact_name || client.company_name)}><MessageCircle size={12} /> WhatsApp</Button>
-                      <Button variant="outline" size="sm" className="flex-1 text-xs gap-1" onClick={() => window.open(`tel:${client.phone}`)}><Phone size={12} /> Chiama</Button>
+                      <Button variant="outline" size="sm" className="flex-1 text-xs gap-1" onClick={() => window.open(`tel:${client.phone}`)}><Phone size={12} /> Call</Button>
                     </>
                   )}
                 </div>
@@ -523,7 +523,7 @@ const CRMOrganizationDetail = () => {
                         <span className="text-xs text-muted-foreground">Email</span>
                         <div className="flex items-center gap-1">
                           <span className="text-xs font-mono text-foreground">{client.email}</span>
-                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { navigator.clipboard.writeText(client.email || ""); toast.success("Email copiata"); }}>
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => { navigator.clipboard.writeText(client.email || ""); toast.success("Email copied"); }}>
                             <Copy size={10} />
                           </Button>
                         </div>
@@ -533,23 +533,23 @@ const CRMOrganizationDetail = () => {
                           try {
                             const { error } = await supabase.functions.invoke("reset-dealer-password", { body: { email: client.email } });
                             if (error) throw error;
-                            toast.success(`Email di reset password inviata a ${client.email}`);
-                          } catch (e: any) { toast.error(e.message || "Errore invio reset"); }
+                            toast.success(`Password reset email sent to ${client.email}`);
+                          } catch (e: any) { toast.error(e.message || "Failed to send reset"); }
                         }}>
                           <KeyRound size={10} /> Reset Password
                         </Button>
                         <Button variant="destructive" size="sm" className="gap-1 text-xs h-7" disabled={deletingCredentials} onClick={handleDeleteCredentials}>
                           {deletingCredentials ? <RefreshCw size={10} className="animate-spin" /> : <Trash2 size={10} />}
-                          Elimina Account
+                          Delete Account
                         </Button>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-xs text-muted-foreground">Nessun account dealer collegato. Crea le credenziali per abilitare l'accesso al portale.</p>
+                    <p className="text-xs text-muted-foreground">No dealer account linked. Create credentials to enable portal access.</p>
                     {!client.email && (
-                      <p className="text-xs text-destructive">⚠️ Configura prima un'email per questa organizzazione.</p>
+                      <p className="text-xs text-destructive">⚠️ Configure an email for this organization first.</p>
                     )}
                     <Button
                       size="sm"
@@ -558,7 +558,7 @@ const CRMOrganizationDetail = () => {
                       onClick={handleCreateCredentials}
                     >
                       {creatingCredentials ? <RefreshCw size={12} className="animate-spin" /> : <UserCheck size={12} />}
-                      Crea Credenziali & Invia Email
+                      Create Credentials & Send Email
                     </Button>
                   </div>
                 )}
@@ -601,7 +601,7 @@ const CRMOrganizationDetail = () => {
                   </div>
                   <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
                     <span>Pipeline: €{orgDeals.filter((d: any) => !["closed_won", "closed_lost"].includes(d.stage)).reduce((s: number, d: any) => s + Number(d.value || 0), 0).toLocaleString("it-IT")}</span>
-                    <span>{orgDeals.filter((d: any) => d.stage === "closed_won").length} vinti · {orgDeals.filter((d: any) => d.stage === "closed_lost").length} persi</span>
+                    <span>{orgDeals.filter((d: any) => d.stage === "closed_won").length} won · {orgDeals.filter((d: any) => d.stage === "closed_lost").length} lost</span>
                   </div>
                 </div>
               )}
@@ -645,13 +645,13 @@ const CRMOrganizationDetail = () => {
         <TabsContent value="contacts">
           <div className="glass-card-solid p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><Users size={16} /> Contatti dell'Organizzazione</h3>
+              <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><Users size={16} /> Organization Contacts</h3>
               <Button size="sm" onClick={() => { resetContactForm(); setEditContactId(null); setAddContactOpen(true); }} className="gap-1">
-                <Plus size={14} /> Aggiungi Contatto
+                <Plus size={14} /> Add Contact
               </Button>
             </div>
             {!contacts?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nessun contatto registrato. Aggiungi il primo contatto.</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No contacts registered. Add the first contact.</p>
             ) : (
               <div className="grid sm:grid-cols-2 gap-3">
                 {contacts.map((c: any) => (
@@ -669,11 +669,11 @@ const CRMOrganizationDetail = () => {
                         {c.job_title && <p className="text-xs text-muted-foreground mt-1">{c.job_title}{c.department ? ` · ${c.department}` : ""}</p>}
                         {c.email && <p className="text-xs text-muted-foreground mt-0.5"><Mail size={10} className="inline mr-1" />{c.email}</p>}
                         {c.phone && <p className="text-xs text-muted-foreground mt-0.5"><Phone size={10} className="inline mr-1" />{c.phone}</p>}
-                        <p className="text-[10px] text-muted-foreground mt-1">Canale: {c.preferred_channel || "email"}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Channel: {c.preferred_channel || "email"}</p>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => editContact(c)}><Pencil size={12} /></Button>
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => { if (confirm("Eliminare questo contatto?")) deleteContact(c.id); }}><Trash2 size={12} /></Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => { if (confirm("Delete this contact?")) deleteContact(c.id); }}><Trash2 size={12} /></Button>
                       </div>
                     </div>
                   </div>
@@ -694,17 +694,17 @@ const CRMOrganizationDetail = () => {
             {!orders?.length ? (
               <div className="p-8 text-center text-muted-foreground text-sm">
                 <ShoppingBag size={32} className="mx-auto mb-2 opacity-30" />
-                <p>Nessun ordine — il cliente è in {getClientStatusLabel(client.status || "lead")}</p>
+                <p>No orders — client is in {getClientStatusLabel(client.status || "lead")}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Codice</TableHead>
-                    <TableHead className="text-xs">Data</TableHead>
-                    <TableHead className="text-xs">Stato</TableHead>
-                    <TableHead className="text-xs">Pagamento</TableHead>
-                    <TableHead className="text-xs text-right">Totale</TableHead>
+                    <TableHead className="text-xs">Code</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Payment</TableHead>
+                    <TableHead className="text-xs text-right">Total</TableHead>
                     <TableHead className="text-xs"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -751,11 +751,11 @@ const CRMOrganizationDetail = () => {
         <TabsContent value="activities">
           <div className="glass-card-solid p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><Clock size={16} /> Attività</h3>
-              <Button size="sm" onClick={() => setAddActivityOpen(true)} className="gap-1"><Plus size={14} /> Nuova Attività</Button>
+              <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><Clock size={16} /> Activities</h3>
+              <Button size="sm" onClick={() => setAddActivityOpen(true)} className="gap-1"><Plus size={14} /> New Activity</Button>
             </div>
             {!activities?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nessuna attività registrata</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No activities recorded</p>
             ) : (
               <div className="relative border-l-2 border-border ml-3 space-y-3">
                 {activities.map((a: any) => (
@@ -786,7 +786,7 @@ const CRMOrganizationDetail = () => {
               <Button size="sm" onClick={() => setAddTaskOpen(true)} className="gap-1"><Plus size={14} /> Nuovo Task</Button>
             </div>
             {!orgTasks?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nessun task collegato</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No linked tasks</p>
             ) : (
               <div className="space-y-2">
                 {orgTasks.map((t: any) => {
@@ -806,7 +806,7 @@ const CRMOrganizationDetail = () => {
                           await supabase.from("tasks").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", t.id);
                           refetchTasks();
                           queryClient.invalidateQueries({ queryKey: ["crm-overdue-tasks-count"] });
-                          toast.success("Task completato");
+                          toast.success("Task completed");
                         }}><Check size={14} /></Button>
                       )}
                     </div>
@@ -821,14 +821,14 @@ const CRMOrganizationDetail = () => {
           <div className="glass-card-solid p-6">
             <h3 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2"><FileText size={16} /> Documenti</h3>
             {!documents?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nessun documento caricato</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No documents uploaded</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Nome File</TableHead>
-                    <TableHead className="text-xs">Tipo</TableHead>
-                    <TableHead className="text-xs">Data</TableHead>
+                    <TableHead className="text-xs">File Name</TableHead>
+                    <TableHead className="text-xs">Type</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -867,7 +867,7 @@ const CRMOrganizationDetail = () => {
               <h3 className="font-heading font-bold text-foreground flex items-center gap-2"><StickyNote size={16} /> Note Azienda</h3>
               {!editingNotes ? (
                 <Button size="sm" variant="ghost" onClick={() => { setEditingNotes(true); setNotesValue(client.notes || ""); }}>
-                  {client.notes ? "Modifica" : "Aggiungi"}
+                  {client.notes ? "Edit" : "Add"}
                 </Button>
               ) : (
                 <div className="flex gap-1">
@@ -877,30 +877,30 @@ const CRMOrganizationDetail = () => {
                     const trimmed = notesValue.trim() || null;
                     const { error } = await supabase.from("clients").update({ notes: trimmed }).eq("id", id!);
                     setSavingNotes(false);
-                    if (error) { toast.error("Errore salvataggio"); return; }
-                    toast.success("Note salvate");
+                    if (error) { toast.error("Failed to save"); return; }
+                    toast.success("Notes saved");
                     setEditingNotes(false);
                     queryClient.invalidateQueries({ queryKey: ["crm-org", id] });
                   }}>
-                    {savingNotes ? "..." : "Salva"}
+                    {savingNotes ? "..." : "Save"}
                   </Button>
                 </div>
               )}
             </div>
             {editingNotes ? (
-              <Textarea value={notesValue} onChange={e => setNotesValue(e.target.value)} placeholder="Scrivi note sull'azienda..." className="text-sm min-h-[150px] resize-none" />
+              <Textarea value={notesValue} onChange={e => setNotesValue(e.target.value)} placeholder="Write company notes..." className="text-sm min-h-[150px] resize-none" />
             ) : client.notes ? (
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{client.notes}</p>
             ) : (
-              <p className="text-xs text-muted-foreground italic">Nessuna nota.</p>
+              <p className="text-xs text-muted-foreground italic">No notes.</p>
             )}
 
             {/* Note activities (type = note) */}
             <div className="mt-6">
-              <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-3">Note dal Team Sales</h4>
+              <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-3">Sales Team Notes</h4>
               {(() => {
                 const noteActs = activities?.filter((a: any) => a.type === "note") || [];
-                if (!noteActs.length) return <p className="text-xs text-muted-foreground italic">Nessuna nota dal team.</p>;
+                if (!noteActs.length) return <p className="text-xs text-muted-foreground italic">No notes from the team.</p>;
                 return (
                   <div className="space-y-2">
                     {noteActs.map((a: any) => (
@@ -924,16 +924,16 @@ const CRMOrganizationDetail = () => {
       <Dialog open={addContactOpen} onOpenChange={setAddContactOpen}>
         <DialogContent className="bg-card border-border max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-heading">{editContactId ? "Modifica Contatto" : "Nuovo Contatto"}</DialogTitle>
+            <DialogTitle className="font-heading">{editContactId ? "Edit Contact" : "New Contact"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Nome *</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Name *</Label>
                 <Input className="h-9 text-sm bg-secondary border-border" value={contactForm.contact_name} onChange={e => setContactForm(f => ({ ...f, contact_name: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Tipo Contatto</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Contact Type</Label>
                 <Select value={contactForm.contact_type} onValueChange={v => setContactForm(f => ({ ...f, contact_type: v }))}>
                   <SelectTrigger className="h-9 text-sm bg-secondary border-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -946,7 +946,7 @@ const CRMOrganizationDetail = () => {
                 <Input className="h-9 text-sm bg-secondary border-border" value={contactForm.email} onChange={e => setContactForm(f => ({ ...f, email: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Telefono</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Phone</Label>
                 <Input className="h-9 text-sm bg-secondary border-border" value={contactForm.phone} onChange={e => setContactForm(f => ({ ...f, phone: e.target.value }))} />
               </div>
               <div className="space-y-1">
@@ -954,16 +954,16 @@ const CRMOrganizationDetail = () => {
                 <Input className="h-9 text-sm bg-secondary border-border" value={contactForm.job_title} onChange={e => setContactForm(f => ({ ...f, job_title: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Dipartimento</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Department</Label>
                 <Input className="h-9 text-sm bg-secondary border-border" value={contactForm.department} onChange={e => setContactForm(f => ({ ...f, department: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Canale Preferito</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Preferred Channel</Label>
                 <Select value={contactForm.preferred_channel} onValueChange={v => setContactForm(f => ({ ...f, preferred_channel: v }))}>
                   <SelectTrigger className="h-9 text-sm bg-secondary border-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="phone">Telefono</SelectItem>
+                    <SelectItem value="phone">Phone</SelectItem>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
                     <SelectItem value="linkedin">LinkedIn</SelectItem>
                   </SelectContent>
@@ -977,7 +977,7 @@ const CRMOrganizationDetail = () => {
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox checked={contactForm.is_primary} onCheckedChange={v => setContactForm(f => ({ ...f, is_primary: !!v }))} />
-                <Star size={12} className="text-warning" /> Contatto Principale
+                <Star size={12} className="text-warning" /> Primary Contact
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox checked={contactForm.is_decision_maker} onCheckedChange={v => setContactForm(f => ({ ...f, is_decision_maker: !!v }))} />
@@ -988,7 +988,7 @@ const CRMOrganizationDetail = () => {
               <Label className="text-[10px] uppercase text-muted-foreground">Note</Label>
               <Textarea className="text-sm bg-secondary border-border min-h-[60px]" value={contactForm.notes} onChange={e => setContactForm(f => ({ ...f, notes: e.target.value }))} />
             </div>
-            <Button onClick={saveContact} className="w-full">{editContactId ? "Aggiorna Contatto" : "Aggiungi Contatto"}</Button>
+            <Button onClick={saveContact} className="w-full">{editContactId ? "Update Contact" : "Add Contact"}</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -996,7 +996,7 @@ const CRMOrganizationDetail = () => {
       {/* Add Activity Dialog */}
       <Dialog open={addActivityOpen} onOpenChange={setAddActivityOpen}>
         <DialogContent className="bg-card border-border">
-          <DialogHeader><DialogTitle className="font-heading">Nuova Attività</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-heading">New Activity</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
               <Label className="text-[10px] uppercase text-muted-foreground">Titolo *</Label>
@@ -1004,7 +1004,7 @@ const CRMOrganizationDetail = () => {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Tipo</Label>
+                <Label className="text-[10px] uppercase text-muted-foreground">Type</Label>
                 <Select value={actForm.type} onValueChange={v => setActForm(f => ({ ...f, type: v }))}>
                   <SelectTrigger className="h-9 text-sm bg-secondary border-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -1047,7 +1047,7 @@ const CRMOrganizationDetail = () => {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs uppercase text-muted-foreground">Tipo</Label>
+                <Label className="text-xs uppercase text-muted-foreground">Type</Label>
                 <Select value={taskForm.type} onValueChange={v => setTaskForm(f => ({ ...f, type: v }))}>
                   <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
                   <SelectContent>
