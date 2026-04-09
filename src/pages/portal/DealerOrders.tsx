@@ -122,6 +122,7 @@ const DealerOrders = () => {
     }
   }, [highlightId, orders]);
 
+  const getDownloadUrl = (filePath: string) => {
     const { data } = supabase.storage.from("order-documents").getPublicUrl(filePath);
     return data.publicUrl;
   };
