@@ -12,7 +12,8 @@ import {
   Copy, DollarSign, XCircle, Trash2, Minus, Plus, Edit3,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
