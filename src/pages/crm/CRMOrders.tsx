@@ -12,7 +12,7 @@ import { TablePagination } from "@/components/ui/TablePagination";
 import { Package, Clock, Truck, CheckCircle, Search, ShoppingBag, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+
 import { getOrderStatusLabel, getOrderStatusColor, getPaymentStatusLabel, getPaymentStatusColor } from "@/lib/constants";
 import { CRMOrderDetailModal } from "@/components/crm/CRMOrderDetailModal";
 import { toast } from "sonner";
@@ -119,7 +119,7 @@ const CRMOrders = () => {
 
   const { pageData, page, totalPages, totalCount, goToPage } = usePaginatedData({ data: filtered, pageSize: 25 });
 
-  const fmtCurrency = (v: number) => `€${v.toLocaleString("it-IT", { minimumFractionDigits: 2 })}`;
+  const fmtCurrency = (v: number) => `€${v.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 
   const openOrder = (id: string) => {
     setSelectedOrderId(id);
@@ -228,7 +228,7 @@ const CRMOrders = () => {
                   <p className="text-xs text-muted-foreground">{order.clients?.contact_name || ""}</p>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {format(new Date(order.created_at), "dd MMM yyyy", { locale: it })}
+                  {format(new Date(order.created_at), "dd MMM yyyy", )}
                 </TableCell>
                 <TableCell className="text-sm text-center text-muted-foreground">
                   {order.order_items?.length || 0}

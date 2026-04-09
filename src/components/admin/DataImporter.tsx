@@ -18,7 +18,7 @@ interface FieldMapping {
 }
 
 const CLIENT_FIELDS = [
-  { key: "company_name", label: "Nome Business", required: true, aliases: ["business", "ragione sociale", "company", "azienda"] },
+  { key: "company_name", label: "Business Name", required: true, aliases: ["business", "ragione sociale", "company", "azienda"] },
   { key: "business_type", label: "Type", required: false, aliases: ["type", "tipo", "business type"] },
   { key: "status", label: "Status", required: false, aliases: ["status", "stato"] },
   { key: "country", label: "Country", required: false, aliases: ["country", "paese", "nazione"] },
@@ -243,7 +243,7 @@ export default function DataImporter() {
       }
 
       setStep("done");
-      toast.success(`Importazione completata: ${importedCount || "tutti i"} record importati`);
+      toast.success(`Import completed: ${importedCount || "all"} records imported`);
     } catch (error) {
       showErrorToast(error, "DataImporter.import");
       setStep("preview");
@@ -387,13 +387,13 @@ export default function DataImporter() {
                 </Table>
               </div>
               {rawData.length > 10 && (
-                <p className="text-xs text-muted-foreground mt-2">...mostrando le prime 10 righe di {rawData.length}</p>
+                <p className="text-xs text-muted-foreground mt-2">...showing first 10 rows of {rawData.length}</p>
               )}
             </CardContent>
           </Card>
 
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setStep("mapping")}>← Torna al Mapping</Button>
+            <Button variant="outline" onClick={() => setStep("mapping")}>← Back to Mapping</Button>
             <Button onClick={doImport} disabled={errors.some((e) => fields.find((f) => f.label === e.field)?.required)}>
               Importa {rawData.length} record
             </Button>
@@ -406,7 +406,7 @@ export default function DataImporter() {
         <Card>
           <CardContent className="pt-6 flex flex-col items-center gap-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="text-muted-foreground">Importazione in corso...</p>
+            <p className="text-muted-foreground">Importing...</p>
           </CardContent>
         </Card>
       )}
@@ -416,9 +416,9 @@ export default function DataImporter() {
         <Card className="border-success/50">
           <CardContent className="pt-6 flex flex-col items-center gap-4">
             <CheckCircle2 className="h-12 w-12 text-success" />
-            <p className="text-lg font-semibold text-foreground">Importazione completata!</p>
+            <p className="text-lg font-semibold text-foreground">Import completed!</p>
             <p className="text-muted-foreground">{importedCount} record importati con successo</p>
-            <Button onClick={reset}>Nuova importazione</Button>
+            <Button onClick={reset}>New import</Button>
           </CardContent>
         </Card>
       )}
