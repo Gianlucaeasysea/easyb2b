@@ -120,7 +120,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (removedAny) {
-        toast.warning("Alcuni prodotti non più disponibili sono stati rimossi dal carrello");
+        toast.warning("Some unavailable products were removed from your cart");
       }
 
       setItems(validated);
