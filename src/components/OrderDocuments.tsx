@@ -11,10 +11,12 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 
 const DOC_TYPES = [
+  { value: "order_confirmation", label: "Order Confirmation" },
   { value: "invoice", label: "Invoice" },
   { value: "ddt", label: "DDT" },
   { value: "credit_note", label: "Credit Note" },
   { value: "proforma", label: "Proforma" },
+  { value: "delivery_note", label: "Delivery Note" },
   { value: "other", label: "Other" },
 ];
 
@@ -27,7 +29,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [docType, setDocType] = useState("invoice");
+  const [docType, setDocType] = useState("order_confirmation");
   const [uploading, setUploading] = useState(false);
   const [uploadNote, setUploadNote] = useState("");
   const [deleteDoc, setDeleteDoc] = useState<any>(null);
@@ -197,12 +199,17 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
         <p className="text-xs text-muted-foreground italic">No documents available</p>
       ) : (
         <div className="space-y-1.5">
-          {documents.map(doc => (
-            <div key={doc.id} className="flex items-center justify-between bg-secondary/50 rounded-lg px-3 py-2">
+          {documents.map(doc => {
+            const isOC = doc.doc_type === "order_confirmation";
+            return (
+            <div key={doc.id} className={`flex items-center justify-between rounded-lg px-3 py-2 ${isOC ? "bg-success/10 border border-success/20" : "bg-secondary/50"}`}>
               <div className="flex items-center gap-2 min-w-0">
-                <FileText size={14} className="text-primary shrink-0" />
+                <FileText size={14} className={isOC ? "text-success shrink-0" : "text-primary shrink-0"} />
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-foreground truncate">{doc.file_name}</p>
+                  <p className="text-xs font-semibold text-foreground truncate flex items-center gap-1.5">
+                    {doc.file_name}
+                    {isOC && <span className="text-[9px] bg-success/20 text-success px-1.5 py-0.5 rounded font-bold uppercase">Official</span>}
+                  </p>
                   <p className="text-[10px] text-muted-foreground">
                     {docTypeLabel(doc.doc_type)} · {format(new Date(doc.created_at), "dd MMM yyyy")}
                     {(doc as any).note && ` · ${(doc as any).note}`}
@@ -220,7 +227,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
                 )}
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
 
