@@ -123,6 +123,7 @@ const BecomeADealer = () => {
     }
 
     setLoading(false);
+    setCooldownUntil(Date.now() + 30_000);
     setSubmitted(true);
   };
 

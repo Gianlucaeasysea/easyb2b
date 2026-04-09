@@ -2,6 +2,30 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { cleanupOrphanedDealerAccountByEmail } from "../_shared/dealer-account-cleanup.ts";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function validateInput(body: any): string | null {
+  const { action, client_id, email, password } = body;
+
+  if (action && action !== "create" && action !== "delete") {
+    return "Invalid action. Must be 'create' or 'delete'.";
+  }
+
+  if (action === "delete") {
+    if (!client_id || typeof client_id !== "string") return "Missing or invalid client_id";
+    return null;
+  }
+
+  // CREATE
+  if (!client_id || typeof client_id !== "string") return "Missing or invalid client_id";
+  if (!email || typeof email !== "string" || !EMAIL_RE.test(email)) return "Missing or invalid email";
+  if (!password || typeof password !== "string" || password.length < 8) return "Password must be at least 8 characters";
+  if (email.length > 255) return "Email too long";
+
+  return null;
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -10,7 +34,22 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const validationError = validateInput(body);
+    if (validationError) {
+      return new Response(JSON.stringify({ error: validationError }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { client_id, email, password, action } = body;
 
     const supabaseAdmin = createClient(
@@ -59,8 +98,6 @@ Deno.serve(async (req) => {
     }
 
     // CREATE action (default)
-    if (!client_id || !email || !password) throw new Error("Missing fields");
-
     await cleanupOrphanedDealerAccountByEmail(supabaseAdmin, email, client_id);
 
     const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
