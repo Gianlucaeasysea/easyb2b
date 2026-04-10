@@ -117,7 +117,14 @@ Best regards,
 The Easysea Team
 business@easysea.org`;
 
-    await sendGmail(accessToken, fromEmail, fromName, email, clientSubject, clientBody);
+    let emailErrors: string[] = [];
+
+    try {
+      await sendGmail(accessToken, fromEmail, fromName, email, clientSubject, clientBody);
+    } catch (e) {
+      console.warn("Failed to send client confirmation email:", e);
+      emailErrors.push(`client: ${e.message}`);
+    }
 
     // 2. Send notification to ALL staff
     const staffSubject = `New dealer application — ${companyName}`;
@@ -140,10 +147,18 @@ ${message || "(no message)"}
 Review in the CRM: Dealer Requests section`;
 
     for (const staffEmail of STAFF_EMAILS) {
-      await sendGmail(accessToken, fromEmail, fromName, staffEmail, staffSubject, staffBody);
+      try {
+        await sendGmail(accessToken, fromEmail, fromName, staffEmail, staffSubject, staffBody);
+      } catch (e) {
+        console.warn(`Failed to send staff email to ${staffEmail}:`, e);
+        emailErrors.push(`staff(${staffEmail}): ${e.message}`);
+      }
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      emailErrors: emailErrors.length > 0 ? emailErrors : undefined 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
