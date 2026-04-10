@@ -15,7 +15,7 @@ const GMAIL_SCOPES = [
 const GmailOAuthPopup = () => {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const [state, setState] = useState<PopupState>("idle");
-  const [message, setMessage] = useState("Clicca il pulsante per autorizzare Gmail.");
+  const [message, setMessage] = useState("Click the button to authorize Gmail.");
   const [isReady, setIsReady] = useState(false);
 
   const targetOrigin = useMemo(() => {
@@ -48,7 +48,7 @@ const GmailOAuthPopup = () => {
       }
 
       setState("success");
-      setMessage("Autorizzazione completata, torno al CRM...");
+      setMessage("Authorization complete, returning to CRM...");
 
       window.opener?.postMessage(
         {
@@ -72,7 +72,7 @@ const GmailOAuthPopup = () => {
       .catch((err) => {
         if (!isMounted) return;
         setState("error");
-        setMessage(err instanceof Error ? err.message : "Impossibile preparare Google OAuth.");
+        setMessage(err instanceof Error ? err.message : "Unable to prepare Google OAuth.");
       });
     return () => { isMounted = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -80,7 +80,7 @@ const GmailOAuthPopup = () => {
   const handleAuthorize = () => {
     if (!isReady) return;
     setState("loading");
-    setMessage("Reindirizzamento a Google...");
+    setMessage("Redirecting to Google...");
 
     const loginHint = searchParams.get("loginHint") || "business@easysea.org";
 
@@ -106,7 +106,7 @@ const GmailOAuthPopup = () => {
       client.requestCode();
     } catch (err) {
       setState("error");
-      setMessage(err instanceof Error ? err.message : "Errore durante l'avvio dell'autorizzazione.");
+      setMessage(err instanceof Error ? err.message : "Error starting the authorization flow.");
     }
   };
 
@@ -125,13 +125,13 @@ const GmailOAuthPopup = () => {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-xl font-semibold text-foreground">Collegamento Gmail</h1>
+            <h1 className="text-xl font-semibold text-foreground">Gmail Connection</h1>
             <p className="text-sm text-muted-foreground">{message}</p>
           </div>
 
           {(state === "idle" || state === "error") && (
             <Button onClick={handleAuthorize} className="mt-2 w-full" disabled={!isReady}>
-              Autorizza Gmail
+              Authorize Gmail
             </Button>
           )}
         </div>

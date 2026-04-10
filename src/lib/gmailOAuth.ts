@@ -1,3 +1,5 @@
+import { supabase } from '@/integrations/supabase/client'
+
 type GoogleOAuthError = {
   type: "popup_failed_to_open" | "popup_closed" | "unknown";
 };
@@ -67,13 +69,26 @@ const OAUTH_STATE_KEY = "gmail_oauth_state";
 let googleIdentityScriptPromise: Promise<void> | null = null;
 
 /**
- * Generates a cryptographically random state nonce for CSRF protection
- * and stores it in sessionStorage for later validation.
+ * Generates a cryptographically random state nonce for CSRF protection.
+ * Format: "{userId}:{nonce}" — the backend extracts the userId from this.
+ * Also persists the nonce to the oauth_states DB table for backend validation.
  */
-function generateOAuthState(): string {
+async function generateOAuthState(userId: string): Promise<string> {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
-  const state = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const nonce = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
+
+  const state = `${userId}:${nonce}`;
+
+  // Persist to DB for backend validation
+  const { error } = await supabase
+    .from('oauth_states')
+    .insert({ user_id: userId, nonce } as Record<string, unknown>);
+
+  if (error) {
+    throw new Error('Failed to initialize OAuth state. Please try again.');
+  }
+
   sessionStorage.setItem(OAUTH_STATE_KEY, state);
   return state;
 }
@@ -97,7 +112,7 @@ function createGmailAuthorizationCodeRequest(loginHint = "business@easysea.org")
     const googleOauth = googleWindow.google?.accounts?.oauth2;
 
     if (!googleOauth) {
-      reject(new Error("Google Identity Services non è disponibile."));
+      reject(new Error("Google Identity Services is not available."));
       return;
     }
 
@@ -115,7 +130,7 @@ function createGmailAuthorizationCodeRequest(loginHint = "business@easysea.org")
         }
 
         if (!response.code) {
-          reject(new Error("Google non ha restituito un authorization code valido."));
+          reject(new Error("Google did not return a valid authorization code."));
           return;
         }
 
@@ -133,11 +148,11 @@ function createGmailAuthorizationCodeRequest(loginHint = "business@easysea.org")
 function getPopupErrorMessage(error: GoogleOAuthError) {
   switch (error.type) {
     case "popup_failed_to_open":
-      return "Il popup di Google non si è aperto. Controlla il blocco popup del browser.";
+      return "The Google popup failed to open. Check your browser's popup blocker settings.";
     case "popup_closed":
-      return "Il popup di Google è stato chiuso prima di completare l'autorizzazione.";
+      return "The Google popup was closed before completing authorization.";
     default:
-      return "Errore sconosciuto durante l'apertura del popup Google.";
+      return "An unknown error occurred while opening the Google popup.";
   }
 }
 
@@ -171,7 +186,7 @@ export async function loadGoogleIdentityScript() {
   await googleIdentityScriptPromise;
 
   if (!googleWindow.google?.accounts?.oauth2) {
-    throw new Error("Google Identity Services non è disponibile nella pagina.");
+    throw new Error("Google Identity Services is not available on this page.");
   }
 }
 
@@ -214,9 +229,16 @@ export async function requestGmailAuthorizationCodeOnCurrentOrigin(loginHint = "
   return createGmailAuthorizationCodeRequest(loginHint);
 }
 
-function requestGmailAuthorizationCodeFromPublishedBridge(loginHint: string) {
+async function requestGmailAuthorizationCodeFromPublishedBridge(loginHint: string) {
+  // Get current user ID for state generation
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('You must be logged in to connect Gmail.');
+  }
+
+  const state = await generateOAuthState(user.id);
+
   return new Promise<GmailAuthorizationCodeResult>((resolve, reject) => {
-    const state = generateOAuthState();
     const popupBridgeUrl = new URL(GMAIL_POPUP_BRIDGE_URL);
     popupBridgeUrl.searchParams.set("targetOrigin", window.location.origin);
     popupBridgeUrl.searchParams.set("loginHint", loginHint);
@@ -261,7 +283,7 @@ function requestGmailAuthorizationCodeFromPublishedBridge(loginHint: string) {
         return;
       }
 
-      reject(new Error(event.data.message || "Errore durante l'autorizzazione Google."));
+      reject(new Error(event.data.message || "Error during Google authorization."));
     };
 
     let closedCount = 0;
