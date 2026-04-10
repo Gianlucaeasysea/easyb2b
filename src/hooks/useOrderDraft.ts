@@ -155,8 +155,8 @@ export function useOrderDraft() {
         p_client_id: clientId,
         p_status: "draft",
         p_notes: `Duplicated from order ${order.order_code || order.id.slice(0, 8)}`,
-        p_payment_terms: null,
-        p_internal_notes: null,
+        p_payment_terms: undefined,
+        p_internal_notes: undefined,
         p_items: validItems,
       });
       if (orderErr) throw orderErr;
