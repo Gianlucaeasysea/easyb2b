@@ -53,7 +53,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
     if (!file || !user) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("File size cannot exceed 10MB");
+      toast.error(ERROR_MESSAGES.FILE_TOO_LARGE);
       return;
     }
 
@@ -118,7 +118,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
 
       setUploadNote("");
     } catch (err: any) {
-      toast.error("Upload error: " + err.message);
+      toast.error(ERROR_MESSAGES.UPLOAD_FAILED);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -133,7 +133,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
       queryClient.invalidateQueries({ queryKey: ["order-documents", orderId] });
       toast.success("Document deleted");
     } catch (err: any) {
-      toast.error("Delete error: " + err.message);
+      toast.error(ERROR_MESSAGES.DELETE_FAILED);
     } finally {
       setDeleteDoc(null);
     }
