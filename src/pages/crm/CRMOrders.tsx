@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useId } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { TablePagination } from "@/components/ui/TablePagination";
-import { Package, Clock, Truck, CheckCircle, Search, ShoppingBag, Plus } from "lucide-react";
+import { Clock, Truck, CheckCircle, Search, ShoppingBag, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 

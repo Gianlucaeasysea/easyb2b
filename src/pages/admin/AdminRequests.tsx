@@ -404,7 +404,7 @@ const AdminRequests = () => {
         <DialogContent className="bg-card border-border max-w-3xl max-h-[85vh] overflow-y-auto">
           {selectedRequest && (() => {
             const sc = STATUS_CONFIG[selectedRequest.status || "new"] || STATUS_CONFIG.new;
-            const _isActionable = selectedRequest.status === "new" || selectedRequest.status === "reviewed";
+            
             const isTerminal = selectedRequest.status === "approved" || selectedRequest.status === "converted" || selectedRequest.status === "rejected";
 
             return (

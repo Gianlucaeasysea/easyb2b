@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Handshake, Plus, Search, Trash2, Building2, User, Calendar,
+  Handshake, Plus, Search, Trash2, Building2, User,
   TrendingUp, CheckCircle2, XCircle, Pencil, Save, X, ShoppingBag
 } from "lucide-react";
 import { useState } from "react";

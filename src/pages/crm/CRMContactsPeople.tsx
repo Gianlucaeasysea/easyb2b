@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Users, Phone, Mail, MessageCircle, Linkedin, Globe, Crown, Star, Download } from "lucide-react";
+import { Search, Users, Phone, Mail, MessageCircle, Linkedin, Crown, Star, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { TablePagination } from "@/components/ui/TablePagination";
 import { useNavigate } from "react-router-dom";
