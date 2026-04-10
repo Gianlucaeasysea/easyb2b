@@ -17,10 +17,12 @@ export interface OrderDocument {
   created_at: string;
 }
 
+export type OrderStatusValue = 'draft' | 'submitted' | 'confirmed' | 'processing' | 'ready_to_ship' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+
 export interface Order {
   id: string;
   client_id: string;
-  status: string | null;
+  status: OrderStatusValue | null;
   total_amount: number | null;
   notes: string | null;
   created_at: string;
