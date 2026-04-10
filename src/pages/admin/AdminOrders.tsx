@@ -140,6 +140,19 @@ const AdminOrders = () => {
       }
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["admin-orders"] });
+
+      // Send notifications to dealers for each updated order (fire-and-forget)
+      supabase
+        .from("orders")
+        .select("id, order_code, client_id")
+        .in("id", ids)
+        .then(({ data: updatedOrders }) => {
+          (updatedOrders ?? []).forEach(order => {
+            supabase.functions.invoke("send-order-notification", {
+              body: { orderId: order.id, type: "order_status_update", newStatus: bulkStatus },
+            }).catch(err => console.error(`Notification failed for ${order.order_code}`, err));
+          });
+        });
     } catch (error) {
       showErrorToast(error, "AdminOrders.bulkStatus");
     } finally {

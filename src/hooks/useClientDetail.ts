@@ -386,7 +386,7 @@ export function useClientDetail(id: string | undefined) {
   };
 
   const handleDocDownload = async (filePath: string) => {
-    const { data } = await supabase.storage.from("client-documents").createSignedUrl(filePath, 300);
+    const { data } = await supabase.storage.from("client-documents").createSignedUrl(filePath, 3600);
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   };
 
