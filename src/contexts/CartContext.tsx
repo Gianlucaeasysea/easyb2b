@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ERROR_MESSAGES } from "@/lib/errorMessages";
+import { logger } from "@/lib/logger";
 import { AnimatePresence, motion } from "framer-motion";
 
 export interface CartItem {
@@ -26,6 +27,7 @@ interface CartContextType {
   totalItems: number;
   totalAmount: number;
   showSavedIndicator: boolean;
+  cartStorageError: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -33,21 +35,40 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_KEY_PREFIX = "easysea_cart_";
 const getCartKey = (userId: string) => `${CART_KEY_PREFIX}${userId}`;
 
+function isLocalStorageAvailable(): boolean {
+  try {
+    const testKey = '__cart_test__';
+    localStorage.setItem(testKey, '1');
+    localStorage.removeItem(testKey);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const loadCartFromStorage = (userId: string): CartItem[] => {
   try {
     const raw = localStorage.getItem(getCartKey(userId));
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch {}
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed as CartItem[];
+  } catch (error) {
+    logger.error('CartContext', 'Failed to load cart from localStorage', error);
+  }
   return [];
 };
 
-const saveCartToStorage = (userId: string, items: CartItem[]) => {
+const saveCartToStorage = (userId: string, items: CartItem[]): void => {
   try {
     localStorage.setItem(getCartKey(userId), JSON.stringify(items));
-  } catch {}
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      logger.warn('CartContext', 'localStorage quota exceeded — cart not saved');
+      toast.warning('Storage space full. Your cart may not be saved.');
+    } else {
+      logger.error('CartContext', 'Failed to save cart to localStorage', error);
+    }
+  }
 };
 
 export const clearCartStorage = (userId?: string) => {
@@ -55,17 +76,27 @@ export const clearCartStorage = (userId?: string) => {
     if (userId) {
       localStorage.removeItem(getCartKey(userId));
     }
-  } catch {}
+  } catch (error) {
+    logger.error('CartContext', 'Failed to clear cart from localStorage', error);
+  }
 };
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
+  const [cartStorageError] = useState(!isLocalStorageAvailable());
   const initializedForUser = useRef<string | null>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const saveDebounceRef = useRef<ReturnType<typeof setTimeout>>();
   const latestItemsRef = useRef<CartItem[]>([]);
+
+  // Warn once if localStorage is unavailable
+  useEffect(() => {
+    if (cartStorageError) {
+      logger.warn('CartContext', 'localStorage unavailable — cart will not persist');
+    }
+  }, [cartStorageError]);
 
   // Load & validate cart when user changes
   useEffect(() => {
@@ -127,18 +158,22 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
 
       setItems(validated);
-      saveCartToStorage(user.id, validated);
+      if (!cartStorageError) {
+        saveCartToStorage(user.id, validated);
+      }
     };
 
     validate();
-  }, [user?.id]);
+  }, [user?.id, cartStorageError]);
 
   // Flush pending save on unmount
   useEffect(() => {
     return () => {
       if (saveDebounceRef.current && user?.id) {
         clearTimeout(saveDebounceRef.current);
-        try { localStorage.setItem(getCartKey(user.id), JSON.stringify(latestItemsRef.current)); } catch {}
+        try { localStorage.setItem(getCartKey(user.id), JSON.stringify(latestItemsRef.current)); } catch (error) {
+          logger.error('CartContext', 'Failed to flush cart on unmount', error);
+        }
       }
     };
   }, [user?.id]);
@@ -149,7 +184,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   // Debounced persist to localStorage (after init)
   useEffect(() => {
-    if (!user?.id || initializedForUser.current !== user.id) return;
+    if (!user?.id || initializedForUser.current !== user.id || cartStorageError) return;
 
     // Cancel previous debounce
     if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
@@ -168,7 +203,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
     };
-  }, [items, user?.id]);
+  }, [items, user?.id, cartStorageError]);
 
   const addItem = useCallback((newItem: Omit<CartItem, "quantity"> & { quantity?: number }) => {
     // Safety net: block items without a valid price from price list
@@ -206,10 +241,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = useCallback(() => {
     // Cancel any pending debounced save
-    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    if (saveDebounceRef.current) {
+      clearTimeout(saveDebounceRef.current);
+      saveDebounceRef.current = undefined;
+    }
     setItems([]);
     if (user?.id) {
-      saveCartToStorage(user.id, []);
+      try {
+        localStorage.removeItem(getCartKey(user.id));
+      } catch (error) {
+        logger.error('CartContext', 'Failed to clear cart from localStorage', error);
+      }
     }
   }, [user?.id]);
 
@@ -217,7 +259,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const totalAmount = items.reduce((sum, i) => sum + i.b2bPrice * i.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, updateQuantity, removeItem, clearCart, totalItems, totalAmount, showSavedIndicator }}>
+    <CartContext.Provider value={{ items, addItem, updateQuantity, removeItem, clearCart, totalItems, totalAmount, showSavedIndicator, cartStorageError }}>
       {children}
     </CartContext.Provider>
   );
@@ -229,7 +271,7 @@ export const useCart = () => {
   return ctx;
 };
 
-/** Small animated "Carrello salvato" indicator */
+/** Small animated "Cart saved" indicator */
 export const CartSavedIndicator = () => {
   const { showSavedIndicator } = useCart();
   return (
