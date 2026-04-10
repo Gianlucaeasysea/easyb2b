@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
-import { useMotionValue, useTransform, animate, motion } from "framer-motion";
+import { useMotionValue, animate, motion } from "framer-motion";
 import { staggerContainer, staggerItem, fadeInUp } from "@/lib/animations";
 import { useEffect, useState } from "react";
 import { DashboardStatsSkeleton } from "@/components/portal/ui/PortalSkeleton";
