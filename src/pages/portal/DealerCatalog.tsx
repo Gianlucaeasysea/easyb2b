@@ -183,15 +183,19 @@ const DealerCatalog = () => {
   const selectedDetail = selectedProduct ? getDetailForProduct(selectedProduct) : null;
   const selectedPlEntry = selectedProduct ? priceListProductMap.get(selectedProduct.id) : null;
   const selectedRetailPrice = selectedProduct ? Number(selectedProduct.compare_at_price || selectedProduct.price) : 0;
-  const selectedHasPrice = !!selectedPlEntry;
+  
   const selectedB2bPrice = selectedPlEntry?.customPrice ?? 0;
-  const selectedDiscountPct = selectedRetailPrice > 0 && selectedB2bPrice < selectedRetailPrice
+  const selectedHasValidPrice = selectedB2bPrice > 0;
+  const selectedDiscountPct = selectedHasValidPrice && selectedRetailPrice > 0 && selectedB2bPrice < selectedRetailPrice
     ? Math.round((1 - selectedB2bPrice / selectedRetailPrice) * 100)
     : 0;
 
   const handleAddToCart = (p: any) => {
     const plEntry = priceListProductMap.get(p.id);
-    if (!plEntry) return;
+    if (!plEntry || !plEntry.customPrice || plEntry.customPrice <= 0) {
+      toast.error("This product has no valid B2B price in your price list");
+      return;
+    }
     const b2bPrice = plEntry.customPrice;
     const retailPrice = Number(p.compare_at_price || p.price || 0);
     const discountPct = retailPrice > 0 && b2bPrice < retailPrice ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
@@ -344,10 +348,11 @@ const DealerCatalog = () => {
           {filtered.map((p, i) => {
             const plEntry = priceListProductMap.get(p.id);
             const b2bPrice = plEntry?.customPrice ?? 0;
+            const hasValidPrice = b2bPrice != null && b2bPrice > 0;
             const retailPrice = Number(p.compare_at_price || p.price || 0);
-            const discountPct = retailPrice > 0 && b2bPrice < retailPrice
+            const discountPct = hasValidPrice && retailPrice > 0 && b2bPrice < retailPrice
               ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
-            const inStock = (p.stock_quantity ?? 0) > 0;
+            const inStock = p.stock_quantity === null || p.stock_quantity > 0;
             const detail = getDetailForProduct(p);
             const leadTime = (detail as any)?.lead_time;
 
@@ -427,13 +432,14 @@ const DealerCatalog = () => {
                       setQuantities(prev => ({ ...prev, [p.id]: val }));
                     }}
                     className="w-14 text-center h-8 text-sm"
-                    disabled={!inStock}
+                    disabled={!inStock || !hasValidPrice}
                   />
                   <Button
-                    disabled={!inStock}
+                    disabled={!inStock || !hasValidPrice}
                     size="sm"
                     className="rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold text-xs h-8 px-3"
                     onClick={() => handleAddToCart(p)}
+                    title={!hasValidPrice ? 'No valid price in your price list' : undefined}
                   >
                     <ShoppingCart size={12} />
                   </Button>
@@ -453,10 +459,11 @@ const DealerCatalog = () => {
           {filtered.map((p, i) => {
             const plEntry = priceListProductMap.get(p.id);
             const b2bPrice = plEntry?.customPrice ?? 0;
+            const hasValidPrice = b2bPrice != null && b2bPrice > 0;
             const retailPrice = Number(p.compare_at_price || p.price || 0);
-            const discountPct = retailPrice > 0 && b2bPrice < retailPrice
+            const discountPct = hasValidPrice && retailPrice > 0 && b2bPrice < retailPrice
               ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
-            const inStock = (p.stock_quantity ?? 0) > 0;
+            const inStock = p.stock_quantity === null || p.stock_quantity > 0;
             const detail = getDetailForProduct(p);
             const leadTime = (detail as any)?.lead_time;
             const isJustAdded = justAdded === p.id;
@@ -534,7 +541,7 @@ const DealerCatalog = () => {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 shrink-0"
-                          disabled={!inStock}
+                          disabled={!inStock || !hasValidPrice}
                           onClick={(e) => {
                             e.stopPropagation();
                             const curr = quantities[p.id] || 1;
@@ -555,13 +562,13 @@ const DealerCatalog = () => {
                           }}
                           onClick={(e) => e.stopPropagation()}
                           className="w-14 text-center h-8 text-sm"
-                          disabled={!inStock}
+                          disabled={!inStock || !hasValidPrice}
                         />
                         <Button
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 shrink-0"
-                          disabled={!inStock || (quantities[p.id] || 1) >= (p.stock_quantity ?? 999)}
+                          disabled={!inStock || !hasValidPrice || (quantities[p.id] || 1) >= (p.stock_quantity ?? 999)}
                           onClick={(e) => {
                             e.stopPropagation();
                             const curr = quantities[p.id] || 1;
@@ -571,7 +578,7 @@ const DealerCatalog = () => {
                           <Plus size={12} />
                         </Button>
                         <motion.button
-                          disabled={!inStock}
+                          disabled={!inStock || !hasValidPrice}
                           className={`flex-1 rounded-lg gap-1.5 font-heading font-semibold text-xs h-8 flex items-center justify-center px-3 transition-colors ${
                             isJustAdded
                               ? 'bg-success text-success-foreground'
@@ -611,10 +618,10 @@ const DealerCatalog = () => {
           retailPrice={selectedRetailPrice}
           discountPct={selectedDiscountPct}
           isClientMode={isClientMode}
-          canAddToCart={selectedHasPrice && (selectedProduct?.stock_quantity ?? 0) > 0}
+          canAddToCart={selectedHasValidPrice && (selectedProduct?.stock_quantity === null || (selectedProduct?.stock_quantity ?? 0) > 0)}
           onAddToCart={() => {
-            if (!selectedHasPrice) {
-              toast.error("Cannot add: price not available");
+            if (!selectedHasValidPrice) {
+              toast.error("Cannot add: no valid B2B price");
               return;
             }
             handleAddToCart(selectedProduct);
