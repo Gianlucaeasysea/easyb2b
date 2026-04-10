@@ -120,7 +120,7 @@ const AdminPriceLists = () => {
   });
 
   // ─── Import hook ───
-  const { importState, fileInputRef, handleFileUpload, setFieldMapping, setTargetListId, resetImport, executeImport } = usePriceListImport(products);
+  const { importState, fileInputRef, handleFileUpload, setFieldMapping, setTargetListId, resetImport, runValidation, executeImport } = usePriceListImport(products);
 
   // ─── Derived data ───
   const activeList = priceLists?.find(pl => pl.id === activeListId);
@@ -645,7 +645,7 @@ const AdminPriceLists = () => {
       <PriceListImport
         importState={importState} priceLists={priceLists || []}
         onSetTargetListId={setTargetListId} onSetFieldMapping={setFieldMapping}
-        onExecuteImport={executeImport} onCancel={resetImport}
+        onRunValidation={runValidation} onExecuteImport={executeImport} onCancel={resetImport}
       />
 
       <PriceListClientsAssignment
