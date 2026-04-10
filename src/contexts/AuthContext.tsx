@@ -14,7 +14,7 @@ interface AuthContextType {
   loading: boolean;
   roleError: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>;
+  signInWithMagicLink: (email: string) => Promise<{ error: Error | null; emailExists: boolean }>;
   signOut: () => Promise<void>;
   retryRole: () => void;
 }
@@ -170,12 +170,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error };
   };
 
-  const signInWithMagicLink = async (email: string) => {
+  const signInWithMagicLink = async (email: string): Promise<{ error: Error | null; emailExists: boolean }> => {
+    const trimmedEmail = email.toLowerCase().trim();
+
+    // Step 1: Verify email exists in registered profiles
+    const { data: profile, error: lookupError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', trimmedEmail)
+      .maybeSingle();
+
+    if (lookupError) {
+      logger.error("AuthContext", "Profile lookup error", lookupError);
+    }
+
+    // If no profile found and no lookup error, block sending
+    if (!lookupError && !profile) {
+      return { error: new Error('EMAIL_NOT_FOUND'), emailExists: false };
+    }
+
+    // Step 2: Email exists — send magic link
+    const productionUrl = import.meta.env.VITE_APP_URL ?? window.location.origin;
+
     const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
+      email: trimmedEmail,
+      options: {
+        emailRedirectTo: `${productionUrl}/portal`,
+        shouldCreateUser: false,
+      },
     });
-    return { error };
+
+    return { error, emailExists: true };
   };
 
   const signOut = async () => {
