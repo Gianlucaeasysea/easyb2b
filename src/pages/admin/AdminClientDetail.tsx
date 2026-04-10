@@ -153,7 +153,7 @@ const AdminClientDetail = () => {
     enabled: !!id,
   });
 
-  const { data: discountTiers } = useQuery({
+  useQuery({
     queryKey: ["discount-tiers"],
     queryFn: async () => {
       const { data, error } = await supabase.from("discount_tiers").select("*").order("sort_order");

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Loader2, MailWarning } from "lucide-react";
 import { loadGoogleIdentityScript } from "@/lib/gmailOAuth";
 import { Button } from "@/components/ui/button";

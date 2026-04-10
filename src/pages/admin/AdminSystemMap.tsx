@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Database, Users, Package, ShoppingBag, FileText, Tag, ArrowRight,
-  CheckCircle, XCircle, RefreshCw, Layers, Shield, GitBranch, Zap
+  CheckCircle, RefreshCw, Layers, Shield, GitBranch, Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

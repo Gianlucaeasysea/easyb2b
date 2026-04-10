@@ -140,7 +140,7 @@ const AdminNewOrders = () => {
         <div className="space-y-4">
           {orders.map(o => {
             const docs = (o as any).order_documents || [];
-            const hasDocs = hasInvoiceOrConfirmation(docs);
+            hasInvoiceOrConfirmation(docs);
             const phaseLabel = getOrderStatusLabel(o.status || "confirmed");
             const phaseColor = getOrderStatusColor(o.status || "confirmed");
             const canConfirm = o.status === "submitted" || o.status === "confirmed";

@@ -1,6 +1,6 @@
 import { LayoutDashboard, Users, Package, ShoppingBag, FileText, Settings, Upload, Tag, Map, FileImage, PackagePlus, Globe, Zap, ClipboardList, History } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+
 import { useNewOrderNotifications } from "@/hooks/useNewOrderNotifications";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
