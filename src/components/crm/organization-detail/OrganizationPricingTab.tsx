@@ -27,7 +27,7 @@ interface OrganizationPricingTabProps {
 }
 
 export function OrganizationPricingTab({
-  clientId, client, discountTiers, allPriceLists, assignedPriceLists,
+  client, discountTiers, allPriceLists, assignedPriceLists,
   priceListItemCounts, onAssignPriceList, onRemovePriceList, onUpdateVisibility,
 }: OrganizationPricingTabProps) {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
