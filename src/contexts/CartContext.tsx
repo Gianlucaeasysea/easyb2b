@@ -63,6 +63,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
   const initializedForUser = useRef<string | null>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const latestItemsRef = useRef<CartItem[]>([]);
 
   // Load & validate cart when user changes
   useEffect(() => {
