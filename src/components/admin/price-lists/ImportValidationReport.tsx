@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 
 interface Props {
   result: ValidationResult;
-  totalRows: number;
+  totalRows?: number;
   onConfirm: () => void;
   onCancel: () => void;
   isImporting: boolean;
