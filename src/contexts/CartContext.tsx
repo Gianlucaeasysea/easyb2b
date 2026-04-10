@@ -132,7 +132,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     validate();
   }, [user?.id]);
 
-  // Keep latest items ref in sync for cleanup
+  // Flush pending save on unmount
+  useEffect(() => {
+    return () => {
+      if (saveDebounceRef.current && user?.id) {
+        clearTimeout(saveDebounceRef.current);
+        try { localStorage.setItem(getCartKey(user.id), JSON.stringify(latestItemsRef.current)); } catch {}
+      }
+    };
+  }, [user?.id]);
+
   useEffect(() => {
     latestItemsRef.current = items;
   }, [items]);
