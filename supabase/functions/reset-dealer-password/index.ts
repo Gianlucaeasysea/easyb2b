@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
 
       const recoveryLink = data?.properties?.action_link || "https://easyb2b.lovable.app/login";
 
-      const subject = "EasySea — Reset Password Portale Dealer";
+      const subject = "EasySea - Reset Password Portale Dealer";
       const body = `Ciao,
 
 Hai ricevuto una richiesta di reset della password per il tuo account sul Portale Dealer EasySea.
@@ -78,7 +78,8 @@ Se non hai richiesto il reset, puoi ignorare questa email.
 
 Il Team EasySea`;
 
-      const rawMessage = `From: EasySea <business@easysea.org>\r\nTo: ${email}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
+      const encodedSubject = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`;
+      const rawMessage = `From: EasySea <business@easysea.org>\r\nTo: ${email}\r\nSubject: ${encodedSubject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
       const encoded = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
       const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
