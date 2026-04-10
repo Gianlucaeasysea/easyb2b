@@ -11,10 +11,21 @@ export const ORDER_STATUSES = {
   returned: "Returned",
 } as const;
 
+/** Valid order status keys as a readonly array */
+export const ORDER_STATUS_KEYS = Object.keys(ORDER_STATUSES) as OrderStatus[];
+
+/** Union type of all valid order statuses */
+export type OrderStatus = keyof typeof ORDER_STATUSES;
+
+/** Type guard to check if a string is a valid OrderStatus */
+export function isValidOrderStatus(status: string): status is OrderStatus {
+  return status in ORDER_STATUSES;
+}
+
 /** @deprecated Use ORDER_STATUSES instead */
 export const ORDER_STATUS_MAP = ORDER_STATUSES as Record<string, string>;
 
-export const ORDER_STATUS_COLORS: Record<string, string> = {
+export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   draft: "bg-gray-100 text-gray-700",
   submitted: "bg-blue-100 text-blue-700",
   confirmed: "bg-emerald-100 text-emerald-700",
@@ -83,7 +94,7 @@ export const getClientStatusLabel = (status: string): string =>
   CLIENT_STATUS_LABELS[status] ?? status;
 
 // ── Order Status Transitions ─────────────────────────────────
-export const VALID_ORDER_TRANSITIONS: Record<string, string[]> = {
+export const VALID_ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   draft: ["submitted", "cancelled"],
   submitted: ["confirmed", "cancelled"],
   confirmed: ["processing", "cancelled"],
@@ -95,13 +106,42 @@ export const VALID_ORDER_TRANSITIONS: Record<string, string[]> = {
   returned: [],
 };
 
+/** Status visible to dealers (excludes draft) */
+export const DEALER_VISIBLE_STATUSES: OrderStatus[] = [
+  "submitted", "confirmed", "processing", "ready_to_ship",
+  "shipped", "delivered", "cancelled",
+];
+
 export function getAvailableTransitions(currentStatus: string): string[] {
-  return VALID_ORDER_TRANSITIONS[currentStatus] || [];
+  if (!isValidOrderStatus(currentStatus)) return [];
+  return VALID_ORDER_TRANSITIONS[currentStatus];
 }
 
 export function canTransitionTo(currentStatus: string, newStatus: string): boolean {
-  const allowed = VALID_ORDER_TRANSITIONS[currentStatus];
-  return allowed ? allowed.includes(newStatus) : false;
+  if (!isValidOrderStatus(currentStatus) || !isValidOrderStatus(newStatus)) return false;
+  return VALID_ORDER_TRANSITIONS[currentStatus].includes(newStatus);
+}
+
+/**
+ * Validates an order status transition, returning an error message if invalid.
+ */
+export function validateOrderStatusTransition(
+  currentStatus: string,
+  newStatus: string,
+): { valid: boolean; error?: string } {
+  if (!isValidOrderStatus(currentStatus)) {
+    return { valid: false, error: `Status attuale non valido: ${currentStatus}` };
+  }
+  if (!isValidOrderStatus(newStatus)) {
+    return { valid: false, error: `Nuovo status non valido: ${newStatus}` };
+  }
+  if (!VALID_ORDER_TRANSITIONS[currentStatus].includes(newStatus)) {
+    return {
+      valid: false,
+      error: `Transizione non permessa: da "${ORDER_STATUSES[currentStatus]}" a "${ORDER_STATUSES[newStatus]}"`,
+    };
+  }
+  return { valid: true };
 }
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -109,7 +149,7 @@ export const getOrderStatusLabel = (dbStatus: string): string =>
   ORDER_STATUSES[dbStatus as keyof typeof ORDER_STATUSES] ?? dbStatus;
 
 export const getOrderStatusColor = (dbStatus: string): string =>
-  ORDER_STATUS_COLORS[dbStatus] ?? "bg-gray-100 text-gray-800";
+  ORDER_STATUS_COLORS[dbStatus as OrderStatus] ?? "bg-gray-100 text-gray-800";
 
 export const getPaymentStatusLabel = (dbStatus: string): string =>
   PAYMENT_STATUS_MAP[dbStatus] ?? dbStatus;
