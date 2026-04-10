@@ -1,4 +1,4 @@
-import { useCart } from "@/contexts/CartContext";
+import { useCart, CartItem } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,14 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Trash2, Minus, Plus, ArrowLeft, AlertTriangle, Clock, Truck, Save } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
+import { logger } from "@/lib/logger";
 
 import { motion } from "framer-motion";
 import { fadeInUp } from "@/lib/animations";
 import { OrderSubmitAnimation } from "@/components/portal/ui/OrderSubmitAnimation";
+import { PriceChangedDialog } from "@/components/portal/ui/PriceChangedDialog";
 
 const MIN_ORDER_AMOUNT = 100;
 
@@ -24,6 +26,7 @@ const PAYMENT_TERMS_LABELS: Record<string, string> = {
   "60_days": "Net 60 days",
   "90_days": "Net 90 days",
   end_of_month: "End of month",
+  "100% upfront": "100% Upfront",
 };
 
 const getProductFamily = (name: string): string | null => {
@@ -54,6 +57,107 @@ const getProductFamily = (name: string): string | null => {
   return null;
 };
 
+// --- Validation ---
+interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  updatedItems: CartItem[];
+}
+
+async function validateCartBeforeSubmit(
+  cartItems: CartItem[],
+  clientId: string
+): Promise<ValidationResult> {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // 1. Fetch current prices from all assigned price lists
+  const { data: assignments } = await supabase
+    .from('price_list_clients')
+    .select('price_list_id')
+    .eq('client_id', clientId);
+
+  const currentPrices = new Map<string, number>();
+
+  if (assignments?.length) {
+    const plIds = assignments.map(a => a.price_list_id);
+    const { data: plItems } = await supabase
+      .from('price_list_items')
+      .select('product_id, custom_price')
+      .in('price_list_id', plIds);
+
+    plItems?.forEach(item => {
+      if (item.custom_price != null && item.custom_price > 0) {
+        const existing = currentPrices.get(item.product_id);
+        // Keep lowest price if multiple lists
+        if (!existing || item.custom_price < existing) {
+          currentPrices.set(item.product_id, item.custom_price);
+        }
+      }
+    });
+  }
+
+  // 2. Fetch current product data
+  const productIds = cartItems.map(i => i.productId);
+  const { data: products } = await supabase
+    .from('products')
+    .select('id, name, stock_quantity, active_b2b, price')
+    .in('id', productIds);
+
+  const productMap = new Map(products?.map(p => [p.id, p]) ?? []);
+
+  // 3. Validate each item
+  const updatedItems: CartItem[] = [];
+
+  for (const item of cartItems) {
+    const product = productMap.get(item.productId);
+
+    if (!product) {
+      errors.push(`"${item.name}" is no longer available`);
+      continue;
+    }
+
+    if (!product.active_b2b) {
+      errors.push(`"${item.name}" is no longer available for B2B`);
+      continue;
+    }
+
+    // Stock check: null = unlimited
+    const availableStock = product.stock_quantity;
+    if (availableStock !== null && availableStock <= 0) {
+      errors.push(`"${item.name}" is out of stock`);
+      continue;
+    }
+    if (availableStock !== null && item.quantity > availableStock) {
+      warnings.push(`"${item.name}": quantity reduced from ${item.quantity} to ${availableStock}`);
+      item.quantity = availableStock;
+    }
+
+    // Price check
+    const currentPrice = currentPrices.get(item.productId);
+    if (currentPrice == null || currentPrice <= 0) {
+      errors.push(`"${item.name}" has no valid B2B price in your price list`);
+      continue;
+    }
+
+    if (Math.abs(currentPrice - item.b2bPrice) > 0.01) {
+      warnings.push(`Price of "${item.name}" changed: €${item.b2bPrice.toFixed(2)} → €${currentPrice.toFixed(2)}`);
+      item.b2bPrice = currentPrice;
+    }
+
+    updatedItems.push({ ...item, stock: availableStock ?? 9999 });
+  }
+
+  // 4. Minimum order check
+  const newTotal = updatedItems.reduce((sum, i) => sum + i.b2bPrice * i.quantity, 0);
+  if (newTotal > 0 && newTotal < MIN_ORDER_AMOUNT) {
+    errors.push(`Order total (€${newTotal.toFixed(2)}) is below the minimum of €${MIN_ORDER_AMOUNT}`);
+  }
+
+  return { valid: errors.length === 0, errors, warnings, updatedItems };
+}
+
 const DealerCart = () => {
   const { items, updateQuantity, removeItem, clearCart, totalAmount, totalItems } = useCart();
   const { user } = useAuth();
@@ -64,7 +168,10 @@ const DealerCart = () => {
   const [savingDraft, setSavingDraft] = useState(false);
   const [showOrderAnimation, setShowOrderAnimation] = useState(false);
   const [submittedOrderCode, setSubmittedOrderCode] = useState("");
-  
+  const [priceWarnings, setPriceWarnings] = useState<string[]>([]);
+  const [showPriceDialog, setShowPriceDialog] = useState(false);
+  const pendingSubmitRef = useRef<CartItem[] | null>(null);
+  const submittingRef = useRef(false); // prevent double submit
 
   const { data: client } = useQuery({
     queryKey: ["my-client"],
@@ -95,16 +202,12 @@ const DealerCart = () => {
 
   const belowMinimum = totalAmount < MIN_ORDER_AMOUNT;
 
-  const createOrder = async (status: "submitted" | "draft") => {
-    if (!client || items.length === 0) return;
-    if (status === "submitted" && belowMinimum) return;
+  const submitOrderWithItems = useCallback(async (validatedItems: CartItem[], status: "submitted" | "draft") => {
+    if (!client || submittingRef.current) return;
+    submittingRef.current = true;
 
     const setLoading = status === "draft" ? setSavingDraft : setSubmitting;
-
-    if (status === "submitted") {
-      setShowOrderAnimation(true);
-    }
-
+    if (status === "submitted") setShowOrderAnimation(true);
     setLoading(true);
 
     try {
@@ -115,10 +218,10 @@ const DealerCart = () => {
         p_payment_terms: (client as any).payment_terms || null,
         p_order_type: null,
         p_internal_notes: null,
-        p_items: items.map(item => ({
+        p_items: validatedItems.map(item => ({
           product_id: item.productId,
           quantity: item.quantity,
-          unit_price: item.unitPrice,
+          unit_price: item.b2bPrice,
           discount_pct: item.discountPct || 0,
           subtotal: item.b2bPrice * item.quantity,
         })),
@@ -127,33 +230,87 @@ const DealerCart = () => {
       if (orderError) throw orderError;
       const order = result as any;
 
+      // Clear cart BEFORE email notification (so email failure doesn't affect order)
+      clearCart();
+      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
+
       if (status === "submitted") {
-        setSubmittedOrderCode(order.order_code || `ES-${order.id.slice(0, 4).toUpperCase()}`);
-        try {
-          await supabase.functions.invoke('send-order-notification', {
-            body: {
-              orderId: order.id,
-              orderCode: order.order_code || `ES-${order.id.slice(0, 4).toUpperCase()}`,
-              type: 'order_received',
-            },
-          });
-        } catch (emailErr) {
-          showErrorToast(emailErr, "DealerCart.emailNotification");
-        }
+        setSubmittedOrderCode(order.order_code || `ORD-${order.order_id?.slice(0, 8)}`);
+        // Non-blocking email notification
+        supabase.functions.invoke('send-order-notification', {
+          body: {
+            orderId: order.order_id,
+            orderCode: order.order_code,
+            type: 'order_received',
+          },
+        }).catch(emailErr => {
+          logger.error('DealerCart', 'Order notification failed (non-blocking)', emailErr);
+        });
       } else {
         toast.success("Draft saved! You can complete the order anytime from My Orders.");
         navigate("/portal/orders");
       }
-
-      clearCart();
-      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
     } catch (error) {
       setShowOrderAnimation(false);
       showErrorToast(error, "DealerCart.createOrder");
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
-  };
+  }, [client, notes, clearCart, queryClient, navigate]);
+
+  const createOrder = useCallback(async (status: "submitted" | "draft") => {
+    if (!client || items.length === 0) return;
+
+    if (status === "submitted") {
+      // Full validation pass before submit
+      setSubmitting(true);
+      try {
+        const validation = await validateCartBeforeSubmit(items, client.id);
+
+        if (!validation.valid) {
+          toast.error(validation.errors.join('\n'), { duration: 6000 });
+          setSubmitting(false);
+          return;
+        }
+
+        if (validation.warnings.length > 0) {
+          // Show confirmation dialog
+          setPriceWarnings(validation.warnings);
+          pendingSubmitRef.current = validation.updatedItems;
+          setShowPriceDialog(true);
+          setSubmitting(false);
+          return;
+        }
+
+        // No warnings, submit directly
+        await submitOrderWithItems(validation.updatedItems, "submitted");
+      } catch (error) {
+        showErrorToast(error, "DealerCart.validate");
+        setSubmitting(false);
+      }
+    } else {
+      // Draft: lighter validation
+      if (totalAmount < 10) {
+        toast.warning("Add at least some products before saving a draft");
+        return;
+      }
+      await submitOrderWithItems(items, "draft");
+    }
+  }, [client, items, totalAmount, submitOrderWithItems]);
+
+  const handlePriceDialogConfirm = useCallback(async () => {
+    setShowPriceDialog(false);
+    if (pendingSubmitRef.current) {
+      await submitOrderWithItems(pendingSubmitRef.current, "submitted");
+      pendingSubmitRef.current = null;
+    }
+  }, [submitOrderWithItems]);
+
+  const handlePriceDialogCancel = useCallback(() => {
+    setShowPriceDialog(false);
+    pendingSubmitRef.current = null;
+  }, []);
 
   const handleAnimationClose = () => {
     setShowOrderAnimation(false);
@@ -217,7 +374,7 @@ const DealerCart = () => {
       <div className="space-y-3 mb-8">
         {items.map(item => {
           const leadTime = getLeadTime(item.name);
-          const outOfStock = item.stock <= 0;
+          const outOfStock = item.stock !== null && item.stock <= 0;
 
           return (
             <div key={item.productId} data-testid="cart-item" className="glass-card-solid p-4 flex items-center gap-4">
@@ -232,9 +389,13 @@ const DealerCart = () => {
                 <p className="font-heading text-sm font-semibold text-foreground truncate">{item.name}</p>
                 {item.sku && <p className="text-xs font-mono text-muted-foreground">SKU: {item.sku}</p>}
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-muted-foreground line-through">€{item.unitPrice.toFixed(2)}</span>
+                  {item.unitPrice !== item.b2bPrice && (
+                    <span className="text-xs text-muted-foreground line-through">€{item.unitPrice.toFixed(2)}</span>
+                  )}
                   <span className="text-sm font-semibold text-foreground">€{item.b2bPrice.toFixed(2)}</span>
-                  <span className="text-xs text-success">-{item.discountPct}%</span>
+                  {item.discountPct > 0 && (
+                    <span className="text-xs text-success">-{item.discountPct}%</span>
+                  )}
                 </div>
                 {leadTime && (
                   <div className="flex items-center gap-1 mt-1">
@@ -248,8 +409,8 @@ const DealerCart = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity - 1)}><Minus size={14} /></Button>
-                <Input data-testid="cart-item-quantity" type="number" min={1} max={item.stock} value={item.quantity} onChange={e => updateQuantity(item.productId, parseInt(e.target.value) || 1)} className="w-16 text-center h-8 text-sm" />
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock}><Plus size={14} /></Button>
+                <Input data-testid="cart-item-quantity" type="number" min={1} max={item.stock || 999} value={item.quantity} onChange={e => updateQuantity(item.productId, parseInt(e.target.value) || 1)} className="w-16 text-center h-8 text-sm" />
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity + 1)} disabled={item.stock !== null && item.quantity >= item.stock}><Plus size={14} /></Button>
               </div>
               <p className="font-heading font-bold text-foreground w-24 text-right">€{(item.b2bPrice * item.quantity).toFixed(2)}</p>
               <motion.div whileTap={{ scale: 0.9 }}>
@@ -305,7 +466,7 @@ const DealerCart = () => {
                 disabled={submitting || belowMinimum}
                 className="w-full bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6 text-base disabled:opacity-50"
               >
-                {submitting ? "Submitting..." : belowMinimum ? `Minimum €${MIN_ORDER_AMOUNT} required` : "Submit Order"}
+                {submitting ? "Validating..." : belowMinimum ? `Minimum €${MIN_ORDER_AMOUNT} required` : "Submit Order"}
               </Button>
             </motion.div>
             <Button
@@ -320,6 +481,13 @@ const DealerCart = () => {
           </div>
         </div>
       </div>
+
+      <PriceChangedDialog
+        isOpen={showPriceDialog}
+        warnings={priceWarnings}
+        onConfirm={handlePriceDialogConfirm}
+        onCancel={handlePriceDialogCancel}
+      />
 
       <OrderSubmitAnimation
         isVisible={showOrderAnimation}
