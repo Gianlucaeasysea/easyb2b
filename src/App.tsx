@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import CookieBanner from "@/components/CookieBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { ClientModeProvider } from "@/contexts/ClientModeContext";
 
 // Public pages
 import Index from "./pages/Index";
@@ -112,7 +113,9 @@ const App = () => (
             {/* Dealer Portal */}
             <Route path="/portal" element={
               <ProtectedRoute allowedRoles={["dealer"]}>
-                <PortalLayout />
+                <ClientModeProvider>
+                  <PortalLayout />
+                </ClientModeProvider>
               </ProtectedRoute>
             }>
               <Route index element={<DealerDashboard />} />

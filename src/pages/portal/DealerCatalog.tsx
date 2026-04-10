@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClientMode } from "@/contexts/ClientModeContext";
-import { Package, Search, ShoppingCart, ShoppingBag, Minus, Plus, LayoutGrid, List, Check } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
+import { Package, Search, ShoppingCart, ShoppingBag, Minus, Plus, LayoutGrid, List, Check, Users } from "lucide-react";
 import OptimizedImage from "@/components/ui/OptimizedImage";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ const getProductFamily = (name: string): string | null => {
 
 const DealerCatalog = () => {
   const { user } = useAuth();
-  const { isClientMode } = useClientMode();
+  const { isClientMode, toggleClientMode } = useClientMode();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { addItem, totalItems } = useCart();
@@ -225,18 +226,45 @@ const DealerCatalog = () => {
               : `Your personalized B2B catalog — ${catalogProducts.length} products`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {totalItems > 0 && (
+        {!isClientMode && totalItems > 0 && (
+          <div className="flex items-center gap-2">
             <Link to="/portal/cart">
               <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold text-xs gap-1.5 rounded-lg">
                 <ShoppingCart size={14} />
                 Cart (<span data-testid="cart-badge">{totalItems}</span>)
               </Button>
             </Link>
-          )}
+            <Badge variant="outline" className="text-xs">{filtered.length} products</Badge>
+          </div>
+        )}
+        {isClientMode && (
           <Badge variant="outline" className="text-xs">{filtered.length} products</Badge>
-        </div>
+        )}
       </div>
+
+      {/* Client Mode Banner */}
+      <AnimatePresence>
+        {isClientMode && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 mb-4"
+          >
+            <Users className="h-4 w-4 text-primary flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-primary">Modalità Cliente attiva</p>
+              <p className="text-xs text-muted-foreground">Stai visualizzando i prezzi pubblici del sito — sconti dealer nascosti</p>
+            </div>
+            <button
+              onClick={toggleClientMode}
+              className="text-xs text-primary hover:text-primary/70 font-medium flex-shrink-0"
+            >
+              Esci
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Search, Filters, View Toggle, Retail Toggle */}
       <div className="flex gap-3 mb-6 flex-wrap items-center">

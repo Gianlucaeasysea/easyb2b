@@ -1,10 +1,12 @@
-import { LayoutDashboard, ShoppingBag, Package, HelpCircle, ShoppingCart, UserCircle, Bell, Receipt } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, HelpCircle, ShoppingCart, UserCircle, Bell, Receipt, Eye, Users } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { CartSavedIndicator } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useClientMode } from "@/contexts/ClientModeContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
@@ -25,6 +27,7 @@ export function DealerSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { user } = useAuth();
+  const { isClientMode, toggleClientMode } = useClientMode();
 
   const { data: client } = useQuery({
     queryKey: ["my-client-sidebar"],
@@ -73,6 +76,57 @@ export function DealerSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Client Mode Toggle */}
+        {!collapsed && (
+          <SidebarGroup>
+            <div className="px-3 mb-2">
+              <div className="border border-border rounded-xl p-3 space-y-2">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold px-1">
+                  Modalità visualizzazione
+                </p>
+                <button
+                  onClick={toggleClientMode}
+                  className={`
+                    w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                    transition-all duration-200
+                    ${isClientMode
+                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                    }
+                  `}
+                >
+                  {isClientMode ? (
+                    <Users className="h-4 w-4 flex-shrink-0" />
+                  ) : (
+                    <Eye className="h-4 w-4 flex-shrink-0" />
+                  )}
+                  <span className="flex-1 text-left">
+                    {isClientMode ? 'Modalità Cliente' : 'Modalità Dealer'}
+                  </span>
+                  <span className={`
+                    text-[10px] font-bold px-1.5 py-0.5 rounded
+                    ${isClientMode ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted-foreground/10 text-muted-foreground'}
+                  `}>
+                    {isClientMode ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+                <AnimatePresence>
+                  {isClientMode && (
+                    <motion.p
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="text-[11px] text-muted-foreground px-1 leading-relaxed"
+                    >
+                      Il cliente vede i prezzi pubblici senza sconti dealer
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );
