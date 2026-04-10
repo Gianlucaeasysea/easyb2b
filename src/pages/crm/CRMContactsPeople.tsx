@@ -65,10 +65,19 @@ const CRMContactsPeople = () => {
     queryFn: async (): Promise<ContactWithClient[]> => {
       const { data, error } = await supabase
         .from("client_contacts")
-        .select("*, clients(id, company_name)")
+        .select(`
+          id, contact_name, email, phone, job_title, contact_type,
+          preferred_channel, notes, created_at, client_id,
+          is_decision_maker, is_primary, department, linkedin_url,
+          last_contacted_at, avatar_url, role, updated_at,
+          clients (id, company_name)
+        `)
         .order("contact_name");
       if (error) throw error;
-      return (data || []) as unknown as ContactWithClient[];
+      return (data ?? []).map(contact => ({
+        ...contact,
+        clients: contact.clients ?? { id: contact.client_id, company_name: "N/D" },
+      })) as unknown as ContactWithClient[];
     },
   });
 

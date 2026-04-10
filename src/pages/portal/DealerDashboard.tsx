@@ -6,26 +6,29 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { useMotionValue, animate, motion } from "framer-motion";
 import { staggerContainer, staggerItem, fadeInUp } from "@/lib/animations";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { DashboardStatsSkeleton } from "@/components/portal/ui/PortalSkeleton";
 
 function AnimatedNumber({ value, prefix = '', suffix = '' }: {
   value: number; prefix?: string; suffix?: string;
 }) {
+  const [display, setDisplay] = useState(`${prefix}0${suffix}`);
   const count = useMotionValue(0);
-  const rounded = useTransform(count, (v) => `${prefix}${Math.round(v).toLocaleString('it-IT')}${suffix}`);
 
   useEffect(() => {
+    const unsubscribe = count.on("change", (v) => {
+      setDisplay(`${prefix}${Math.round(v).toLocaleString('it-IT')}${suffix}`);
+    });
     const controls = animate(count, value, {
       duration: 1.2,
       ease: [0.25, 0.1, 0.25, 1],
     });
-    return controls.stop;
-  }, [value, count]);
+    return () => { controls.stop(); unsubscribe(); };
+  }, [value, count, prefix, suffix]);
 
-  return <motion.span>{rounded}</motion.span>;
+  return <span>{display}</span>;
 }
 
 const DealerDashboard = () => {
