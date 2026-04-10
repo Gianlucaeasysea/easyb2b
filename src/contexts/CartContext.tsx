@@ -204,6 +204,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const clearCart = useCallback(() => {
+    // Cancel any pending debounced save
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
     setItems([]);
     if (user?.id) {
       saveCartToStorage(user.id, []);
