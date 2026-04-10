@@ -15,7 +15,7 @@ import { format, differenceInDays } from "date-fns";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
-import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
+import { getOrderStatusLabel, getOrderStatusColor, canTransitionTo } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
@@ -260,6 +260,11 @@ const DealerOrders = () => {
 
   // Cancel submitted order
   const handleCancelOrder = async (order: any) => {
+    const currentStatus = order.status || "draft";
+    if (!canTransitionTo(currentStatus, "cancelled")) {
+      toast.error(`Cannot cancel an order in "${getOrderStatusLabel(currentStatus)}" status.`);
+      return;
+    }
     setCancellingId(order.id);
     try {
       const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", order.id);
