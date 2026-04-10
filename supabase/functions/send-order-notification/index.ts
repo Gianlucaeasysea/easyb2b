@@ -4,6 +4,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const APP_URL = Deno.env.get("APP_URL") ?? "https://easyb2b.lovable.app";
 
 // Fallback values if DB lookup fails
 const FALLBACK_ADMIN_EMAILS = ["g.scotto@easysea.org", "business@easysea.org", "gianluca@easysea.org"];
@@ -90,8 +91,10 @@ serve(async (req) => {
       }
     };
 
+    const portalUrl = `${APP_URL}/portal/orders?highlight=${orderId}`;
+
     if (type === "order_received") {
-      pushClientEmail("order-received", { clientName, orderCode: code, itemsHtml, totalAmount, notes: order.notes }, `order-received-client-${orderId}`);
+      pushClientEmail("order-received", { clientName, orderCode: code, orderDate: new Date(order.created_at).toLocaleDateString('en-GB'), itemsHtml, totalAmount, notes: order.notes, portalUrl }, `order-received-client-${orderId}`);
       adminEmails.forEach(email => {
         sends.push({
           templateName: "order-received-admin",
@@ -101,11 +104,11 @@ serve(async (req) => {
         });
       });
     } else if (type === "order_confirmed") {
-      pushClientEmail("order-confirmed", { clientName, orderCode: code, totalAmount }, `order-confirmed-${orderId}`);
+      pushClientEmail("order-confirmed", { clientName, orderCode: code, totalAmount, portalUrl }, `order-confirmed-${orderId}`);
     } else if (type === "status_update") {
-      pushClientEmail("order-status-update", { clientName, orderCode: code, status: order.status, trackingNumber: order.tracking_number, trackingUrl: order.tracking_url }, `order-status-${orderId}-${order.status}`);
+      pushClientEmail("order-status-update", { clientName, orderCode: code, status: order.status, trackingNumber: order.tracking_number, trackingUrl: order.tracking_url, portalUrl }, `order-status-${orderId}-${order.status}`);
     } else if (type === "documents_uploaded") {
-      pushClientEmail("order-documents-ready", { clientName, orderCode: code }, `order-docs-${orderId}-${Date.now()}`);
+      pushClientEmail("order-documents-ready", { clientName, orderCode: code, portalUrl }, `order-docs-${orderId}-${Date.now()}`);
     }
 
     const results = [];
