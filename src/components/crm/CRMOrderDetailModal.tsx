@@ -36,7 +36,7 @@ const fmtDate = (d: string | null | undefined) => {
 export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDetailModalProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const _user = useAuth();
   const [internalNotes, setInternalNotes] = useState("");
   const [notesChanged, setNotesChanged] = useState(false);
 

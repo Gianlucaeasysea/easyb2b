@@ -21,9 +21,9 @@ const safeFormat = (dateStr: string | null | undefined, fmt: string) => {
   return isValid(d) ? format(d, fmt) : "—";
 };
 import {
-  Phone, Mail, MessageCircle, StickyNote, Video, Calendar,
-  Plus, Check, Clock, User, Building, MapPin, Globe, FileText,
-  ArrowRight, Edit2, Save, X, Trash2,
+  Phone, Mail, MessageCircle, StickyNote, Video,
+  Plus, Check, Clock, User, Building, MapPin, Globe,
+  Edit2, Save, X, Trash2,
 } from "lucide-react";
 
 const stages = ["new", "contacted", "qualified", "proposal", "onboarding", "won", "lost"];

@@ -30,7 +30,7 @@ const items = [
 export function AdminSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
+  const _location = useLocation();
   const { newOrderCount, resetCount } = useNewOrderNotifications();
 
   const { data: pendingRequestCount } = useQuery({
