@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteClientsCascade } from "@/lib/crmEntityActions";
 import { toast } from "sonner";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import { showErrorToast } from "@/lib/errorHandler";
 import { useState, useEffect, useRef } from "react";
 
@@ -292,8 +293,8 @@ export function useClientDetail(id: string | undefined) {
 
   // ── Actions ──
   const createDealerAccount = async () => {
-    if (!client?.email) { toast.error("Client must have an email"); return; }
-    if (accountPassword.length < 10) { toast.error("Password must be at least 10 characters"); return; }
+    if (!client?.email) { toast.error(ERROR_MESSAGES.CLIENT_EMAIL_REQUIRED); return; }
+    if (accountPassword.length < 10) { toast.error(ERROR_MESSAGES.CLIENT_PASSWORD_TOO_SHORT); return; }
     setCreatingAccount(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -391,13 +392,13 @@ export function useClientDetail(id: string | undefined) {
 
   const togglePortalVisibility = async (field: string, checked: boolean) => {
     const { error } = await supabase.from("clients").update({ [field]: checked } as any).eq("id", id!);
-    if (error) toast.error(error.message);
+    if (error) toast.error(ERROR_MESSAGES.CLIENT_UPDATE_FAILED);
     else { toast.success("Updated"); queryClient.invalidateQueries({ queryKey: ["admin-client", id] }); }
   };
 
   const removePriceList = async (plcId: string) => {
     const { error } = await supabase.from("price_list_clients").delete().eq("id", plcId);
-    if (error) toast.error(error.message);
+    if (error) toast.error(ERROR_MESSAGES.PRICE_LIST_UPDATE_FAILED);
     else { toast.success("Listino rimosso"); refetchAssignedLists(); }
   };
 
@@ -405,7 +406,7 @@ export function useClientDetail(id: string | undefined) {
     const { error } = await supabase.from("price_list_clients").insert({ price_list_id: priceListId, client_id: id! } as any);
     if (error) {
       if (error.code === "23505") toast.info("Listino già assegnato");
-      else toast.error(error.message);
+      else toast.error(ERROR_MESSAGES.PRICE_LIST_UPDATE_FAILED);
     } else {
       toast.success("Listino assegnato");
       refetchAssignedLists();
@@ -417,7 +418,7 @@ export function useClientDetail(id: string | undefined) {
       const { error } = await supabase.functions.invoke("reset-dealer-password", { body: { email } });
       if (error) throw error;
       toast.success(`Password reset email sent to ${email}`);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Error sending reset"); }
+    } catch (e) { toast.error(ERROR_MESSAGES.GENERIC_ERROR); }
   };
 
   // ── Derived ──
