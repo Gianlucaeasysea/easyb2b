@@ -1,5 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 type AppRole = "admin" | "dealer" | "sales" | "operations";
 
@@ -9,7 +11,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { user, role, loading, roleError, retryRole } = useAuth();
+  const { user, role, loading, roleError, roleNotFound, retryRole } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -41,8 +43,23 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
 
+  // User authenticated but no role configured
+  if (roleNotFound && !role) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground text-sm">
+            Account non configurato. Contatta l'amministratore.
+          </p>
+          <Button variant="outline" onClick={() => supabase.auth.signOut()}>
+            Esci
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (allowedRoles && role && !allowedRoles.includes(role)) {
-    // Redirect to the correct portal based on role
     if (role === "dealer") return <Navigate to="/portal" replace />;
     if (role === "admin" || role === "operations") return <Navigate to="/admin" replace />;
     if (role === "sales") return <Navigate to="/crm" replace />;
