@@ -6,20 +6,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FileSpreadsheet, ArrowRight, Check } from "lucide-react";
 import type { ImportState } from "@/hooks/usePriceListImport";
+import { ImportValidationReport } from "./ImportValidationReport";
 
 interface PriceListImportProps {
   importState: ImportState;
   priceLists: any[];
   onSetTargetListId: (id: string | null) => void;
   onSetFieldMapping: (updater: (prev: Record<string, string>) => Record<string, string>) => void;
+  onRunValidation: () => void;
   onExecuteImport: () => void;
   onCancel: () => void;
 }
 
 export default function PriceListImport({
-  importState, priceLists, onSetTargetListId, onSetFieldMapping, onExecuteImport, onCancel,
+  importState, priceLists, onSetTargetListId, onSetFieldMapping, onRunValidation, onExecuteImport, onCancel,
 }: PriceListImportProps) {
-  const { step, data, headers, fieldMapping, targetListId } = importState;
+  const { step, data, headers, fieldMapping, targetListId, validationResult, isImporting } = importState;
 
   return (
     <Dialog open={step !== "idle"} onOpenChange={open => { if (!open) onCancel(); }}>
@@ -27,9 +29,19 @@ export default function PriceListImport({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
-            Importa Listino da File
+            {step === "validation" ? "Validazione Import" : "Importa Listino da File"}
           </DialogTitle>
         </DialogHeader>
+
+        {step === "validation" && validationResult && (
+          <ImportValidationReport
+            result={validationResult}
+            onConfirm={onExecuteImport}
+            onCancel={onCancel}
+            isImporting={isImporting}
+          />
+        )}
+
         {step === "mapping" && (
           <div className="space-y-6">
             <div>
@@ -93,8 +105,8 @@ export default function PriceListImport({
             </div>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={onCancel}>Annulla</Button>
-              <Button onClick={onExecuteImport} disabled={!targetListId || !fieldMapping.price}>
-                <Check className="h-4 w-4 mr-1" /> Importa
+              <Button onClick={onRunValidation} disabled={!targetListId || !fieldMapping.price}>
+                <Check className="h-4 w-4 mr-1" /> Valida e Importa
               </Button>
             </div>
           </div>
