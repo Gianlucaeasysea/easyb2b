@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
     .eq('id', commId)
 
   console.error(`All ${MAX_RETRIES} attempts failed for comm ${commId}`)
-  return new Response(JSON.stringify({ error: 'Failed to send email after retries', details: lastError }), {
+  return new Response(JSON.stringify({ error: 'Failed to send email after retries' }), {
     status: 500,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })

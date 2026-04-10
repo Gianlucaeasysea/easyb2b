@@ -146,7 +146,7 @@ ${context.custom_prompt || 'Follow-up commerciale generico.'}`
     })
   } catch (err: any) {
     console.error('AI draft generation failed:', err)
-    return new Response(JSON.stringify({ error: 'Failed to generate draft', details: err.message }), {
+    return new Response(JSON.stringify({ error: 'Failed to generate draft' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { getOrderStatusLabel, getOrderStatusColor, getPaymentStatusLabel, getPaymentStatusColor } from "@/lib/constants";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { toast } from "sonner";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
 
 interface CRMOrderDetailModalProps {
   open: boolean;
@@ -94,7 +95,7 @@ export const CRMOrderDetailModal = ({ open, onOpenChange, orderId }: CRMOrderDet
       setNotesChanged(false);
       queryClient.invalidateQueries({ queryKey: ["crm-order-detail", orderId] });
     },
-    onError: () => toast.error("Failed to save notes"),
+    onError: () => toast.error(ERROR_MESSAGES.ORDER_NOTES_SAVE_FAILED),
   });
 
   const handleDownloadDoc = async (filePath: string) => {

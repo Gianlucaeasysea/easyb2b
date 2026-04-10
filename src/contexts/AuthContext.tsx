@@ -3,6 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
 
 type AppRole = "admin" | "dealer" | "sales" | "operations";
 
@@ -82,7 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     // All retries exhausted
-    toast.error("Impossibile caricare il ruolo utente. Riprova.");
+    toast.error(ERROR_MESSAGES.AUTH_ROLE_LOAD_FAILED);
     return null;
   }, []);
 
@@ -101,7 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!resolvedRole) {
         setRoleError(true);
         setLoading(false);
-        toast.error("Impossibile caricare il ruolo utente. Riprova.");
+        toast.error(ERROR_MESSAGES.AUTH_ROLE_LOAD_FAILED);
       }
     }, ROLE_TIMEOUT_MS);
 

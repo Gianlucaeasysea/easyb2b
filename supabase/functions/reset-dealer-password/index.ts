@@ -101,7 +101,8 @@ Il Team EasySea`;
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
+    console.error("reset-dealer-password error:", e);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

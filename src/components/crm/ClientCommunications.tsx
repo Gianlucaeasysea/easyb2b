@@ -16,6 +16,7 @@ import { useState, useMemo } from "react";
 import { ComposeEmailDialog } from "./ComposeEmailDialog";
 import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import { requestGmailAuthorizationCode } from "@/lib/gmailOAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -173,7 +174,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
       if (res.error) throw new Error(res.error.message);
       const result = res.data;
       if (result?.needs_auth) {
-        toast.error("Il token Gmail non è più valido. Ricollega Gmail.");
+        toast.error(ERROR_MESSAGES.GMAIL_TOKEN_EXPIRED);
         await refetchGmailStatus();
         return;
       }

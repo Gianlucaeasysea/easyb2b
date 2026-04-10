@@ -15,6 +15,7 @@ import { Send, Sparkles, Loader2, Users, Plus, X, Variable, Save, Clock, AlertTr
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import { format } from "date-fns";
 
 
@@ -204,11 +205,11 @@ export const ComposeEmailDialog = ({
 
   const handleSend = async (mode: "send" | "draft" | "schedule") => {
     if (mode !== "draft" && (!subject.trim() || !body.trim())) {
-      toast.error("Please fill in subject and body");
+      toast.error(ERROR_MESSAGES.EMAIL_FILL_REQUIRED);
       return;
     }
     if (!selectedRecipient) {
-      toast.error("Select a recipient");
+      toast.error(ERROR_MESSAGES.EMAIL_SELECT_RECIPIENT);
       return;
     }
     setSending(true);
@@ -237,7 +238,7 @@ export const ComposeEmailDialog = ({
         toast.success("Draft saved!");
       } else if (mode === "schedule") {
         if (!scheduleDate) {
-          toast.error("Select a date for scheduling");
+          toast.error(ERROR_MESSAGES.EMAIL_SELECT_DATE);
           setSending(false);
           return;
         }
@@ -410,11 +411,11 @@ export const ComposeEmailDialog = ({
             <input ref={fileInputRef} type="file" multiple className="hidden" onChange={async (e) => {
               const files = e.target.files;
               if (!files) return;
-              if (attachments.length + files.length > 5) { toast.error("Max 5 attachments"); return; }
+              if (attachments.length + files.length > 5) { toast.error(ERROR_MESSAGES.EMAIL_MAX_ATTACHMENTS); return; }
               setUploading(true);
               try {
                 for (const file of Array.from(files)) {
-                  if (file.size > 10 * 1024 * 1024) { toast.error(`${file.name} exceeds 10MB`); continue; }
+                  if (file.size > 10 * 1024 * 1024) { toast.error(ERROR_MESSAGES.EMAIL_FILE_TOO_LARGE); continue; }
                   const path = `${clientId}/${Date.now()}-${file.name}`;
                   const { error } = await supabase.storage.from("email-attachments").upload(path, file);
                   if (error) throw error;
