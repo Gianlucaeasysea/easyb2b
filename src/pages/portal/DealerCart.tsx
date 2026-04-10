@@ -122,7 +122,7 @@ const DealerCart = () => {
           discount_pct: item.discountPct || 0,
           subtotal: item.b2bPrice * item.quantity,
         })),
-      });
+      } as any);
 
       if (orderError) throw orderError;
       const order = result as any;
