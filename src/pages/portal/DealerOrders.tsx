@@ -260,6 +260,11 @@ const DealerOrders = () => {
 
   // Cancel submitted order
   const handleCancelOrder = async (order: any) => {
+    const currentStatus = order.status || "draft";
+    if (!canTransitionTo(currentStatus, "cancelled")) {
+      toast.error(`Cannot cancel an order in "${getOrderStatusLabel(currentStatus)}" status.`);
+      return;
+    }
     setCancellingId(order.id);
     try {
       const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", order.id);

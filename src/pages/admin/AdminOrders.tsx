@@ -385,6 +385,10 @@ const AdminOrders = () => {
                               }
                             };
                             const dueDate = calcDueDate(o.payment_terms);
+                            if (!canTransitionTo(o.status || "draft", "confirmed")) {
+                              toast.error(`Cannot confirm order in "${getOrderStatusLabel(o.status || "draft")}" status.`);
+                              return;
+                            }
                             await supabase.from("orders").update({ status: "confirmed", payment_due_date: format(dueDate, "yyyy-MM-dd") }).eq("id", o.id);
                             await supabase.from("client_notifications").insert({
                               client_id: o.client_id,
