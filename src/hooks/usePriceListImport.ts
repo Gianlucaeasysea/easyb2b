@@ -42,7 +42,7 @@ export function usePriceListImport(products: any[] | undefined) {
       const wb = XLSX.read(evt.target?.result, { type: "binary" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json<any>(ws, { defval: "" });
-      if (json.length === 0) { toast.error("File vuoto"); return; }
+      if (json.length === 0) { toast.error(ERROR_MESSAGES.FILE_EMPTY); return; }
       const headers = Object.keys(json[0]);
       setImportState({
         step: "mapping",
@@ -76,11 +76,11 @@ export function usePriceListImport(products: any[] | undefined) {
 
   const runValidation = () => {
     const { fieldMapping, data, targetListId } = importState;
-    if (!targetListId) { toast.error("Seleziona un listino"); return; }
+    if (!targetListId) { toast.error(ERROR_MESSAGES.PRICE_LIST_SELECT_REQUIRED); return; }
     const skuCol = fieldMapping.sku;
     const priceCol = fieldMapping.price;
-    if (!priceCol) { toast.error("Mappa almeno il campo Prezzo"); return; }
-    if (!skuCol && !fieldMapping.product_name) { toast.error("Mappa almeno Nome Prodotto o SKU"); return; }
+    if (!priceCol) { toast.error(ERROR_MESSAGES.PRICE_LIST_MAP_PRICE); return; }
+    if (!skuCol && !fieldMapping.product_name) { toast.error(ERROR_MESSAGES.PRICE_LIST_MAP_IDENTIFIER); return; }
 
     const existingSkus = new Set((products || []).filter(p => p.sku).map(p => p.sku!.toUpperCase()));
 
@@ -127,14 +127,14 @@ export function usePriceListImport(products: any[] | undefined) {
     }
 
     if (items.length === 0) {
-      toast.error("Nessun prodotto trovato.");
+      toast.error(ERROR_MESSAGES.PRICE_LIST_NO_MATCH);
       setImportState(prev => ({ ...prev, isImporting: false }));
       return;
     }
 
     const { error } = await supabase.from("price_list_items").upsert(items, { onConflict: "price_list_id,product_id" });
     if (error) {
-      toast.error(error.message);
+      toast.error(ERROR_MESSAGES.PRICE_LIST_IMPORT_FAILED);
       setImportState(prev => ({ ...prev, isImporting: false }));
     } else {
       qc.invalidateQueries({ queryKey: ["price-list-items"] });
