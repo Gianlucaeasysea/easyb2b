@@ -132,18 +132,32 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     validate();
   }, [user?.id]);
 
-  // Persist to localStorage on every change (after init)
+  // Keep latest items ref in sync for cleanup
+  useEffect(() => {
+    latestItemsRef.current = items;
+  }, [items]);
+
+  // Debounced persist to localStorage (after init)
   useEffect(() => {
     if (!user?.id || initializedForUser.current !== user.id) return;
 
-    saveCartToStorage(user.id, items);
+    // Cancel previous debounce
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
 
-    // Show saved indicator briefly
-    if (items.length > 0) {
-      setShowSavedIndicator(true);
-      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
-      savedTimerRef.current = setTimeout(() => setShowSavedIndicator(false), 1500);
-    }
+    saveDebounceRef.current = setTimeout(() => {
+      saveCartToStorage(user.id, items);
+
+      // Show saved indicator briefly
+      if (items.length > 0) {
+        setShowSavedIndicator(true);
+        if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+        savedTimerRef.current = setTimeout(() => setShowSavedIndicator(false), 1500);
+      }
+    }, 500);
+
+    return () => {
+      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    };
   }, [items, user?.id]);
 
   const addItem = useCallback((newItem: Omit<CartItem, "quantity"> & { quantity?: number }) => {
