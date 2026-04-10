@@ -5,6 +5,16 @@ import { useToast } from "@/hooks/use-toast";
 import { differenceInDays, format, isValid } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Building2 } from "lucide-react";
+import { toast as sonnerToast } from "sonner";
+
+// Valid stage transitions for the client pipeline
+const VALID_STAGE_TRANSITIONS: Record<string, string[]> = {
+  lead: ["qualifying"],
+  qualifying: ["lead", "onboarding", "at_risk"],
+  onboarding: ["qualifying", "active", "at_risk"],
+  active: ["at_risk"],
+  at_risk: ["active", "qualifying"],
+};
 
 const safeFormat = (d: string | null | undefined, fmt: string) => {
   if (!d) return "—";
@@ -86,6 +96,13 @@ const CRMPipeline = () => {
     const clientId = result.draggableId;
     const client = clients?.find((c: any) => c.id === clientId);
     if (!client || client.status === newStage) return;
+
+    // Validate stage transition
+    const allowed = VALID_STAGE_TRANSITIONS[client.status] ?? [];
+    if (!allowed.includes(newStage)) {
+      sonnerToast.warning(`Cannot move from "${stageLabels[client.status]}" to "${stageLabels[newStage]}"`);
+      return;
+    }
 
     queryClient.setQueryData(["crm-pipeline-clients"], (old: any) =>
       old?.map((c: any) => (c.id === clientId ? { ...c, status: newStage } : c))
