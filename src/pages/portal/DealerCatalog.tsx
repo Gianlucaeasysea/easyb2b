@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClientMode } from "@/contexts/ClientModeContext";
-import { Package, Search, ShoppingCart, ShoppingBag, Minus, Plus, LayoutGrid, List } from "lucide-react";
+import { Package, Search, ShoppingCart, ShoppingBag, Minus, Plus, LayoutGrid, List, Check } from "lucide-react";
 import OptimizedImage from "@/components/ui/OptimizedImage";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,9 @@ import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import ProductDetailModal from "@/components/portal/ProductDetailModal";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerItem } from "@/lib/animations";
+import { CatalogSkeleton } from "@/components/portal/ui/PortalSkeleton";
 
 // Map product names to product_family slugs
 const getProductFamily = (name: string): string | null => {
@@ -57,6 +60,7 @@ const DealerCatalog = () => {
     return saved === "list" ? "list" : "grid";
   });
   const [showRetailPrices, setShowRetailPrices] = useState(false);
+  const [justAdded, setJustAdded] = useState<string | null>(null);
 
   const handleViewModeChange = (mode: "grid" | "list") => {
     setViewMode(mode);
@@ -203,6 +207,8 @@ const DealerCatalog = () => {
       quantity: qty,
     });
     toast.success(`${qty}x ${p.name} added`);
+    setJustAdded(p.id);
+    setTimeout(() => setJustAdded(null), 1200);
     setQuantities(prev => ({ ...prev, [p.id]: 1 }));
   };
 
@@ -298,7 +304,7 @@ const DealerCatalog = () => {
       </div>
 
       {loadingPriceList ? (
-        <p className="text-muted-foreground">Loading catalog...</p>
+        <CatalogSkeleton />
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
           <Package className="mx-auto text-muted-foreground mb-4" size={48} />
@@ -410,7 +416,12 @@ const DealerCatalog = () => {
         </div>
       ) : (
         /* GRID VIEW */
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        >
           {filtered.map((p, i) => {
             const plEntry = priceListProductMap.get(p.id);
             const b2bPrice = plEntry?.customPrice ?? 0;
@@ -420,10 +431,13 @@ const DealerCatalog = () => {
             const inStock = (p.stock_quantity ?? 0) > 0;
             const detail = getDetailForProduct(p);
             const leadTime = (detail as any)?.lead_time;
+            const isJustAdded = justAdded === p.id;
 
             return (
-              <div
+              <motion.div
                 key={p.id}
+                variants={staggerItem}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
                 data-testid="product-card"
                 className="glass-card-solid overflow-hidden group hover:border-primary/30 transition-colors cursor-pointer"
                 onClick={() => setSelectedProduct(p)}
@@ -528,25 +542,34 @@ const DealerCatalog = () => {
                         >
                           <Plus size={12} />
                         </Button>
-                        <Button
+                        <motion.button
                           disabled={!inStock}
-                          size="sm"
-                          className="flex-1 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs h-8"
+                          className={`flex-1 rounded-lg gap-1.5 font-heading font-semibold text-xs h-8 flex items-center justify-center px-3 transition-colors ${
+                            isJustAdded
+                              ? 'bg-success text-success-foreground'
+                              : 'bg-foreground text-background hover:bg-foreground/90'
+                          }`}
+                          animate={isJustAdded ? { scale: [1, 1.08, 1] } : {}}
+                          whileTap={{ scale: 0.96 }}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAddToCart(p);
                           }}
                         >
-                          <ShoppingCart size={12} /> Add
-                        </Button>
+                          {isJustAdded ? (
+                            <><Check size={12} /> Added!</>
+                          ) : (
+                            <><ShoppingCart size={12} /> Add</>
+                          )}
+                        </motion.button>
                       </div>
                     </>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       {/* Product Detail Modal */}

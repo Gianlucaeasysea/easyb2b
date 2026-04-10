@@ -6,11 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Trash2, Minus, Plus, CheckCircle, ArrowLeft, AlertTriangle, Clock, Truck, Save } from "lucide-react";
+import { ShoppingCart, Trash2, Minus, Plus, ArrowLeft, AlertTriangle, Clock, Truck, Save } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { motion } from "framer-motion";
+import { fadeInUp } from "@/lib/animations";
+import { OrderSubmitAnimation } from "@/components/portal/ui/OrderSubmitAnimation";
 
 const MIN_ORDER_AMOUNT = 100;
 
@@ -22,7 +26,6 @@ const PAYMENT_TERMS_LABELS: Record<string, string> = {
   end_of_month: "End of month",
 };
 
-// Same mapping as DealerCatalog
 const getProductFamily = (name: string): string | null => {
   const n = name.toLowerCase();
   if (n.includes("kit easybarber")) return "kit-easybarber";
@@ -59,7 +62,9 @@ const DealerCart = () => {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
-  const [orderConfirmed, setOrderConfirmed] = useState<{ id: string; code: string } | null>(null);
+  const [showOrderAnimation, setShowOrderAnimation] = useState(false);
+  const [submittedOrderCode, setSubmittedOrderCode] = useState("");
+  const [listRef] = useAutoAnimate({ duration: 250, easing: 'ease-out' });
 
   const { data: client } = useQuery({
     queryKey: ["my-client"],
@@ -95,15 +100,20 @@ const DealerCart = () => {
     if (status === "submitted" && belowMinimum) return;
 
     const setLoading = status === "draft" ? setSavingDraft : setSubmitting;
+
+    if (status === "submitted") {
+      setShowOrderAnimation(true);
+    }
+
     setLoading(true);
 
     try {
       const { data: result, error: orderError } = await supabase.rpc("create_order_with_items", {
         p_client_id: client.id,
         p_status: status,
-         p_notes: notes || undefined,
-         p_payment_terms: (client as any).payment_terms || undefined,
-         p_internal_notes: undefined,
+        p_notes: notes || undefined,
+        p_payment_terms: (client as any).payment_terms || undefined,
+        p_internal_notes: undefined,
         p_items: items.map(item => ({
           product_id: item.productId,
           quantity: item.quantity,
@@ -117,6 +127,7 @@ const DealerCart = () => {
       const order = result as any;
 
       if (status === "submitted") {
+        setSubmittedOrderCode(order.order_code || `ES-${order.id.slice(0, 4).toUpperCase()}`);
         try {
           await supabase.functions.invoke('send-order-notification', {
             body: {
@@ -128,7 +139,6 @@ const DealerCart = () => {
         } catch (emailErr) {
           showErrorToast(emailErr, "DealerCart.emailNotification");
         }
-        setOrderConfirmed({ id: order.id, code: order.order_code || `#${order.id.slice(0, 8).toUpperCase()}` });
       } else {
         toast.success("Draft saved! You can complete the order anytime from My Orders.");
         navigate("/portal/orders");
@@ -137,47 +147,35 @@ const DealerCart = () => {
       clearCart();
       queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
     } catch (error) {
+      setShowOrderAnimation(false);
       showErrorToast(error, "DealerCart.createOrder");
     } finally {
       setLoading(false);
     }
   };
 
-  if (orderConfirmed) {
-    return (
-      <div className="max-w-lg mx-auto text-center py-20">
-        <CheckCircle className="mx-auto text-success mb-6" size={64} />
-        <h1 className="font-heading text-3xl font-bold text-foreground mb-3">Order Submitted!</h1>
-        <p className="text-muted-foreground mb-2">
-          Your order <span className="font-mono font-semibold text-foreground">{orderConfirmed.code}</span> has been submitted successfully.
-        </p>
-        <p className="text-sm text-muted-foreground mb-2">You will receive a confirmation from our team.</p>
-        <p className="text-sm text-muted-foreground mb-8">You can track the status in My Orders.</p>
-        <div className="flex gap-3 justify-center">
-          <Button onClick={() => navigate("/portal/orders")} className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">My Orders</Button>
-          <Button variant="outline" onClick={() => { setOrderConfirmed(null); navigate("/portal/catalog"); }}>Continue Shopping</Button>
-        </div>
-      </div>
-    );
-  }
+  const handleAnimationClose = () => {
+    setShowOrderAnimation(false);
+    navigate("/portal/orders");
+  };
 
-  if (items.length === 0) {
+  if (items.length === 0 && !showOrderAnimation) {
     return (
-      <div className="text-center py-20">
+      <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="text-center py-20">
         <ShoppingCart className="mx-auto text-muted-foreground mb-4" size={48} />
         <h1 className="font-heading text-2xl font-bold text-foreground mb-2">Your cart is empty</h1>
         <p className="text-muted-foreground mb-6">Browse the catalog to add products to your order.</p>
         <Link to="/portal/catalog">
           <Button className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold">Browse Catalog</Button>
         </Link>
-      </div>
+      </motion.div>
     );
   }
 
   const paymentTermsLabel = PAYMENT_TERMS_LABELS[(client as any)?.payment_terms] || (client as any)?.payment_terms || "—";
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">Order Review</h1>
@@ -215,7 +213,7 @@ const DealerCart = () => {
         </div>
       )}
 
-      <div className="space-y-3 mb-8">
+      <div ref={listRef} className="space-y-3 mb-8">
         {items.map(item => {
           const leadTime = getLeadTime(item.name);
           const outOfStock = item.stock <= 0;
@@ -253,7 +251,9 @@ const DealerCart = () => {
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock}><Plus size={14} /></Button>
               </div>
               <p className="font-heading font-bold text-foreground w-24 text-right">€{(item.b2bPrice * item.quantity).toFixed(2)}</p>
-              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => removeItem(item.productId)}><Trash2 size={14} /></Button>
+              <motion.div whileTap={{ scale: 0.9 }}>
+                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={() => removeItem(item.productId)}><Trash2 size={14} /></Button>
+              </motion.div>
             </div>
           );
         })}
@@ -298,13 +298,15 @@ const DealerCart = () => {
             <p className="text-xs text-warning mb-4">Minimum order: €{MIN_ORDER_AMOUNT.toFixed(2)} — add €{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)}</p>
           )}
           <div className="space-y-2">
-            <Button
-              onClick={() => createOrder("submitted")}
-              disabled={submitting || belowMinimum}
-              className="w-full bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6 text-base disabled:opacity-50"
-            >
-              {submitting ? "Submitting..." : belowMinimum ? `Minimum €${MIN_ORDER_AMOUNT} required` : "Submit Order"}
-            </Button>
+            <motion.div whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={() => createOrder("submitted")}
+                disabled={submitting || belowMinimum}
+                className="w-full bg-foreground text-background hover:bg-foreground/90 font-heading font-bold py-6 text-base disabled:opacity-50"
+              >
+                {submitting ? "Submitting..." : belowMinimum ? `Minimum €${MIN_ORDER_AMOUNT} required` : "Submit Order"}
+              </Button>
+            </motion.div>
             <Button
               variant="outline"
               onClick={() => createOrder("draft")}
@@ -317,7 +319,13 @@ const DealerCart = () => {
           </div>
         </div>
       </div>
-    </div>
+
+      <OrderSubmitAnimation
+        isVisible={showOrderAnimation}
+        orderCode={submittedOrderCode}
+        onClose={handleAnimationClose}
+      />
+    </motion.div>
   );
 };
 

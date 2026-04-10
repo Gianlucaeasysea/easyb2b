@@ -6,6 +6,27 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { staggerContainer, staggerItem, fadeInUp } from "@/lib/animations";
+import { useEffect } from "react";
+import { DashboardStatsSkeleton } from "@/components/portal/ui/PortalSkeleton";
+
+function AnimatedNumber({ value, prefix = '', suffix = '' }: {
+  value: number; prefix?: string; suffix?: string;
+}) {
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, (v) => `${prefix}${Math.round(v).toLocaleString('it-IT')}${suffix}`);
+
+  useEffect(() => {
+    const controls = animate(count, value, {
+      duration: 1.2,
+      ease: [0.25, 0.1, 0.25, 1],
+    });
+    return controls.stop;
+  }, [value, count]);
+
+  return <motion.span>{rounded}</motion.span>;
+}
 
 const DealerDashboard = () => {
   const { user } = useAuth();
@@ -19,7 +40,7 @@ const DealerDashboard = () => {
     enabled: !!user,
   });
 
-  const { data: orders } = useQuery({
+  const { data: orders, isLoading: loadingOrders } = useQuery({
     queryKey: ["my-orders"],
     queryFn: async () => {
       if (!client) return [];
@@ -72,37 +93,56 @@ const DealerDashboard = () => {
   const discountPct = discountTier?.discount_pct ?? 10;
 
   const statCards = [
-    { icon: TrendingUp, label: "Discount Class", value: `Class ${discountClass}`, sub: `-${discountPct}% on all products` },
-    { icon: ShoppingBag, label: "Active Orders", value: String(activeOrders.length), sub: `${orders?.length || 0} total orders` },
-    { icon: FileText, label: "Open Invoices", value: String(openInvoices.length), sub: `€${openInvoiceTotal.toLocaleString()} outstanding` },
-    { icon: Package, label: "Catalog", value: String(productCount), sub: "Available products" },
+    { icon: TrendingUp, label: "Discount Class", value: `Class ${discountClass}`, numericValue: discountPct, sub: `-${discountPct}% on all products`, isNumeric: false },
+    { icon: ShoppingBag, label: "Active Orders", value: String(activeOrders.length), numericValue: activeOrders.length, sub: `${orders?.length || 0} total orders`, isNumeric: true },
+    { icon: FileText, label: "Open Invoices", value: String(openInvoices.length), numericValue: openInvoices.length, sub: `€${openInvoiceTotal.toLocaleString()} outstanding`, isNumeric: true },
+    { icon: Package, label: "Catalog", value: String(productCount), numericValue: productCount || 0, sub: "Available products", isNumeric: true },
   ];
+
+  if (loadingOrders && !orders) {
+    return (
+      <div>
+        <div className="mb-8">
+          <p className="text-[11px] uppercase tracking-[0.3em] text-primary font-heading font-bold mb-1">Dashboard</p>
+          <h1 className="font-heading text-2xl font-black text-foreground">Welcome back</h1>
+        </div>
+        <DashboardStatsSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="mb-8">
+      <motion.div className="mb-8" variants={fadeInUp} initial="hidden" animate="visible">
         <p className="text-[11px] uppercase tracking-[0.3em] text-primary font-heading font-bold mb-1">Dashboard</p>
         <h1 className="font-heading text-2xl font-black text-foreground">Welcome back</h1>
         <p className="text-sm text-muted-foreground mt-0.5">{client?.company_name || user?.email}</p>
-      </div>
+      </motion.div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+        className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+      >
         {statCards.map((s) => (
-          <div key={s.label} className="glass-card-solid p-6 hover:border-primary/15 transition-colors">
+          <motion.div key={s.label} variants={staggerItem} whileHover={{ y: -2, transition: { duration: 0.2 } }} className="glass-card-solid p-6 hover:border-primary/15 transition-colors">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-9 h-9 rounded-xl gradient-blue flex items-center justify-center">
                 <s.icon className="text-primary-foreground" size={16} />
               </div>
               <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-heading font-semibold">{s.label}</span>
             </div>
-            <p className="font-heading text-2xl font-black text-foreground">{s.value}</p>
+            <p className="font-heading text-2xl font-black text-foreground">
+              {s.isNumeric ? <AnimatedNumber value={s.numericValue} /> : s.value}
+            </p>
             <p className="text-[11px] text-muted-foreground mt-1">{s.sub}</p>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
-      <div className="grid lg:grid-cols-2 gap-4 mb-8">
-        <div className="glass-card-solid p-6 hover:border-primary/15 transition-colors">
+      <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid lg:grid-cols-2 gap-4 mb-8">
+        <motion.div variants={staggerItem} className="glass-card-solid p-6 hover:border-primary/15 transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <Tag size={15} className="text-primary" />
             <h2 className="font-heading font-bold text-foreground text-sm">Assigned Price List</h2>
@@ -120,9 +160,9 @@ const DealerDashboard = () => {
           ) : (
             <p className="text-sm text-muted-foreground">No price list assigned</p>
           )}
-        </div>
+        </motion.div>
 
-        <div className="glass-card-solid p-6 hover:border-primary/15 transition-colors">
+        <motion.div variants={staggerItem} className="glass-card-solid p-6 hover:border-primary/15 transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <CreditCard size={15} className="text-primary" />
             <h2 className="font-heading font-bold text-foreground text-sm">Financial Summary</h2>
@@ -130,17 +170,21 @@ const DealerDashboard = () => {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-heading">Total Ordered</p>
-              <p className="font-heading font-black text-foreground text-lg">€{totalSpent.toLocaleString()}</p>
+              <p className="font-heading font-black text-foreground text-lg">
+                €<AnimatedNumber value={totalSpent} />
+              </p>
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-heading">Outstanding</p>
-              <p className="font-heading font-black text-warning text-lg">€{openInvoiceTotal.toLocaleString()}</p>
+              <p className="font-heading font-black text-warning text-lg">
+                €<AnimatedNumber value={openInvoiceTotal} />
+              </p>
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
-      <div className="glass-card-solid p-6 mb-8 hover:border-primary/15 transition-colors">
+      <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="glass-card-solid p-6 mb-8 hover:border-primary/15 transition-colors">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-heading text-sm font-bold text-foreground flex items-center gap-2">
             <span className="text-lg">🏆</span> Monthly Goal
@@ -155,12 +199,17 @@ const DealerDashboard = () => {
             : `You need €${(monthlyTarget - totalSpent).toLocaleString()} more to unlock an additional 5% discount.`}
         </p>
         <div className="w-full bg-secondary rounded-full h-2.5 overflow-hidden">
-          <div className="gradient-blue h-full rounded-full transition-all duration-700" style={{ width: `${monthlyProgress}%` }} />
+          <motion.div
+            className="gradient-blue h-full rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${monthlyProgress}%` }}
+            transition={{ duration: 1, delay: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+          />
         </div>
         <p className="text-[11px] text-muted-foreground mt-2 font-heading">€{totalSpent.toLocaleString()} / €{monthlyTarget.toLocaleString()}</p>
-      </div>
+      </motion.div>
 
-      <div className="glass-card-solid p-6">
+      <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="glass-card-solid p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-heading text-sm font-bold text-foreground">Recent Orders</h2>
           <Link to="/portal/orders" className="text-[11px] text-primary hover:underline flex items-center gap-1 font-heading font-semibold">
@@ -175,7 +224,13 @@ const DealerDashboard = () => {
               const statusLabel = getOrderStatusLabel(order.status || "draft");
               const statusColor = getOrderStatusColor(order.status || "draft");
               return (
-                <div key={order.id} className="flex items-center justify-between py-3.5 border-b border-border last:border-0">
+                <motion.div
+                  key={order.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex items-center justify-between py-3.5 border-b border-border last:border-0"
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
                       <Package size={14} className="text-muted-foreground" />
@@ -191,12 +246,12 @@ const DealerDashboard = () => {
                     <Badge className={`border-0 text-[10px] rounded-full font-heading ${statusColor}`}>{statusLabel}</Badge>
                     <span className="font-heading font-black text-foreground text-sm">€{Number(order.total_amount || 0).toFixed(2)}</span>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };
