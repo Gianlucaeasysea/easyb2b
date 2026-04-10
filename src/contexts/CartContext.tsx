@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, ReactNode, useC
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import { AnimatePresence, motion } from "framer-motion";
 
 export interface CartItem {
@@ -172,7 +173,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addItem = useCallback((newItem: Omit<CartItem, "quantity"> & { quantity?: number }) => {
     // Safety net: block items without a valid price from price list
     if (!newItem.b2bPrice || newItem.b2bPrice <= 0) {
-      toast.error("Cannot add: price not available");
+      toast.error(ERROR_MESSAGES.PRODUCT_PRICE_UNAVAILABLE);
       return;
     }
 

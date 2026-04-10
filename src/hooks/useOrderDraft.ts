@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import { showErrorToast } from "@/lib/errorHandler";
 import { canTransitionTo, getOrderStatusLabel } from "@/lib/constants";
 import type { Order, DraftItem, PriceCheckData } from "@/types/orders";
@@ -109,7 +110,7 @@ export function useOrderDraft() {
   const handleCancelOrder = async (order: Order) => {
     const currentStatus = order.status || "draft";
     if (!canTransitionTo(currentStatus, "cancelled")) {
-      toast.error(`Cannot cancel an order in "${getOrderStatusLabel(currentStatus)}" status.`);
+      toast.error(ERROR_MESSAGES.ORDER_STATUS_TRANSITION_INVALID);
       return;
     }
     setCancellingId(order.id);
@@ -145,7 +146,7 @@ export function useOrderDraft() {
         }));
 
       if (!validItems.length) {
-        toast.error("No available products to duplicate");
+        toast.error(ERROR_MESSAGES.ORDER_NO_PRODUCTS);
         return;
       }
 
@@ -183,7 +184,7 @@ export function useOrderDraft() {
     try {
       const items = (order.order_items || []) as any[];
       if (!items.length) {
-        toast.error("This order has no items to duplicate");
+        toast.error(ERROR_MESSAGES.ORDER_NO_ITEMS);
         return;
       }
 
