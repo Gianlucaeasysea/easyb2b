@@ -21,7 +21,7 @@ const items = [
   { title: "Listini & Sconti", url: "/admin/price-lists", icon: Tag },
   { title: "System Map", url: "/admin/system-map", icon: Map },
   { title: "CMS / Pagine", url: "/admin/cms", icon: Globe },
-  { title: "Automazioni", url: "/admin/automations", icon: Zap },
+  { title: "Automazioni", url: "/crm/automations", icon: Zap },
   { title: "Changelog", url: "/admin/changelog", icon: ClipboardList },
   { title: "Log Attività", url: "/admin/audit-log", icon: History },
   { title: "Settings", url: "/admin/settings", icon: Settings },
