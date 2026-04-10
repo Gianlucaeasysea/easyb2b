@@ -98,9 +98,10 @@ const CRMPipeline = () => {
     if (!client || client.status === newStage) return;
 
     // Validate stage transition
-    const allowed = VALID_STAGE_TRANSITIONS[client.status] ?? [];
+    const currentStatus = client.status || "lead";
+    const allowed = VALID_STAGE_TRANSITIONS[currentStatus] ?? [];
     if (!allowed.includes(newStage)) {
-      sonnerToast.warning(`Cannot move from "${stageLabels[client.status]}" to "${stageLabels[newStage]}"`);
+      sonnerToast.warning(`Cannot move from "${stageLabels[currentStatus] || currentStatus}" to "${stageLabels[newStage] || newStage}"`);
       return;
     }
 
