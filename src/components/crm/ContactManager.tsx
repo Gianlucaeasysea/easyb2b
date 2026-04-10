@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Users, Plus, Pencil, Trash2, Check, X, StickyNote } from "lucide-react";
 import { toast } from "sonner";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
 
 interface ContactManagerProps {
   clientId: string;
@@ -51,7 +52,7 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
   };
 
   const handleAdd = async () => {
-    if (!form.contact_name.trim()) { toast.error("Il nome è obbligatorio"); return; }
+    if (!form.contact_name.trim()) { toast.error(ERROR_MESSAGES.CONTACT_NAME_REQUIRED); return; }
     const { error } = await supabase.from("client_contacts").insert({
       client_id: clientId,
       contact_name: form.contact_name.trim(),
@@ -60,7 +61,7 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
       role: form.role.trim() || null,
       notes: form.notes.trim() || null,
     } as any);
-    if (error) { toast.error("Error saving contact"); return; }
+    if (error) { toast.error(ERROR_MESSAGES.CONTACT_SAVE_FAILED); return; }
 
     if (form.email.trim()) {
       const { data: client } = await supabase.from("clients").select("email, contact_name").eq("id", clientId).maybeSingle();
@@ -86,7 +87,7 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
       role: form.role.trim() || null,
       notes: form.notes.trim() || null,
     } as any).eq("id", contactId);
-    if (error) { toast.error("Error updating contact"); return; }
+    if (error) { toast.error(ERROR_MESSAGES.CONTACT_UPDATE_FAILED); return; }
     toast.success("Contact updated");
     setEditingId(null);
     setForm(emptyForm);
@@ -99,7 +100,7 @@ export const ContactManager = ({ clientId, clientMainEmail, clientMainPhone, cli
       toast.success("Contatto rimosso");
       invalidateAll();
     } catch (err: any) {
-      toast.error(err.message || "Error deleting contact");
+      toast.error(ERROR_MESSAGES.CONTACT_DELETE_FAILED);
     }
   };
 
