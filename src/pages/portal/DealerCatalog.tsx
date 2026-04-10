@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClientMode } from "@/contexts/ClientModeContext";
-import { Package, Search, ShoppingCart, ShoppingBag, Minus, Plus, LayoutGrid, List } from "lucide-react";
+import { Package, Search, ShoppingCart, ShoppingBag, Minus, Plus, LayoutGrid, List, Check } from "lucide-react";
 import OptimizedImage from "@/components/ui/OptimizedImage";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,9 @@ import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import ProductDetailModal from "@/components/portal/ProductDetailModal";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerItem } from "@/lib/animations";
+import { CatalogSkeleton } from "@/components/portal/ui/PortalSkeleton";
 
 // Map product names to product_family slugs
 const getProductFamily = (name: string): string | null => {
