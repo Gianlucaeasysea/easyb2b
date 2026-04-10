@@ -235,46 +235,16 @@ const convertRequestToPipeline = async (adminClient: any, requestId: string, use
 };
 
 const deleteClientGraph = async (adminClient: any, clientId: string) => {
-  const { data: clientRow } = await adminClient
-    .from("clients")
-    .select("user_id")
-    .eq("id", clientId)
-    .maybeSingle();
+  // Use atomic RPC for all DB deletions in a single transaction
+  const { data, error } = await adminClient.rpc("delete_client_cascade", {
+    p_client_id: clientId,
+  });
 
-  const linkedUserId = clientRow?.user_id as string | null;
+  if (error) throw new Error(`Failed to delete client cascade: ${error.message}`);
 
-  const { data: orders, error: ordersError } = await adminClient
-    .from("orders")
-    .select("id")
-    .eq("client_id", clientId);
-
-  if (ordersError) throw new Error(`Failed to read client orders: ${ordersError.message}`);
-
-  const orderIds = (orders || []).map((order: { id: string }) => order.id);
-
-  if (orderIds.length) {
-    await ensure(adminClient.from("order_items").delete().in("order_id", orderIds), "Failed to delete order items");
-    await ensure(adminClient.from("order_documents").delete().in("order_id", orderIds), "Failed to delete order documents");
-    await ensure(adminClient.from("order_events").delete().in("order_id", orderIds), "Failed to delete order events");
-  }
-
-  await ensure(adminClient.from("tasks").delete().eq("client_id", clientId), "Failed to delete client tasks");
-  await ensure(adminClient.from("deals").delete().eq("client_id", clientId), "Failed to delete client deals");
-  await ensure(adminClient.from("activities").delete().eq("client_id", clientId), "Failed to delete client activities");
-  await ensure(adminClient.from("client_bank_details").delete().eq("client_id", clientId), "Failed to delete bank details");
-  await ensure(adminClient.from("client_notifications").delete().eq("client_id", clientId), "Failed to delete notifications");
-  await ensure(adminClient.from("client_notification_preferences").delete().eq("client_id", clientId), "Failed to delete notification preferences");
-  await ensure(adminClient.from("client_documents").delete().eq("client_id", clientId), "Failed to delete client documents");
-  await ensure(adminClient.from("client_shipping_addresses").delete().eq("client_id", clientId), "Failed to delete shipping addresses");
-  await ensure(adminClient.from("price_list_clients").delete().eq("client_id", clientId), "Failed to delete price list links");
-  await ensure(adminClient.from("price_lists").delete().eq("client_id", clientId), "Failed to delete client price lists");
-  await ensure(adminClient.from("client_communications").delete().eq("client_id", clientId), "Failed to delete communications");
-  await ensure(adminClient.from("client_contacts").delete().eq("client_id", clientId), "Failed to delete contacts");
-  await ensure(adminClient.from("orders").delete().eq("client_id", clientId), "Failed to delete orders");
-  await ensure(adminClient.from("clients").delete().eq("id", clientId), "Failed to delete organization");
-
-  if (linkedUserId) {
-    await deleteDealerAuthArtifacts(adminClient, linkedUserId);
+  // Auth cleanup is separate (not in DB transaction — acceptable)
+  if (data?.had_dealer_account && data?.dealer_user_id) {
+    await deleteDealerAuthArtifacts(adminClient, data.dealer_user_id);
   }
 };
 

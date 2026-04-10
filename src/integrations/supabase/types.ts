@@ -1840,6 +1840,7 @@ export type Database = {
             }
             Returns: Json
           }
+      delete_client_cascade: { Args: { p_client_id: string }; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

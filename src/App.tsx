@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import CookieBanner from "@/components/CookieBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ClientModeProvider } from "@/contexts/ClientModeContext";
+import { ComingSoon } from "@/components/portal/ui/ComingSoon";
 
 // Public pages
 import Index from "./pages/Index";
@@ -123,10 +124,9 @@ const App = () => (
               <Route path="orders" element={<DealerOrders />} />
               <Route path="cart" element={<DealerCart />} />
               <Route path="invoices" element={<DealerInvoices />} />
-              {/* TODO: Re-enable when page is implemented */}
-              {/* <Route path="promos" element={<DealerPromos />} /> */}
-              {/* <Route path="goals" element={<DealerGoals />} /> */}
-              {/* <Route path="marketing" element={<DealerMarketing />} /> */}
+              <Route path="promos" element={<ComingSoon featureName="Promozioni" />} />
+              <Route path="goals" element={<ComingSoon featureName="Obiettivi" />} />
+              <Route path="marketing" element={<ComingSoon featureName="Marketing" />} />
               <Route path="notifications" element={<DealerNotifications />} />
               <Route path="profile" element={<DealerProfile />} />
               <Route path="support" element={<DealerSupport />} />
@@ -153,7 +153,7 @@ const App = () => (
               <Route path="system-map" element={<AdminSystemMap />} />
               <Route path="marketing" element={<AdminMarketing />} />
               <Route path="cms" element={<AdminCMS />} />
-              <Route path="automations" element={<CRMAutomations />} />
+              {/* Automations accessible only via /crm/automations */}
               <Route path="changelog" element={<AdminChangelog />} />
               <Route path="notifications" element={<AdminNotifications />} />
               <Route path="audit-log" element={<AdminAuditLog />} />
