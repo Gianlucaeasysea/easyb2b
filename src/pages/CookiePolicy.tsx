@@ -5,80 +5,80 @@ const CookiePolicy = () => (
   <div className="min-h-screen bg-background">
     <div className="container mx-auto px-4 py-16 max-w-3xl">
       <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8">
-        <ArrowLeft size={16} /> Torna alla Home
+        <ArrowLeft size={16} /> Back to Home
       </Link>
       <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-2">Cookie Policy</h1>
-      <p className="text-sm text-muted-foreground mb-10">Ultimo aggiornamento: 9 Aprile 2026</p>
+      <p className="text-sm text-muted-foreground mb-10">Last updated: April 9, 2026</p>
 
       <div className="prose prose-invert prose-sm max-w-none space-y-6 text-foreground/80">
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">1. Titolare del Trattamento</h2>
+          <h2 className="font-heading text-xl font-bold text-foreground">1. Data Controller</h2>
           <p>
-            <strong>Easysea Srl</strong> — Startup Innovativa<br />
-            Via Per Curnasco 52, 24127 Bergamo (BG), Italia<br />
-            P.IVA: IT15126351004<br />
+            <strong>Easysea Srl</strong> — Italian Innovative Startup<br />
+            Via Per Curnasco 52, 24127 Bergamo (BG), Italy<br />
+            VAT: IT15126351004<br />
             Email: <strong>business@easysea.org</strong>
           </p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">2. Cosa sono i Cookie</h2>
-          <p>I cookie sono piccoli file di testo che vengono memorizzati sul dispositivo dell'utente durante la navigazione su un sito web. Servono a migliorare l'esperienza di utilizzo del sito, a memorizzare preferenze e a fornire informazioni utili al gestore del servizio.</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">2. What Are Cookies</h2>
+          <p>Cookies are small text files stored on the user's device while browsing a website. They are used to improve the browsing experience, remember preferences and provide useful information to the service provider.</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">3. Tipologie di Cookie Utilizzati</h2>
-          
-          <h3 className="font-heading text-lg font-semibold text-foreground mt-4">Cookie Tecnici (necessari)</h3>
-          <p>Indispensabili per il corretto funzionamento della piattaforma B2B. Non richiedono il consenso dell'utente. Includono:</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">3. Types of Cookies Used</h2>
+
+          <h3 className="font-heading text-lg font-semibold text-foreground mt-4">Technical Cookies (necessary)</h3>
+          <p>Essential for the proper functioning of the B2B platform. They do not require user consent. These include:</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li>Cookie di sessione per l'autenticazione sicura al portale dealer</li>
-            <li>Cookie per la gestione del carrello ordini e delle sessioni di acquisto</li>
-            <li>Cookie per le preferenze di navigazione (tema chiaro/scuro)</li>
-            <li>Cookie di sicurezza (protezione CSRF, prevenzione accessi non autorizzati)</li>
+            <li>Session cookies for secure authentication to the dealer portal</li>
+            <li>Cookies for shopping cart management and purchasing sessions</li>
+            <li>Cookies for navigation preferences (light/dark theme)</li>
+            <li>Security cookies (CSRF protection, unauthorized access prevention)</li>
           </ul>
 
-          <h3 className="font-heading text-lg font-semibold text-foreground mt-4">Cookie Analitici</h3>
-          <p>Utilizzati per raccogliere informazioni aggregate e anonime sull'utilizzo della piattaforma (pagine più visitate, durata media delle sessioni, funzionalità più utilizzate). Questi dati ci permettono di migliorare continuamente il servizio offerto ai nostri dealer.</p>
+          <h3 className="font-heading text-lg font-semibold text-foreground mt-4">Analytical Cookies</h3>
+          <p>Used to collect aggregate and anonymous information about platform usage (most visited pages, average session duration, most used features). This data allows us to continuously improve the service offered to our dealers.</p>
 
-          <h3 className="font-heading text-lg font-semibold text-foreground mt-4">Cookie di Terze Parti</h3>
-          <p>La piattaforma potrebbe includere servizi di terze parti (es. provider di hosting, servizi di analisi) che potrebbero installare propri cookie. Easysea non controlla direttamente questi cookie e invita l'utente a consultare le rispettive informative.</p>
+          <h3 className="font-heading text-lg font-semibold text-foreground mt-4">Third-Party Cookies</h3>
+          <p>The platform may include third-party services (e.g., hosting providers, analytics services) that may install their own cookies. Easysea does not directly control these cookies and encourages users to consult the respective privacy policies.</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">4. Durata dei Cookie</h2>
+          <h2 className="font-heading text-xl font-bold text-foreground">4. Cookie Duration</h2>
           <ul className="list-disc pl-6 space-y-1">
-            <li><strong>Cookie di sessione:</strong> vengono automaticamente eliminati alla chiusura del browser</li>
-            <li><strong>Cookie persistenti:</strong> rimangono sul dispositivo per un periodo definito (massimo 12 mesi) o fino alla cancellazione manuale da parte dell'utente</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">5. Gestione dei Cookie</h2>
-          <p>L'utente può gestire le preferenze sui cookie in qualsiasi momento attraverso le impostazioni del proprio browser. Si precisa che la disabilitazione dei cookie tecnici potrebbe compromettere il funzionamento del portale dealer (impossibilità di effettuare login, perdita del carrello, etc.).</p>
-          <p>Istruzioni per la gestione dei cookie nei principali browser:</p>
-          <ul className="list-disc pl-6 space-y-1">
-            <li><strong>Google Chrome:</strong> Impostazioni → Privacy e sicurezza → Cookie e altri dati dei siti</li>
-            <li><strong>Mozilla Firefox:</strong> Impostazioni → Privacy e sicurezza → Cookie e dati dei siti web</li>
-            <li><strong>Apple Safari:</strong> Preferenze → Privacy → Gestisci dati siti web</li>
-            <li><strong>Microsoft Edge:</strong> Impostazioni → Cookie e autorizzazioni sito → Gestisci ed elimina cookie</li>
+            <li><strong>Session cookies:</strong> automatically deleted when the browser is closed</li>
+            <li><strong>Persistent cookies:</strong> remain on the device for a defined period (maximum 12 months) or until manually deleted by the user</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">6. Base Giuridica</h2>
-          <p>I cookie tecnici sono installati sulla base del legittimo interesse del Titolare, in quanto necessari per l'erogazione del servizio richiesto dall'utente. Per i cookie analitici e di eventuale profilazione, ove utilizzati, verrà richiesto il consenso esplicito dell'utente tramite apposito banner al primo accesso alla piattaforma, in conformità con la normativa italiana (Provvedimento del Garante Privacy n. 229/2014) e il Regolamento UE 2016/679 (GDPR).</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">5. Managing Cookies</h2>
+          <p>Users can manage their cookie preferences at any time through their browser settings. Please note that disabling technical cookies may impair the functioning of the dealer portal (inability to log in, loss of shopping cart, etc.).</p>
+          <p>Instructions for managing cookies in major browsers:</p>
+          <ul className="list-disc pl-6 space-y-1">
+            <li><strong>Google Chrome:</strong> Settings → Privacy and Security → Cookies and other site data</li>
+            <li><strong>Mozilla Firefox:</strong> Settings → Privacy & Security → Cookies and Site Data</li>
+            <li><strong>Apple Safari:</strong> Preferences → Privacy → Manage Website Data</li>
+            <li><strong>Microsoft Edge:</strong> Settings → Cookies and site permissions → Manage and delete cookies</li>
+          </ul>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">7. Aggiornamenti</h2>
-          <p>La presente Cookie Policy può essere aggiornata periodicamente per riflettere modifiche normative o variazioni nei servizi offerti. L'utente è invitato a consultare periodicamente questa pagina.</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">6. Legal Basis</h2>
+          <p>Technical cookies are installed based on the legitimate interest of the Controller, as they are necessary for providing the service requested by the user. For analytical cookies and any profiling cookies, where used, the user's explicit consent will be requested via a dedicated banner on first access to the platform, in compliance with Italian regulations (Privacy Authority Provision No. 229/2014) and EU Regulation 2016/679 (GDPR).</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">8. Contatti</h2>
-          <p>Per domande relative alla Cookie Policy: <strong>business@easysea.org</strong></p>
-          <p>Easysea Srl — Via Per Curnasco 52, 24127 Bergamo (BG), Italia<br />P.IVA IT15126351004</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">7. Updates</h2>
+          <p>This Cookie Policy may be updated periodically to reflect regulatory changes or variations in the services offered. Users are encouraged to review this page regularly.</p>
+        </section>
+
+        <section>
+          <h2 className="font-heading text-xl font-bold text-foreground">8. Contact</h2>
+          <p>For questions regarding this Cookie Policy: <strong>business@easysea.org</strong></p>
+          <p>Easysea Srl — Via Per Curnasco 52, 24127 Bergamo (BG), Italy<br />VAT IT15126351004</p>
         </section>
       </div>
     </div>

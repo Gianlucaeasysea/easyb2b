@@ -5,109 +5,109 @@ const PrivacyPolicy = () => (
   <div className="min-h-screen bg-background">
     <div className="container mx-auto px-4 py-16 max-w-3xl">
       <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8">
-        <ArrowLeft size={16} /> Torna alla Home
+        <ArrowLeft size={16} /> Back to Home
       </Link>
       <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-2">Privacy Policy</h1>
-      <p className="text-sm text-muted-foreground mb-10">Ultimo aggiornamento: 9 Aprile 2026</p>
+      <p className="text-sm text-muted-foreground mb-10">Last updated: April 9, 2026</p>
 
       <div className="prose prose-invert prose-sm max-w-none space-y-6 text-foreground/80">
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">1. Titolare del Trattamento</h2>
+          <h2 className="font-heading text-xl font-bold text-foreground">1. Data Controller</h2>
           <p>
-            <strong>Easysea Srl</strong> — Startup Innovativa<br />
-            Sede legale: Via Per Curnasco 52, 24127 Bergamo (BG), Italia<br />
-            P.IVA / C.F.: IT15126351004<br />
-            Capitale Sociale: € 13.781,28 i.v.<br />
+            <strong>Easysea Srl</strong> — Italian Innovative Startup<br />
+            Registered office: Via Per Curnasco 52, 24127 Bergamo (BG), Italy<br />
+            VAT / Tax ID: IT15126351004<br />
+            Share Capital: € 13,781.28 fully paid-in<br />
             Email: <strong>business@easysea.org</strong><br />
-            Sito web: <a href="https://easysea.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">easysea.org</a>
+            Website: <a href="https://easysea.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">easysea.org</a>
           </p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">2. Dati Raccolti</h2>
-          <p>Nell'ambito dell'attività B2B di distribuzione di accessori nautici innovativi, raccogliamo i seguenti dati personali:</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">2. Data Collected</h2>
+          <p>In the course of our B2B distribution of innovative nautical accessories, we collect the following personal data:</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li><strong>Dati identificativi e aziendali:</strong> nome, cognome, ragione sociale, P.IVA, codice fiscale, tipologia di attività commerciale (negozio nautico, charter, cantiere, distributore, etc.)</li>
-            <li><strong>Dati di contatto:</strong> email aziendale, numero di telefono, indirizzo della sede e/o magazzino, sito web</li>
-            <li><strong>Dati di navigazione:</strong> indirizzo IP, tipo di browser, sistema operativo, pagine visitate, durata della sessione, cookie tecnici</li>
-            <li><strong>Dati commerciali:</strong> storico ordini, condizioni di pagamento concordate, classe di sconto assegnata, listini personalizzati, fatture e documenti di trasporto</li>
-            <li><strong>Dati di accesso al portale:</strong> credenziali di autenticazione (email e password cifrata), log di accesso, preferenze utente</li>
+            <li><strong>Identification and business data:</strong> name, surname, company name, VAT number, tax code, type of business activity (nautical shop, charter, shipyard, distributor, etc.)</li>
+            <li><strong>Contact data:</strong> business email, phone number, office and/or warehouse address, website</li>
+            <li><strong>Browsing data:</strong> IP address, browser type, operating system, pages visited, session duration, technical cookies</li>
+            <li><strong>Commercial data:</strong> order history, agreed payment terms, assigned discount class, custom price lists, invoices and shipping documents</li>
+            <li><strong>Portal access data:</strong> authentication credentials (email and encrypted password), access logs, user preferences</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">3. Finalità del Trattamento</h2>
-          <p>I dati personali sono trattati per le seguenti finalità:</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">3. Purpose of Processing</h2>
+          <p>Personal data is processed for the following purposes:</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li>Gestione del rapporto contrattuale B2B, inclusa l'evasione degli ordini di accessori nautici (boat hook Jake™, winch handle Flipper™, etc.)</li>
-            <li>Registrazione, gestione e manutenzione dell'account sul portale dealer riservato</li>
-            <li>Applicazione di condizioni commerciali personalizzate (listini, sconti, termini di pagamento)</li>
-            <li>Comunicazioni operative relative a ordini, spedizioni, disponibilità prodotti e aggiornamenti di catalogo</li>
-            <li>Comunicazioni commerciali e promozionali su nuovi prodotti, promozioni e iniziative (previo consenso ove richiesto)</li>
-            <li>Adempimenti contabili, fiscali e legali</li>
-            <li>Miglioramento della piattaforma e analisi statistiche aggregate sull'utilizzo del portale</li>
+            <li>Management of the B2B contractual relationship, including fulfillment of orders for nautical accessories (boat hook Jake™, winch handle Flipper™, etc.)</li>
+            <li>Registration, management and maintenance of the dealer portal account</li>
+            <li>Application of customized commercial conditions (price lists, discounts, payment terms)</li>
+            <li>Operational communications regarding orders, shipments, product availability and catalog updates</li>
+            <li>Commercial and promotional communications about new products, promotions and initiatives (subject to consent where required)</li>
+            <li>Accounting, tax and legal compliance</li>
+            <li>Platform improvement and aggregate statistical analysis of portal usage</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">4. Base Giuridica</h2>
-          <p>Il trattamento dei dati è fondato su:</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">4. Legal Basis</h2>
+          <p>Data processing is based on:</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li><strong>Esecuzione del contratto:</strong> per la gestione degli ordini, la fornitura dei prodotti e l'erogazione dei servizi del portale dealer</li>
-            <li><strong>Adempimento di obblighi legali:</strong> per gli obblighi contabili, fiscali e normativi (conservazione fatture, registri IVA, etc.)</li>
-            <li><strong>Legittimo interesse del Titolare:</strong> per il miglioramento dei servizi, la prevenzione frodi e la sicurezza della piattaforma</li>
-            <li><strong>Consenso dell'interessato:</strong> per l'invio di comunicazioni commerciali e promozionali, revocabile in qualsiasi momento</li>
+            <li><strong>Performance of contract:</strong> for managing orders, supplying products and providing dealer portal services</li>
+            <li><strong>Legal obligations:</strong> for accounting, tax and regulatory compliance (invoice retention, VAT records, etc.)</li>
+            <li><strong>Legitimate interest of the Controller:</strong> for service improvement, fraud prevention and platform security</li>
+            <li><strong>Consent:</strong> for sending commercial and promotional communications, revocable at any time</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">5. Conservazione dei Dati</h2>
-          <p>I dati personali sono conservati per il tempo strettamente necessario al perseguimento delle finalità indicate:</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">5. Data Retention</h2>
+          <p>Personal data is retained for the time strictly necessary to fulfill the stated purposes:</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li><strong>Dati contrattuali e contabili:</strong> 10 anni dalla cessazione del rapporto commerciale, come previsto dalla normativa fiscale e civilistica italiana (art. 2220 c.c.)</li>
-            <li><strong>Dati di navigazione e cookie:</strong> massimo 24 mesi dalla raccolta</li>
-            <li><strong>Dati del portale dealer:</strong> per tutta la durata del rapporto commerciale e fino a 12 mesi dalla chiusura dell'account</li>
-            <li><strong>Dati per marketing:</strong> fino alla revoca del consenso</li>
+            <li><strong>Contractual and accounting data:</strong> 10 years from the end of the business relationship, as required by Italian tax and civil legislation (Art. 2220 Civil Code)</li>
+            <li><strong>Browsing data and cookies:</strong> maximum 24 months from collection</li>
+            <li><strong>Dealer portal data:</strong> for the duration of the business relationship and up to 12 months after account closure</li>
+            <li><strong>Marketing data:</strong> until consent is withdrawn</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">6. Condivisione dei Dati</h2>
-          <p>I dati potranno essere comunicati a:</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">6. Data Sharing</h2>
+          <p>Data may be shared with:</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li>Fornitori di servizi IT, cloud hosting e gestione della piattaforma (infrastruttura tecnica)</li>
-            <li>Corrieri e spedizionieri per la consegna degli ordini (nazionali e internazionali)</li>
-            <li>Consulenti fiscali, contabili e legali del Titolare</li>
-            <li>Istituti bancari per la gestione dei pagamenti</li>
-            <li>Autorità competenti ove richiesto dalla legge</li>
+            <li>IT service providers, cloud hosting and platform management (technical infrastructure)</li>
+            <li>Couriers and shipping carriers for order delivery (domestic and international)</li>
+            <li>Tax, accounting and legal advisors of the Controller</li>
+            <li>Banking institutions for payment processing</li>
+            <li>Competent authorities where required by law</li>
           </ul>
-          <p>I dati non vengono ceduti a terzi per finalità di marketing senza il consenso esplicito dell'interessato. I dati potranno essere trasferiti verso paesi extra-UE solo in presenza di adeguate garanzie ai sensi degli artt. 44-49 del GDPR.</p>
+          <p>Data is not shared with third parties for marketing purposes without the explicit consent of the data subject. Data may be transferred to non-EU countries only with adequate safeguards pursuant to Articles 44-49 of the GDPR.</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">7. Diritti dell'Interessato</h2>
-          <p>Ai sensi degli artt. 15-22 del Regolamento UE 2016/679 (GDPR), l'interessato ha diritto di:</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">7. Rights of the Data Subject</h2>
+          <p>Pursuant to Articles 15-22 of EU Regulation 2016/679 (GDPR), the data subject has the right to:</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li>Accedere ai propri dati personali e ottenerne copia</li>
-            <li>Richiederne la rettifica o l'aggiornamento</li>
-            <li>Richiedere la cancellazione (diritto all'oblio), nei limiti previsti dalla legge</li>
-            <li>Limitare il trattamento o opporsi ad esso</li>
-            <li>Richiedere la portabilità dei dati in formato strutturato</li>
-            <li>Revocare il consenso in qualsiasi momento, senza pregiudicare la liceità del trattamento basato sul consenso prestato prima della revoca</li>
-            <li>Proporre reclamo al Garante per la Protezione dei Dati Personali (<a href="https://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.garanteprivacy.it</a>)</li>
+            <li>Access their personal data and obtain a copy</li>
+            <li>Request rectification or updating</li>
+            <li>Request erasure (right to be forgotten), within the limits provided by law</li>
+            <li>Restrict or object to processing</li>
+            <li>Request data portability in a structured format</li>
+            <li>Withdraw consent at any time, without affecting the lawfulness of processing based on consent given prior to withdrawal</li>
+            <li>Lodge a complaint with the Italian Data Protection Authority (<a href="https://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.garanteprivacy.it</a>)</li>
           </ul>
-          <p>Per esercitare i propri diritti, scrivere a: <strong>business@easysea.org</strong></p>
+          <p>To exercise your rights, write to: <strong>business@easysea.org</strong></p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">8. Sicurezza</h2>
-          <p>Easysea Srl adotta misure tecniche e organizzative adeguate per proteggere i dati personali da accessi non autorizzati, perdita, distruzione o divulgazione, incluse:</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">8. Security</h2>
+          <p>Easysea Srl adopts appropriate technical and organizational measures to protect personal data from unauthorized access, loss, destruction or disclosure, including:</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li>Crittografia dei dati in transito (TLS/SSL) e a riposo</li>
-            <li>Autenticazione sicura con password cifrate e politiche di complessità</li>
-            <li>Controllo degli accessi basato su ruoli (Role-Based Access Control)</li>
-            <li>Monitoraggio e logging degli accessi alla piattaforma</li>
-            <li>Backup periodici e procedure di disaster recovery</li>
+            <li>Encryption of data in transit (TLS/SSL) and at rest</li>
+            <li>Secure authentication with encrypted passwords and complexity policies</li>
+            <li>Role-Based Access Control (RBAC)</li>
+            <li>Monitoring and logging of platform access</li>
+            <li>Regular backups and disaster recovery procedures</li>
           </ul>
         </section>
       </div>
