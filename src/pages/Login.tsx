@@ -13,6 +13,8 @@ import logo from "@/assets/easysea-logo.png";
 const Login = () => {
   const { user, role, signInWithEmail, signInWithMagicLink } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"password" | "magic">("magic");
@@ -21,6 +23,9 @@ const Login = () => {
 
   // Redirect if already logged in
   if (user && role) {
+    if (returnTo && returnTo.startsWith("/")) {
+      return <Navigate to={returnTo} replace />;
+    }
     if (role === "dealer") return <Navigate to="/portal" replace />;
     if (role === "admin" || role === "operations") return <Navigate to="/admin" replace />;
     if (role === "sales") return <Navigate to="/crm" replace />;

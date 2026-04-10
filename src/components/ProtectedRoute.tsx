@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   const { user, role, loading, roleError, retryRole } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -35,7 +36,10 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    const returnTo = location.pathname + location.search;
+    return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
+  }
 
   if (allowedRoles && role && !allowedRoles.includes(role)) {
     // Redirect to the correct portal based on role
