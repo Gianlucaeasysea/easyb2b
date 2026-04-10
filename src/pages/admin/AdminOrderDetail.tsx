@@ -572,7 +572,7 @@ const AdminOrderDetail = () => {
             clientName={client.company_name || "Client"}
             clientEmail={client.email}
             orderId={order.id}
-            orderCode={order.order_code}
+            orderCode={order.order_code ?? undefined}
           />
         </div>
       )}

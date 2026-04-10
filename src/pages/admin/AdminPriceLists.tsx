@@ -449,7 +449,7 @@ const AdminPriceLists = () => {
     for (const row of importData) {
       const price = parseFloat(String(row[priceCol]).replace(",", "."));
       if (isNaN(price)) continue;
-      let prod = null;
+      let prod: typeof products extends (infer U)[] | undefined ? U | undefined : never = undefined;
       if (skuCol && row[skuCol]) prod = products?.find(p => p.sku?.toLowerCase() === String(row[skuCol]).toLowerCase().trim());
       if (!prod && nameCol && row[nameCol]) prod = products?.find(p => p.name.toLowerCase().includes(String(row[nameCol]).toLowerCase().trim()));
       if (prod) { items.push({ price_list_id: importTargetListId, product_id: prod.id, custom_price: price }); matched++; }

@@ -187,11 +187,11 @@ const CRMCreateOrder = () => {
       const { data, error } = await supabase.rpc("create_order_with_items", {
         p_client_id: selectedClientId,
         p_status: status,
-        p_notes: clientNotes || null,
-        p_payment_terms: selectedClient?.payment_terms || null,
-        p_order_type: "sales_manual",
-        p_items: orderItems as any,
-        p_internal_notes: internalNotes.trim() || null,
+         p_notes: clientNotes || undefined,
+         p_payment_terms: selectedClient?.payment_terms ?? undefined,
+         p_order_type: "sales_manual",
+         p_items: orderItems as any,
+         p_internal_notes: internalNotes.trim() || undefined,
       });
 
       if (error) throw error;

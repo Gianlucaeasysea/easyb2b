@@ -270,9 +270,9 @@ const AdminClientDetail = () => {
       const { data: order, error: orderErr } = await supabase.rpc("create_order_with_items", {
         p_client_id: id,
         p_status: "confirmed",
-        p_notes: newOrderNotes || null,
-        p_order_type: "MANUAL B2B",
-        p_internal_notes: null,
+         p_notes: newOrderNotes || undefined,
+         p_order_type: "MANUAL B2B",
+         p_internal_notes: undefined,
         p_items: orderItems.map(item => ({
           product_id: item.product_id,
           quantity: item.quantity,

@@ -101,9 +101,9 @@ const DealerCart = () => {
       const { data: result, error: orderError } = await supabase.rpc("create_order_with_items", {
         p_client_id: client.id,
         p_status: status,
-        p_notes: notes || null,
-        p_payment_terms: (client as any).payment_terms || null,
-        p_internal_notes: null,
+         p_notes: notes || undefined,
+         p_payment_terms: (client as any).payment_terms || undefined,
+         p_internal_notes: undefined,
         p_items: items.map(item => ({
           product_id: item.productId,
           quantity: item.quantity,

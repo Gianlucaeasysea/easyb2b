@@ -484,7 +484,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
           
           {/* Reply */}
           <div className="flex justify-end pt-3 border-t border-border">
-            <Button size="sm" onClick={() => handleReply(openEmail)} className="gap-1.5">
+            <Button size="sm" onClick={() => openEmail && handleReply(openEmail)} className="gap-1.5">
               <Reply size={14} /> Reply
             </Button>
           </div>

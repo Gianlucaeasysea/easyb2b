@@ -187,14 +187,14 @@ export default function CRMEmailTemplates() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-sm text-foreground">{t.name}</h3>
-                    {getCategoryBadge(t.category)}
+                    {getCategoryBadge(t.category ?? "general")}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">Subject: {t.subject}</p>
                   <p className="text-xs text-muted-foreground/60 truncate mt-0.5">{stripHtml(t.body).slice(0, 120)}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-[10px] text-muted-foreground">
-                    {format(new Date(t.created_at), "dd MMM yyyy")}
+                    {format(new Date(t.created_at ?? Date.now()), "dd MMM yyyy")}
                   </span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
