@@ -1,60 +1,93 @@
+/// <reference types="npm:@types/react@18.3.1" />
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Container, Head, Heading, Html, Preview, Text, Section, Hr,
+  Button, Section, Text, Row, Column,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
-
-const SITE_NAME = "Easysea"
+import { BaseEmailLayout, emailStyles, APP_URL } from './layouts/BaseEmailLayout.tsx'
 
 interface OrderReceivedProps {
   clientName?: string
   orderCode?: string
+  orderDate?: string
   itemsHtml?: string
   totalAmount?: string
   notes?: string
+  portalUrl?: string
 }
 
-const OrderReceivedEmail = ({ clientName, orderCode, itemsHtml, totalAmount, notes }: OrderReceivedProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Your order {orderCode || ''} has been received — {SITE_NAME}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Thank you, {clientName || 'Customer'}!</Heading>
-        <Text style={text}>
-          Your order <strong>{orderCode || '—'}</strong> has been received and is being processed.
+const OrderReceivedEmail = ({
+  clientName, orderCode, orderDate, itemsHtml, totalAmount, notes, portalUrl,
+}: OrderReceivedProps) => {
+  const viewUrl = portalUrl || `${APP_URL}/portal/orders?highlight=${orderCode || ''}`
+
+  return (
+    <BaseEmailLayout preview={`Order ${orderCode || ''} received — Easysea B2B`}>
+      <Text style={emailStyles.h1}>Order Received</Text>
+      <Text style={emailStyles.paragraph}>
+        Hi <strong>{clientName || 'Customer'}</strong>, we have received your order.
+        We are processing it and will contact you for confirmation.
+      </Text>
+
+      {/* Order Info Box */}
+      <Section style={emailStyles.infoBox}>
+        <Row>
+          <Column>
+            <Text style={{ margin: '0', color: '#0369a1', fontSize: '12px', fontWeight: '600' }}>
+              ORDER NUMBER
+            </Text>
+            <Text style={{ margin: '2px 0 0', color: '#0f172a', fontSize: '20px', fontWeight: '700' }}>
+              {orderCode || '—'}
+            </Text>
+          </Column>
+          {orderDate && (
+            <Column style={{ textAlign: 'right' as const }}>
+              <Text style={{ margin: '0', color: '#0369a1', fontSize: '12px', fontWeight: '600' }}>
+                DATE
+              </Text>
+              <Text style={{ margin: '2px 0 0', color: '#0f172a', fontSize: '14px' }}>
+                {orderDate}
+              </Text>
+            </Column>
+          )}
+        </Row>
+      </Section>
+
+      {/* Items HTML */}
+      {itemsHtml && (
+        <div dangerouslySetInnerHTML={{ __html: itemsHtml }} />
+      )}
+
+      {totalAmount && (
+        <Text style={{ ...emailStyles.paragraph, fontWeight: '700', fontSize: '16px', color: '#0f172a' }}>
+          Order Total: €{totalAmount}
         </Text>
-        {itemsHtml && (
-          <div dangerouslySetInnerHTML={{ __html: itemsHtml }} />
-        )}
-        {totalAmount && (
-          <Text style={{ ...text, fontWeight: 'bold', fontSize: '16px' }}>
-            Total: €{totalAmount}
-          </Text>
-        )}
-        {notes && (
-          <Text style={text}><strong>Notes:</strong> {notes}</Text>
-        )}
-        <Hr style={hr} />
-        <Text style={text}>
-          You'll receive a confirmation email once we review and confirm your order.
-        </Text>
-        <Text style={footer}>— The {SITE_NAME} Team</Text>
-      </Container>
-    </Body>
-  </Html>
-)
+      )}
+
+      {notes && (
+        <Section style={{ marginTop: '16px' }}>
+          <Text style={emailStyles.h2}>Notes</Text>
+          <Text style={emailStyles.paragraph}>{notes}</Text>
+        </Section>
+      )}
+
+      {/* CTA */}
+      <Section style={{ textAlign: 'center' as const, marginTop: '32px' }}>
+        <Button href={viewUrl} style={emailStyles.button}>
+          View your order in the portal
+        </Button>
+      </Section>
+
+      <Text style={{ ...emailStyles.paragraph, fontSize: '13px', color: '#94a3b8', marginTop: '24px' }}>
+        For assistance, reply to this email or contact your sales representative.
+      </Text>
+    </BaseEmailLayout>
+  )
+}
 
 export const template = {
   component: OrderReceivedEmail,
-  subject: (data: Record<string, any>) => `Order Received — Easysea B2B`,
+  subject: (data: Record<string, unknown>) => `Order Received — Easysea B2B`,
   displayName: 'Order received (client)',
-  previewData: { clientName: 'Mario Rossi', orderCode: 'ES-0001', totalAmount: '250.00' },
+  previewData: { clientName: 'Mario Rossi', orderCode: 'ES-0001', totalAmount: '250.00', orderDate: '10/04/2026' },
 } satisfies TemplateEntry
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px', maxWidth: '600px', margin: '0 auto' }
-const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#0a0a0a', margin: '0 0 20px' }
-const text = { fontSize: '14px', color: '#555575', lineHeight: '1.6', margin: '0 0 16px' }
-const hr = { borderColor: '#eee', margin: '24px 0' }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
