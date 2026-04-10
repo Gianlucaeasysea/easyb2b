@@ -1,0 +1,12 @@
+{
+  "labels": {
+    "leads": "Leads",
+    "deals": "Deals",
+    "pipeline": "Pipeline",
+    "activities": "Activities",
+    "tasks": "Tasks",
+    "contacts": "Contacts",
+    "organizations": "Organizations",
+    "analytics": "Analytics"
+  }
+}

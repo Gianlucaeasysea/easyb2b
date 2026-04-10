@@ -1,0 +1,40 @@
+{
+  "status": {
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "confirmed": "Confirmed",
+    "processing": "Processing",
+    "ready_to_ship": "Ready to Ship",
+    "shipped": "Shipped",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled"
+  },
+  "labels": {
+    "orderNumber": "Order #",
+    "orderDate": "Order Date",
+    "total": "Total",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "discount": "Discount",
+    "quantity": "Quantity",
+    "unitPrice": "Unit Price",
+    "notes": "Notes",
+    "documents": "Documents",
+    "timeline": "Timeline"
+  },
+  "actions": {
+    "submitOrder": "Submit Order",
+    "duplicateOrder": "Duplicate Order",
+    "cancelOrder": "Cancel Order",
+    "downloadInvoice": "Download Invoice",
+    "addToCart": "Add to Cart"
+  },
+  "messages": {
+    "orderSubmitted": "Order submitted successfully!",
+    "orderCancelled": "Order cancelled",
+    "cartUpdated": "Cart updated",
+    "cartSaved": "Cart saved",
+    "priceChanged": "Prices have changed since your last visit",
+    "outOfStock": "Product not available in the requested quantity"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "auth": {
+    "loginFailed": "Invalid credentials. Check email and password.",
+    "sessionExpired": "Session expired. Please log in again.",
+    "unauthorized": "You do not have permission to perform this action.",
+    "gmailFailed": "Gmail authentication failed. Please try again.",
+    "roleLoadFailed": "Unable to load user role. Please try again."
+  },
+  "orders": {
+    "createFailed": "Unable to create order. Please try again.",
+    "submitFailed": "Unable to submit order. Check the data and try again.",
+    "updateFailed": "Unable to update order.",
+    "statusTransitionInvalid": "This action is not allowed for the current order status.",
+    "noItems": "This order has no items to duplicate.",
+    "noProducts": "No available products to duplicate.",
+    "notesSaveFailed": "Unable to save notes."
+  },
+  "products": {
+    "loadFailed": "Unable to load product catalog.",
+    "updateFailed": "Unable to update product.",
+    "priceUnavailable": "Cannot add: price not available."
+  },
+  "clients": {
+    "loadFailed": "Unable to load client data.",
+    "updateFailed": "Unable to update client data.",
+    "deleteFailed": "Unable to delete client.",
+    "createFailed": "Unable to create client.",
+    "emailRequired": "Client must have an email address.",
+    "passwordTooShort": "Password must be at least 10 characters."
+  },
+  "priceLists": {
+    "loadFailed": "Unable to load price lists.",
+    "importFailed": "Import failed. Check the file format.",
+    "updateFailed": "Unable to update price list.",
+    "selectRequired": "Select a price list.",
+    "mapPrice": "Map at least the Price field.",
+    "mapIdentifier": "Map at least Product Name or SKU.",
+    "noMatch": "No products found."
+  },
+  "email": {
+    "sendFailed": "Unable to send email. Please try again.",
+    "loadFailed": "Unable to load communications.",
+    "fillRequired": "Fill in subject and body.",
+    "selectRecipient": "Select a recipient.",
+    "selectDate": "Select a date for scheduling.",
+    "maxAttachments": "Maximum 5 attachments allowed.",
+    "fileTooLarge": "File exceeds the 10MB limit.",
+    "gmailTokenExpired": "Gmail token is no longer valid. Reconnect Gmail.",
+    "gmailSyncFailed": "Gmail sync failed."
+  },
+  "files": {
+    "tooLarge": "File cannot exceed 10MB.",
+    "empty": "File is empty.",
+    "uploadFailed": "Upload failed. Please try again.",
+    "deleteFailed": "Unable to delete. Please try again."
+  },
+  "contacts": {
+    "nameRequired": "Name is required.",
+    "saveFailed": "Unable to save contact.",
+    "updateFailed": "Unable to update contact.",
+    "deleteFailed": "Unable to delete contact."
+  },
+  "cms": {
+    "videoUrlRequired": "Video URL is required.",
+    "uploadFailed": "Upload failed. Please try again."
+  },
+  "generic": {
+    "error": "An error occurred. Please try again.",
+    "network": "Connection error. Check your internet connection.",
+    "loadFailed": "Unable to load data.",
+    "saveFailed": "Unable to save. Please try again."
+  }
+}

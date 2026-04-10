@@ -1,0 +1,12 @@
+{
+  "labels": {
+    "clients": "Clients",
+    "products": "Products",
+    "orders": "Orders",
+    "priceLists": "Price Lists",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "import": "Import",
+    "notifications": "Notifications"
+  }
+}

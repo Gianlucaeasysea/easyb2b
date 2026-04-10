@@ -1,0 +1,36 @@
+{
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "deleting": "Deleting..."
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+  "table": {
+    "noResults": "No results",
+    "noData": "No data available",
+    "rowsPerPage": "Rows per page",
+    "of": "of"
+  },
+  "form": {
+    "required": "Required field",
+    "invalidEmail": "Invalid email",
+    "invalidPhone": "Invalid phone number"
+  }
+}
