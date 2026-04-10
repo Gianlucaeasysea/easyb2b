@@ -1,10 +1,19 @@
+/// <reference types="npm:@types/react@18.3.1" />
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Button, Container, Head, Heading, Html, Preview, Text, Hr,
+  Button, Section, Text,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
+import { BaseEmailLayout, emailStyles, APP_URL } from './layouts/BaseEmailLayout.tsx'
 
-const SITE_NAME = "Easysea"
+const STATUS_COLORS: Record<string, string> = {
+  confirmed: '#10b981',
+  processing: '#f59e0b',
+  ready_to_ship: '#f97316',
+  shipped: '#8b5cf6',
+  delivered: '#22c55e',
+  cancelled: '#ef4444',
+}
 
 interface OrderStatusUpdateProps {
   clientName?: string
@@ -12,42 +21,58 @@ interface OrderStatusUpdateProps {
   status?: string
   trackingNumber?: string
   trackingUrl?: string
+  portalUrl?: string
 }
 
-const OrderStatusUpdateEmail = ({ clientName, orderCode, status, trackingNumber, trackingUrl }: OrderStatusUpdateProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Order {orderCode || ''} update: {status || 'updated'}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Order Update</Heading>
-        <Text style={text}>
-          Hi {clientName || 'Customer'}, your order <strong>{orderCode || '—'}</strong> status has been updated to: <strong>{status || 'updated'}</strong>
+const OrderStatusUpdateEmail = ({
+  clientName, orderCode, status, trackingNumber, trackingUrl, portalUrl,
+}: OrderStatusUpdateProps) => {
+  const viewUrl = portalUrl || `${APP_URL}/portal/orders?highlight=${orderCode || ''}`
+  const badgeColor = STATUS_COLORS[status || ''] || '#64748b'
+
+  return (
+    <BaseEmailLayout preview={`Order ${orderCode || ''} update: ${status || 'updated'}`}>
+      <Text style={emailStyles.h1}>Order Update</Text>
+      <Text style={emailStyles.paragraph}>
+        Hi <strong>{clientName || 'Customer'}</strong>, your order <strong>{orderCode || '—'}</strong> status has been updated:
+      </Text>
+
+      <Section style={{ ...emailStyles.infoBox, borderColor: badgeColor }}>
+        <Text style={{ margin: '0', color: '#64748b', fontSize: '12px', fontWeight: '600' }}>
+          NEW STATUS
         </Text>
-        {trackingNumber && (
-          <Text style={text}><strong>Tracking:</strong> {trackingNumber}</Text>
-        )}
-        {trackingUrl && (
-          <Button href={trackingUrl} style={button}>Track your shipment →</Button>
-        )}
-        <Hr style={hr} />
-        <Text style={footer}>— The {SITE_NAME} Team</Text>
-      </Container>
-    </Body>
-  </Html>
-)
+        <Text style={{ margin: '4px 0 0', color: badgeColor, fontSize: '18px', fontWeight: '700', textTransform: 'capitalize' as const }}>
+          {(status || 'Updated').replace(/_/g, ' ')}
+        </Text>
+      </Section>
+
+      {trackingNumber && (
+        <Text style={emailStyles.paragraph}>
+          <strong>Tracking Number:</strong> {trackingNumber}
+        </Text>
+      )}
+
+      <Section style={{ textAlign: 'center' as const, marginTop: '24px' }}>
+        {trackingUrl ? (
+          <Button href={trackingUrl} style={{ ...emailStyles.button, marginRight: '8px' }}>
+            Track your shipment →
+          </Button>
+        ) : null}
+        <Button href={viewUrl} style={{ ...emailStyles.button, backgroundColor: trackingUrl ? '#475569' : '#0f172a' }}>
+          View order in portal
+        </Button>
+      </Section>
+
+      <Text style={{ ...emailStyles.paragraph, fontSize: '13px', color: '#94a3b8', marginTop: '24px' }}>
+        For assistance, reply to this email or contact your sales representative.
+      </Text>
+    </BaseEmailLayout>
+  )
+}
 
 export const template = {
   component: OrderStatusUpdateEmail,
-  subject: (data: Record<string, any>) => `Order status update — Easysea B2B`,
+  subject: (data: Record<string, unknown>) => `Order status update — Easysea B2B`,
   displayName: 'Order status update',
-  previewData: { clientName: 'Mario Rossi', orderCode: 'ES-0001', status: 'Shipped', trackingNumber: 'TRK123456' },
+  previewData: { clientName: 'Mario Rossi', orderCode: 'ES-0001', status: 'shipped', trackingNumber: 'TRK123456' },
 } satisfies TemplateEntry
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px', maxWidth: '600px', margin: '0 auto' }
-const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#0a0a0a', margin: '0 0 20px' }
-const text = { fontSize: '14px', color: '#555575', lineHeight: '1.6', margin: '0 0 16px' }
-const button = { backgroundColor: '#3366cc', color: '#ffffff', padding: '12px 24px', borderRadius: '6px', textDecoration: 'none', display: 'inline-block', fontSize: '14px' }
-const hr = { borderColor: '#eee', margin: '24px 0' }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }

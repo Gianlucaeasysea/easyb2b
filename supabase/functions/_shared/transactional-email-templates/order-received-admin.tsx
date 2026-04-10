@@ -1,8 +1,10 @@
+/// <reference types="npm:@types/react@18.3.1" />
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Container, Head, Heading, Html, Preview, Text, Section, Hr,
+  Button, Section, Text, Hr,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
+import { BaseEmailLayout, emailStyles, APP_URL } from './layouts/BaseEmailLayout.tsx'
 
 interface OrderReceivedAdminProps {
   orderCode?: string
@@ -14,42 +16,56 @@ interface OrderReceivedAdminProps {
   notes?: string
 }
 
-const OrderReceivedAdminEmail = ({ orderCode, companyName, clientName, clientEmail, itemsHtml, totalAmount, notes }: OrderReceivedAdminProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>🔔 New Order {orderCode || ''} from {companyName || 'client'}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>New B2B Order Received</Heading>
-        <Text style={text}><strong>Order:</strong> {orderCode || '—'}</Text>
-        <Text style={text}><strong>Client:</strong> {companyName || '—'}</Text>
-        <Text style={text}><strong>Contact:</strong> {clientName || '—'} ({clientEmail || 'no email'})</Text>
-        {itemsHtml && (
-          <div dangerouslySetInnerHTML={{ __html: itemsHtml }} />
-        )}
-        {totalAmount && (
-          <Text style={{ ...text, fontWeight: 'bold', fontSize: '16px' }}>Total: €{totalAmount}</Text>
-        )}
-        {notes && (
-          <Text style={text}><strong>Client notes:</strong> {notes}</Text>
-        )}
-        <Hr style={hr} />
-        <Text style={footer}>Manage this order in the admin panel.</Text>
-      </Container>
-    </Body>
-  </Html>
-)
+const OrderReceivedAdminEmail = ({
+  orderCode, companyName, clientName, clientEmail, itemsHtml, totalAmount, notes,
+}: OrderReceivedAdminProps) => {
+  const adminUrl = `${APP_URL}/admin/orders`
+
+  return (
+    <BaseEmailLayout preview={`🔔 New Order ${orderCode || ''} from ${companyName || 'client'}`}>
+      <Text style={emailStyles.h1}>New B2B Order Received</Text>
+
+      <Section style={emailStyles.infoBox}>
+        <Text style={{ margin: '0 0 4px', color: '#334155', fontSize: '14px' }}>
+          <strong>Order:</strong> {orderCode || '—'}
+        </Text>
+        <Text style={{ margin: '0 0 4px', color: '#334155', fontSize: '14px' }}>
+          <strong>Client:</strong> {companyName || '—'}
+        </Text>
+        <Text style={{ margin: '0', color: '#334155', fontSize: '14px' }}>
+          <strong>Contact:</strong> {clientName || '—'} ({clientEmail || 'no email'})
+        </Text>
+      </Section>
+
+      {itemsHtml && (
+        <div dangerouslySetInnerHTML={{ __html: itemsHtml }} />
+      )}
+
+      {totalAmount && (
+        <Text style={{ ...emailStyles.paragraph, fontWeight: '700', fontSize: '16px', color: '#0f172a' }}>
+          Total: €{totalAmount}
+        </Text>
+      )}
+
+      {notes && (
+        <>
+          <Text style={emailStyles.h2}>Client Notes</Text>
+          <Text style={emailStyles.paragraph}>{notes}</Text>
+        </>
+      )}
+
+      <Section style={{ textAlign: 'center' as const, marginTop: '32px' }}>
+        <Button href={adminUrl} style={emailStyles.button}>
+          Manage in admin panel
+        </Button>
+      </Section>
+    </BaseEmailLayout>
+  )
+}
 
 export const template = {
   component: OrderReceivedAdminEmail,
-  subject: (data: Record<string, any>) => `New order received — ${data.companyName || 'Dealer'}`,
+  subject: (data: Record<string, unknown>) => `New order received — ${(data as Record<string, string>).companyName || 'Dealer'}`,
   displayName: 'New order (admin notification)',
   previewData: { orderCode: 'ES-0001', companyName: 'Nautica SRL', clientName: 'Mario Rossi', clientEmail: 'mario@nautica.it', totalAmount: '250.00' },
 } satisfies TemplateEntry
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px', maxWidth: '600px', margin: '0 auto' }
-const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#0a0a0a', margin: '0 0 20px' }
-const text = { fontSize: '14px', color: '#555575', lineHeight: '1.6', margin: '0 0 10px' }
-const hr = { borderColor: '#eee', margin: '24px 0' }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
