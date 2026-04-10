@@ -13,6 +13,7 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   roleError: boolean;
+  roleNotFound: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null; emailExists: boolean }>;
   signOut: () => Promise<void>;
@@ -61,6 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [roleError, setRoleError] = useState(false);
+  const [roleNotFound, setRoleNotFound] = useState(false);
 
   const VALID_ROLES: AppRole[] = ["admin", "dealer", "sales", "operations"];
 
@@ -89,6 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loadRole = useCallback(async (userId: string) => {
     setRoleError(false);
+    setRoleNotFound(false);
 
     const cached = getCachedRole(userId);
     let resolvedRole: AppRole | null = cached;
@@ -113,8 +116,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (fetched) {
         setRole(fetched);
         setRoleError(false);
+        setRoleNotFound(false);
       } else if (!cached) {
-        setRoleError(true);
+        // Distinguish between "no role configured" and "network error"
+        // fetchRoleWithRetry returns null both for no-role and error,
+        // but shows toast on error. If no toast was shown, it's a clean null.
+        setRoleNotFound(true);
+        logger.warn('AuthContext', `User ${userId} has no role configured`);
       }
     } finally {
       clearTimeout(timeoutId);
