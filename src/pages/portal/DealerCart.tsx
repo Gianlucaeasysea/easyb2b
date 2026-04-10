@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { motion } from "framer-motion";
-import { fadeInUp, staggerContainer, staggerItem } from "@/lib/animations";
+import { fadeInUp } from "@/lib/animations";
 import { OrderSubmitAnimation } from "@/components/portal/ui/OrderSubmitAnimation";
 
 const MIN_ORDER_AMOUNT = 100;
