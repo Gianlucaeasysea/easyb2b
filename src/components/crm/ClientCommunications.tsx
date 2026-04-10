@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   Mail, Send, Clock, ArrowUpRight, ArrowDownLeft,
-  RefreshCw, Link2, CheckCircle2, Filter, ChevronDown, ChevronRight, MessageSquare, Reply, User
+  RefreshCw, Link2, CheckCircle2, Filter, ChevronDown, ChevronRight, MessageSquare, Reply
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -484,7 +484,7 @@ export const ClientCommunications = ({ clientId, clientName, clientEmail, contac
           
           {/* Reply */}
           <div className="flex justify-end pt-3 border-t border-border">
-            <Button size="sm" onClick={() => handleReply(openEmail)} className="gap-1.5">
+            <Button size="sm" onClick={() => openEmail && handleReply(openEmail)} className="gap-1.5">
               <Reply size={14} /> Reply
             </Button>
           </div>

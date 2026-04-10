@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Receipt, Download, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Receipt, Download, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, addDays } from "date-fns";
@@ -63,7 +63,7 @@ const DealerInvoices = () => {
     enabled: orders.length > 0,
   });
 
-  const handleDownload = async (filePath: string, fileName: string) => {
+  const handleDownload = async (filePath: string, _fileName: string) => {
     const { data, error } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 300);
     if (error || !data?.signedUrl) {
       toast.error("Error downloading document");

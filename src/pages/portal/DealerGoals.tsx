@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Trophy, Target, Star, TrendingUp, Award, Zap, Lock } from "lucide-react";
+import { Trophy, Star, TrendingUp, Award, Zap, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const tiers = [

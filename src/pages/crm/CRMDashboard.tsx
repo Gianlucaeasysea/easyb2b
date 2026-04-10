@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Target, Activity, Calendar, Phone, Mail, MessageCircle, TrendingUp,
-  Euro, CreditCard, Truck, ShoppingBag, Eye, XCircle, PackagePlus, Clock,
+  Euro, CreditCard, Truck, Eye, XCircle, PackagePlus,
   AlertTriangle, RefreshCw, UserCheck, Building2, Handshake, CheckSquare, ListTodo, Video, MailOpen
 } from "lucide-react";
 import OrderDetailsTable from "@/components/crm/OrderDetailsTable";

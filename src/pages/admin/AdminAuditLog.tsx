@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { TablePagination } from "@/components/ui/TablePagination";
 import { format } from "date-fns";
 import { ChevronDown, ChevronRight, History } from "lucide-react";
-import { showErrorToast } from "@/lib/errorHandler";
+
 
 const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   INSERT: { label: "Creazione", color: "bg-chart-2/15 text-chart-2 border-chart-2/30" },

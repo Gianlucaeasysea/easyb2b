@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Package } from "lucide-react";
 
-interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+interface OptimizedImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   src: string | null | undefined;
   alt: string;
   width?: number;

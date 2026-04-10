@@ -1,6 +1,6 @@
 import { LayoutDashboard, Users, Package, ShoppingBag, FileText, Settings, Upload, Tag, Map, FileImage, PackagePlus, Globe, Zap, ClipboardList, History } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+
 import { useNewOrderNotifications } from "@/hooks/useNewOrderNotifications";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,7 +30,7 @@ const items = [
 export function AdminSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
+  
   const { newOrderCount, resetCount } = useNewOrderNotifications();
 
   const { data: pendingRequestCount } = useQuery({

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Clock, CheckCircle, Truck, Package, Mail, AlertTriangle, XCircle, CalendarClock } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle, Mail, AlertTriangle, XCircle, CalendarClock } from "lucide-react";
 import { addDays, lastDayOfMonth, addMonths, differenceInDays } from "date-fns";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -20,7 +20,7 @@ import OrderDocuments from "@/components/OrderDocuments";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
 import { ClientCommunications } from "@/components/crm/ClientCommunications";
 import {
-  ORDER_STATUSES, PAYMENT_STATUSES, getOrderStatusLabel, getOrderStatusColor,
+  PAYMENT_STATUSES, getOrderStatusLabel, getOrderStatusColor,
   getPaymentStatusLabel, getPaymentStatusColor, getAvailableTransitions, canTransitionTo,
 } from "@/lib/constants";
 
@@ -572,7 +572,7 @@ const AdminOrderDetail = () => {
             clientName={client.company_name || "Client"}
             clientEmail={client.email}
             orderId={order.id}
-            orderCode={order.order_code}
+            orderCode={order.order_code ?? undefined}
           />
         </div>
       )}

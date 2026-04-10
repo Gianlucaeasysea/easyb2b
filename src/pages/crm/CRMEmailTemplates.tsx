@@ -6,11 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Plus, Search, Mail, Pencil, Trash2, Eye, MoreVertical, Variable } from "lucide-react";
@@ -187,14 +187,14 @@ export default function CRMEmailTemplates() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-sm text-foreground">{t.name}</h3>
-                    {getCategoryBadge(t.category)}
+                    {getCategoryBadge(t.category ?? "general")}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">Subject: {t.subject}</p>
                   <p className="text-xs text-muted-foreground/60 truncate mt-0.5">{stripHtml(t.body).slice(0, 120)}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-[10px] text-muted-foreground">
-                    {format(new Date(t.created_at), "dd MMM yyyy")}
+                    {format(new Date(t.created_at ?? Date.now()), "dd MMM yyyy")}
                   </span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>

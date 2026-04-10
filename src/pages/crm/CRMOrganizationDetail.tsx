@@ -15,8 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   ArrowLeft, Building2, Mail, Phone, Globe, MapPin, ShoppingBag,
   MessageCircle, Send, Clock, TrendingUp, Users, FileText, CalendarDays, BarChart3,
-  Plus, Crown, Star, Pencil, Trash2, Check, X, StickyNote, Upload, Handshake, CheckSquare, Tag, Eye,
-  UserCheck, RefreshCw, KeyRound, Copy, EyeOff
+  Plus, Crown, Star, Pencil, Trash2, Check, StickyNote, Handshake, CheckSquare, Tag, Eye,
+  UserCheck, RefreshCw, KeyRound, Copy
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { isPast } from "date-fns";
@@ -83,7 +83,7 @@ const CRMOrganizationDetail = () => {
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [taskForm, setTaskForm] = useState({ title: "", type: "call", priority: "medium", due_date: "", description: "" });
   const [creatingCredentials, setCreatingCredentials] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  
 
   const generatePassword = () => {
     const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$";

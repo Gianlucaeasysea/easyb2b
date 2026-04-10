@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import LeadDetailPanel from "@/components/crm/LeadDetailPanel";
 import { differenceInDays } from "date-fns";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { deleteLeadsCascade } from "@/lib/crmEntityActions";
 import { TablePagination } from "@/components/ui/TablePagination";
 import BulkActionBar, { runBulkOperation, bulkResultToast } from "@/components/admin/BulkActionBar";

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import OrderDetailsTable from "@/components/crm/OrderDetailsTable";
-import { BarChart3, TrendingUp, Users, Target, Euro, Clock, ArrowUpRight, ArrowDownRight, Calendar } from "lucide-react";
+import { BarChart3, ArrowUpRight, ArrowDownRight, Calendar } from "lucide-react";
 import { format, subDays, subMonths, startOfMonth, endOfMonth, startOfYear, eachMonthOfInterval, differenceInDays } from "date-fns";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FileText, Check, X, Target, Eye, ChevronRight, ChevronLeft, KeyRound, Copy, RefreshCw, Loader2, Mail, Clock, ExternalLink } from "lucide-react";
+import { FileText, Check, X, Target, Eye, ChevronRight, ChevronLeft, KeyRound, Copy, RefreshCw, Loader2, Mail, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -404,7 +404,7 @@ const AdminRequests = () => {
         <DialogContent className="bg-card border-border max-w-3xl max-h-[85vh] overflow-y-auto">
           {selectedRequest && (() => {
             const sc = STATUS_CONFIG[selectedRequest.status || "new"] || STATUS_CONFIG.new;
-            const isActionable = selectedRequest.status === "new" || selectedRequest.status === "reviewed";
+            
             const isTerminal = selectedRequest.status === "approved" || selectedRequest.status === "converted" || selectedRequest.status === "rejected";
 
             return (

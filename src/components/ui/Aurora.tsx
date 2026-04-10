@@ -129,7 +129,7 @@ export default function Aurora({
 
   useEffect(() => {
     const ctn = ctnDom.current;
-    if (!ctn) return;
+    if (!ctn) return undefined;
 
     const renderer = new Renderer({
       alpha: true,

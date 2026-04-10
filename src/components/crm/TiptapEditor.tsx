@@ -12,7 +12,7 @@ interface TiptapEditorProps {
   placeholder?: string;
 }
 
-const TiptapEditor = ({ content, onChange, placeholder }: TiptapEditorProps) => {
+const TiptapEditor = ({ content, onChange }: TiptapEditorProps) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: false }),

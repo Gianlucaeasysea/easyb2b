@@ -170,7 +170,7 @@ export default function DarkVeil({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return undefined;
 
     const renderer = new Renderer({
       canvas,

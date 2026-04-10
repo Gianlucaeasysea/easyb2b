@@ -1,8 +1,8 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { 
-  HelpCircle, Mail, Users, Phone, MessageCircle, RefreshCw, Send, 
-  ShoppingBag, FileText, Target, LayoutDashboard, Activity, ArrowRight
+  HelpCircle, Mail, Users, RefreshCw, Send, 
+  ShoppingBag, Target, LayoutDashboard, Activity, ArrowRight
 } from "lucide-react";
 
 const CRMHelp = () => {

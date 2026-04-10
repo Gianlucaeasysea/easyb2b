@@ -12,10 +12,11 @@
     "moduleDetection": "force",
     "moduleResolution": "bundler",
     "noEmit": true,
-    "noFallthroughCasesInSwitch": false,
+    "noFallthroughCasesInSwitch": true,
     "noImplicitAny": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "paths": {
       "@/*": [
         "./src/*"
@@ -23,6 +24,7 @@
     },
     "skipLibCheck": true,
     "strict": false,
+    "strictNullChecks": true,
     "target": "ES2020",
     "types": [
       "vitest/globals"

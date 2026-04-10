@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, FileText, Image, ChevronDown, ChevronRight, ExternalLink, Package, Palette } from "lucide-react";
+import { Download, FileText, ChevronDown, ChevronRight, ExternalLink, Package, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";

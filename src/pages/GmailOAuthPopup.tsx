@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { CheckCircle2, Loader2, MailWarning, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Loader2, MailWarning } from "lucide-react";
 import { loadGoogleIdentityScript } from "@/lib/gmailOAuth";
 import { Button } from "@/components/ui/button";
 
@@ -28,12 +28,6 @@ const GmailOAuthPopup = () => {
     }
   }, [searchParams]);
 
-  const notifyParent = useCallback((payload: Record<string, string>) => {
-    window.opener?.postMessage(
-      { source: POPUP_SOURCE, ...payload },
-      targetOrigin,
-    );
-  }, [targetOrigin]);
 
   // Check if returning from Google redirect with authorization code
   useEffect(() => {
@@ -65,7 +59,7 @@ const GmailOAuthPopup = () => {
       );
 
       window.setTimeout(() => window.close(), 300);
-      return;
+      return undefined;
     }
 
     // No code — preload Google Identity Services script
