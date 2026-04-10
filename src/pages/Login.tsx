@@ -39,13 +39,20 @@ const Login = () => {
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signInWithMagicLink(email);
+    const { error, emailExists } = await signInWithMagicLink(email);
     setLoading(false);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      setMagicSent(true);
+
+    if (!emailExists) {
+      toast({ title: "Account not found", description: "No account found with this email. Contact your EasySea representative to request access.", variant: "destructive" });
+      return;
     }
+
+    if (error) {
+      toast({ title: "Error", description: "Unable to send the link. Please try again in a few minutes.", variant: "destructive" });
+      return;
+    }
+
+    setMagicSent(true);
   };
 
   return (
