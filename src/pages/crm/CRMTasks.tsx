@@ -33,12 +33,6 @@ const priorityConfig: Record<string, { label: string; color: string }> = {
   urgent: { label: "Urgent", color: "bg-destructive/20 text-destructive" },
 };
 
-const _statusConfig: Record<string, { label: string; color: string }> = {
-  pending: { label: "Pending", color: "bg-warning/20 text-warning" },
-  in_progress: { label: "In Progress", color: "bg-primary/20 text-primary" },
-  completed: { label: "Done", color: "bg-success/20 text-success" },
-  cancelled: { label: "Cancelled", color: "bg-muted text-muted-foreground" },
-};
 
 const calTypeColors: Record<string, string> = {
   task: "bg-muted-foreground/20 border-muted-foreground",

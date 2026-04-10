@@ -15,7 +15,7 @@ import { format, differenceInDays } from "date-fns";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import OrderEventsTimeline from "@/components/OrderEventsTimeline";
-import { ORDER_STATUSES, getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
+import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";

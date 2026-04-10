@@ -1,9 +1,8 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { HelpCircle, Mail, Phone, Clock, FileText, ExternalLink, MessageCircle } from "lucide-react";
+import { HelpCircle, Mail, Clock, FileText, ExternalLink, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 const faqItems = [
   { q: "How do I place a B2B order?", a: "Browse the Product Catalog, click 'Add to Order' for items you want, then review and submit from the Orders page." },
