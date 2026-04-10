@@ -1,59 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  ShoppingBag, ExternalLink, Clock, CheckCircle, Truck, Package,
-  ChevronDown, ChevronUp, FileText, Download, Bell, Loader2, Send,
-  Copy, DollarSign, XCircle, Trash2, Minus, Plus, Edit3, Search, PackagePlus,
-} from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ShoppingBag, Loader2 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import OrderEventsTimeline from "@/components/OrderEventsTimeline";
-import { getOrderStatusLabel, getOrderStatusColor, canTransitionTo } from "@/lib/constants";
 import { TablePagination } from "@/components/ui/TablePagination";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { showErrorToast } from "@/lib/errorHandler";
-
-const ORDER_PHASES = [
-  { key: "submitted", label: "Submitted", icon: Send },
-  { key: "confirmed", label: "Confirmed", icon: CheckCircle },
-  { key: "processing", label: "Processing", icon: Package },
-  { key: "ready_to_ship", label: "Ready to Ship", icon: Clock },
-  { key: "shipped", label: "Shipped", icon: Truck },
-  { key: "delivered", label: "Delivered", icon: Package },
-];
-
-const STATUS_MESSAGES: Record<string, string> = {
-  submitted: "Your order has been submitted and is awaiting confirmation from our team.",
-  confirmed: "Your order has been confirmed and is under review. You will receive an invoice shortly.",
-  processing: "Your order has been confirmed and the invoice is available in the documents section. We are preparing shipment.",
-  ready_to_ship: "Your order is ready and will be shipped shortly. You will receive tracking information as soon as available.",
-  shipped: "Your order has been shipped! Use the tracking link to follow the delivery.",
-  delivered: "Your order has been delivered successfully.",
-};
-
-const DOC_TYPE_LABELS: Record<string, string> = {
-  order_confirmation: "Order Confirmation",
-  invoice: "Invoice",
-  delivery_note: "Delivery Note",
-  ddt: "DDT",
-  credit_note: "Credit Note",
-  proforma: "Proforma",
-  warranty: "Warranty Certificate",
-  other: "Other",
-};
+import { useOrderDraft } from "@/hooks/useOrderDraft";
+import DraftsList from "@/components/portal/orders/DraftsList";
+import OrderCard from "@/components/portal/orders/OrderCard";
+import DraftEditorDialog from "@/components/portal/orders/DraftEditorDialog";
+import PriceCheckDialog from "@/components/portal/orders/PriceCheckDialog";
+import AddProductsDialog from "@/components/portal/orders/AddProductsDialog";
+import type { Order } from "@/types/orders";
 
 const DealerOrders = () => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightId = searchParams.get("highlight");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -61,26 +25,12 @@ const DealerOrders = () => {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(highlightId);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState<any>(null);
-  const [confirmDeleteDraft, setConfirmDeleteDraft] = useState<any>(null);
-  const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
-  const [editingDraft, setEditingDraft] = useState<any>(null);
-  const [draftItems, setDraftItems] = useState<any[]>([]);
-  const [draftNotes, setDraftNotes] = useState("");
-  const [submittingDraft, setSubmittingDraft] = useState(false);
-  const [showAddProductsToDraft, setShowAddProductsToDraft] = useState(false);
-  const [addProductSearch, setAddProductSearch] = useState("");
-  const [addProductQtys, setAddProductQtys] = useState<Record<string, number>>({});
-  const [savingDraftItems, setSavingDraftItems] = useState(false);
-  const [priceCheckData, setPriceCheckData] = useState<{
-    order: any;
-    items: { product_id: string; name: string; sku: string; quantity: number; originalPrice: number; currentPrice: number | null; available: boolean }[];
-    originalTotal: number;
-    newTotal: number;
-    hasChanges: boolean;
-  } | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<Order | null>(null);
+  const [confirmDeleteDraft, setConfirmDeleteDraft] = useState<Order | null>(null);
+  const [showAddProducts, setShowAddProducts] = useState(false);
+
+  const draft = useOrderDraft();
+
   const { data: client } = useQuery({
     queryKey: ["my-client"],
     queryFn: async () => {
@@ -88,25 +38,6 @@ const DealerOrders = () => {
       return data;
     },
     enabled: !!user,
-  });
-
-  // Price list products for "Add Products" to draft
-  const { data: priceListProducts } = useQuery({
-    queryKey: ["my-price-list-products", client?.id],
-    queryFn: async () => {
-      const { data: assignments } = await supabase
-        .from("price_list_clients")
-        .select("price_list_id")
-        .eq("client_id", client!.id);
-      if (!assignments?.length) return [];
-      const plIds = assignments.map(a => a.price_list_id);
-      const { data: items } = await supabase
-        .from("price_list_items")
-        .select("*, products!inner(*)")
-        .in("price_list_id", plIds);
-      return (items || []).filter((item: any) => item.products && item.products.active_b2b === true);
-    },
-    enabled: !!client?.id && !!showAddProductsToDraft,
   });
 
   const { data: orders, isLoading } = useQuery({
@@ -118,308 +49,25 @@ const DealerOrders = () => {
         .select("*, order_items(*, products(name, sku)), order_documents(id, file_name, file_path, doc_type, created_at)")
         .eq("client_id", client.id)
         .order("created_at", { ascending: false });
-      return data || [];
+      return (data || []) as Order[];
     },
     enabled: !!client,
   });
 
-  const draftOrders = useMemo(() => (orders || []).filter((o: any) => o.status === "draft"), [orders]);
-  const nonDraftOrders = useMemo(() => (orders || []).filter((o: any) => o.status !== "draft"), [orders]);
-
+  const draftOrders = useMemo(() => (orders || []).filter((o) => o.status === "draft"), [orders]);
+  const nonDraftOrders = useMemo(() => (orders || []).filter((o) => o.status !== "draft"), [orders]);
   const totalPages = Math.max(1, Math.ceil(nonDraftOrders.length / pageSize));
-  const sliceFrom = (page - 1) * pageSize;
-  const pageData = nonDraftOrders.slice(sliceFrom, sliceFrom + pageSize);
+  const pageData = nonDraftOrders.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize);
 
   // Highlight order from notification link
   useEffect(() => {
     if (highlightId && orders) {
       setHighlightedId(highlightId);
       setExpandedOrder(highlightId);
-      setTimeout(() => {
-        highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 300);
-      setTimeout(() => {
-        setHighlightedId(null);
-        setSearchParams({}, { replace: true });
-      }, 3000);
+      setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+      setTimeout(() => { setHighlightedId(null); setSearchParams({}, { replace: true }); }, 3000);
     }
-  }, [highlightId, orders]);
-
-  const handleDownloadDoc = async (filePath: string) => {
-    const { data } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 300);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-  };
-
-  const getPhaseIndex = (status: string) => {
-    if (status === "cancelled") return -2; // special cancelled marker
-    const idx = ORDER_PHASES.findIndex(p => p.key === status);
-    return idx >= 0 ? idx : -1;
-  };
-
-  // Step 1: Check prices before duplicating
-  const handlePrepareDuplicate = async (order: any) => {
-    if (!client) return;
-    setDuplicatingId(order.id);
-    try {
-      const items = (order.order_items || []) as any[];
-      if (!items.length) { toast.error("This order has no items to duplicate"); return; }
-
-      // Fetch current prices from client's price list
-      const { data: priceListClients } = await supabase.from("price_list_clients").select("price_list_id").eq("client_id", client.id);
-      const priceListIds = priceListClients?.map(plc => plc.price_list_id) || [];
-      let priceMap: Record<string, number> = {};
-      if (priceListIds.length > 0) {
-        const { data: priceItems } = await supabase.from("price_list_items").select("product_id, custom_price").in("price_list_id", priceListIds);
-        priceItems?.forEach(pi => { priceMap[pi.product_id] = Number(pi.custom_price); });
-      }
-
-      // Check product availability
-      const productIds = items.map((i: any) => i.product_id);
-      const { data: products } = await supabase.from("products").select("id, name, price, active_b2b, stock_quantity").in("id", productIds);
-      const productMap = new Map(products?.map(p => [p.id, p]) || []);
-
-      const comparisonItems = items.map((item: any) => {
-        const product = productMap.get(item.product_id);
-        const available = !!(product && product.active_b2b);
-        const currentPrice = available ? (priceMap[item.product_id] ?? (product?.price ? Number(product.price) : null)) : null;
-        return {
-          product_id: item.product_id,
-          name: item.products?.name || "Unknown product",
-          sku: item.products?.sku || "—",
-          quantity: item.quantity,
-          originalPrice: Number(item.unit_price || 0),
-          currentPrice,
-          available,
-        };
-      });
-
-      const originalTotal = comparisonItems.reduce((s, i) => s + i.originalPrice * i.quantity, 0);
-      const newTotal = comparisonItems.filter(i => i.available && i.currentPrice !== null).reduce((s, i) => s + (i.currentPrice! * i.quantity), 0);
-      const hasChanges = comparisonItems.some(i => !i.available || i.currentPrice === null || i.currentPrice !== i.originalPrice);
-
-      if (!hasChanges) {
-        // No changes — duplicate directly
-        await executeDuplicate(order, comparisonItems);
-      } else {
-        // Show price comparison dialog
-        setPriceCheckData({ order, items: comparisonItems, originalTotal, newTotal, hasChanges });
-      }
-    } catch (error) {
-      showErrorToast(error, "DealerOrders.prepareDuplicate");
-    } finally {
-      setDuplicatingId(null);
-      
-    }
-  };
-
-  // Step 2: Execute the actual duplication
-  const executeDuplicate = async (order: any, comparisonItems?: typeof priceCheckData extends null ? never : NonNullable<typeof priceCheckData>["items"]) => {
-    if (!client) return;
-    setDuplicatingId(order.id);
-    try {
-      const itemsToUse = comparisonItems || priceCheckData?.items;
-      if (!itemsToUse) return;
-
-      const validItems = itemsToUse
-        .filter(i => i.available && i.currentPrice !== null)
-        .map(i => ({
-          product_id: i.product_id,
-          quantity: i.quantity,
-          unit_price: i.currentPrice!,
-          subtotal: i.currentPrice! * i.quantity,
-        }));
-
-      if (!validItems.length) { toast.error("No available products to duplicate"); return; }
-
-      const excludedCount = itemsToUse.length - validItems.length;
-
-      const { data: newOrder, error: orderErr } = await supabase.rpc("create_order_with_items", {
-        p_client_id: client.id,
-        p_status: "draft",
-        p_notes: `Duplicated from order ${(order as any).order_code || order.id.slice(0, 8)}`,
-        p_payment_terms: (client as any).payment_terms || null,
-        p_internal_notes: null,
-        p_items: validItems,
-      });
-      if (orderErr) throw orderErr;
-
-      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      const newCode = (newOrder as any)?.order_code || (newOrder as any)?.id?.slice(0, 8);
-      if (excludedCount > 0) {
-        toast.warning(`Order duplicated as draft #${newCode}. ${excludedCount} unavailable products excluded. Review before submitting.`);
-      } else {
-        toast.success(`Order duplicated as draft #${newCode}. Review before submitting.`);
-      }
-    } catch (error) {
-      showErrorToast(error, "DealerOrders.duplicate");
-    } finally {
-      setDuplicatingId(null);
-      setPriceCheckData(null);
-    }
-  };
-
-  // Cancel submitted order
-  const handleCancelOrder = async (order: any) => {
-    const currentStatus = order.status || "draft";
-    if (!canTransitionTo(currentStatus, "cancelled")) {
-      toast.error(`Cannot cancel an order in "${getOrderStatusLabel(currentStatus)}" status.`);
-      return;
-    }
-    setCancellingId(order.id);
-    try {
-      const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", order.id);
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      toast.success("Order cancelled successfully");
-    } catch (error) {
-      showErrorToast(error, "DealerOrders.cancel");
-    } finally {
-      setCancellingId(null);
-      setConfirmCancel(null);
-    }
-  };
-
-  // Draft management
-
-  const handleDeleteDraft = async (order: any) => {
-    setDeletingDraftId(order.id);
-    try {
-      // Mark linked deal as lost
-      await supabase.from("deals").update({ stage: "closed_lost", lost_reason: "Draft deleted by dealer", closed_at: new Date().toISOString() }).eq("order_id", order.id).eq("source", "dealer_draft");
-      // Delete order items then order
-      await supabase.from("order_items").delete().eq("order_id", order.id);
-      const { error } = await supabase.from("orders").delete().eq("id", order.id);
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      toast.success("Draft deleted");
-    } catch (error) {
-      showErrorToast(error, "DealerOrders.deleteDraft");
-    } finally {
-      setDeletingDraftId(null);
-      setConfirmDeleteDraft(null);
-    }
-  };
-
-  const openDraftEditor = (order: any) => {
-    const items = (order.order_items || []).map((i: any) => ({
-      ...i,
-      name: i.products?.name || "—",
-      sku: i.products?.sku || "—",
-    }));
-    setDraftItems(items);
-    setDraftNotes(order.notes || "");
-    setEditingDraft(order);
-  };
-
-  const updateDraftItemQty = (itemId: string, qty: number) => {
-    if (qty <= 0) {
-      setDraftItems(prev => prev.filter(i => i.id !== itemId));
-    } else {
-      setDraftItems(prev => prev.map(i => i.id === itemId ? { ...i, quantity: qty, subtotal: qty * Number(i.unit_price) } : i));
-    }
-  };
-
-  const removeDraftItem = (itemId: string) => {
-    setDraftItems(prev => prev.filter(i => i.id !== itemId));
-  };
-
-  const draftTotal = draftItems.reduce((s, i) => s + Number(i.subtotal || 0), 0);
-
-  const handleAddProductsToDraft = async () => {
-    if (!editingDraft) return;
-    setSavingDraftItems(true);
-    try {
-      const selectedProducts = Object.entries(addProductQtys).filter(([, qty]) => qty > 0);
-      if (!selectedProducts.length) { toast.error("Select at least one product"); setSavingDraftItems(false); return; }
-
-      for (const [productId, qty] of selectedProducts) {
-        // Check if already in draft
-        const existing = draftItems.find(i => i.product_id === productId);
-        if (existing) {
-          // Update quantity
-          const newQty = existing.quantity + qty;
-          const newSubtotal = newQty * Number(existing.unit_price);
-          await supabase.from("order_items").update({ quantity: newQty, subtotal: newSubtotal }).eq("id", existing.id);
-          setDraftItems(prev => prev.map(i => i.id === existing.id ? { ...i, quantity: newQty, subtotal: newSubtotal } : i));
-        } else {
-          // Find price from price list
-          const plItem = priceListProducts?.find((p: any) => p.product_id === productId);
-          if (!plItem) continue;
-          const product = (plItem as any).products;
-          const unitPrice = plItem.custom_price;
-          const subtotal = unitPrice * qty;
-          const { data: newItem, error } = await supabase.from("order_items").insert({
-            order_id: editingDraft.id,
-            product_id: productId,
-            quantity: qty,
-            unit_price: unitPrice,
-            discount_pct: 0,
-            subtotal,
-          }).select("*").single();
-          if (error) throw error;
-          setDraftItems(prev => [...prev, { ...newItem, name: product.name, sku: product.sku }]);
-        }
-      }
-
-      // Recalculate total
-      const newTotal = draftItems.reduce((s, i) => s + Number(i.subtotal || 0), 0) + selectedProducts.reduce((s, [productId, qty]) => {
-        const plItem = priceListProducts?.find((p: any) => p.product_id === productId);
-        return s + (plItem ? plItem.custom_price * qty : 0);
-      }, 0);
-      await supabase.from("orders").update({ total_amount: newTotal }).eq("id", editingDraft.id);
-
-      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      setAddProductQtys({});
-      setAddProductSearch("");
-      setShowAddProductsToDraft(false);
-      toast.success("Products added to draft");
-    } catch (error) {
-      showErrorToast(error, "DealerOrders.addProductsToDraft");
-    } finally {
-      setSavingDraftItems(false);
-    }
-  };
-
-  const submitDraft = async () => {
-    if (!editingDraft || draftItems.length === 0) return;
-    setSubmittingDraft(true);
-    try {
-      // Update items
-      for (const item of draftItems) {
-        await supabase.from("order_items").update({ quantity: item.quantity, subtotal: item.quantity * Number(item.unit_price) }).eq("id", item.id);
-      }
-      // Delete removed items
-      const currentItemIds = draftItems.map(i => i.id);
-      const originalItems = (editingDraft.order_items || []) as any[];
-      for (const orig of originalItems) {
-        if (!currentItemIds.includes(orig.id)) {
-          await supabase.from("order_items").delete().eq("id", orig.id);
-        }
-      }
-      // Update order
-      const { error } = await supabase.from("orders").update({
-        status: "submitted",
-        total_amount: draftTotal,
-        notes: draftNotes || null,
-      }).eq("id", editingDraft.id);
-      if (error) throw error;
-
-      // Send notification
-      try {
-        await supabase.functions.invoke("send-order-notification", {
-          body: { orderId: editingDraft.id, orderCode: editingDraft.order_code, type: "order_received" },
-        });
-      } catch {}
-
-      queryClient.invalidateQueries({ queryKey: ["my-orders-full"] });
-      toast.success("Order submitted successfully!");
-      setEditingDraft(null);
-    } catch (error) {
-      showErrorToast(error, "DealerOrders.submitDraft");
-    } finally {
-      setSubmittingDraft(false);
-    }
-  };
+  }, [highlightId, orders]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div>
@@ -442,424 +90,56 @@ const DealerOrders = () => {
         </div>
       ) : (
         <>
-          {/* Drafts Section */}
-          {draftOrders.length > 0 && (
-            <div className="mb-6">
-              <h2 className="font-heading text-lg font-bold text-foreground mb-3 flex items-center gap-2">
-                <Edit3 size={16} /> Drafts ({draftOrders.length})
-              </h2>
-              <div className="space-y-2">
-                {draftOrders.map((order: any) => {
-                  const items = (order.order_items || []) as any[];
-                  return (
-                    <div key={order.id} className="glass-card-solid p-4 flex items-center justify-between border-dashed border-2 border-border">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                          <Package size={18} className="text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-heading font-bold text-foreground">
-                            {order.order_code || `Draft #${order.id.slice(0, 8).toUpperCase()}`}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
-                            {items.length > 0 && <span className="ml-2">· {items.length} product{items.length > 1 ? "s" : ""}</span>}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge className="border-0 text-xs bg-muted text-muted-foreground">Draft</Badge>
-                        <span className="font-heading font-bold text-foreground">
-                          €{Number(order.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                        </span>
-                        <Button size="sm" onClick={() => openDraftEditor(order)}>
-                          Complete Order
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive/80"
-                          onClick={() => setConfirmDeleteDraft(order)}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          <DraftsList
+            drafts={draftOrders}
+            onEditDraft={(o) => draft.openDraftEditor(o)}
+            onDeleteDraft={(o) => setConfirmDeleteDraft(o)}
+          />
 
           <div className="space-y-4">
-          {pageData.map(order => {
-            const status = order.status || "draft";
-            const statusLabel = getOrderStatusLabel(status);
-            const statusColor = getOrderStatusColor(status);
-            const statusMessage = STATUS_MESSAGES[status] || null;
-            const isExpanded = expandedOrder === order.id;
-            const docs = (order as any).order_documents || [];
-            const items = (order.order_items || []) as any[];
-            const isSalesOrder = (order as any).order_type === "sales_manual";
-            const shippingCost = Number((order as any).shipping_cost_client || 0);
-            const phaseIdx = getPhaseIndex(status);
-            const isPaid = (order as any).payment_status === "paid";
-            const isCancelled = status === "cancelled";
-            const isDraft = status === "draft";
-            const isSubmitted = status === "submitted";
+            {pageData.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                isExpanded={expandedOrder === order.id}
+                isHighlighted={highlightedId === order.id}
+                highlightRef={order.id === highlightId ? highlightRef : undefined}
+                duplicatingId={draft.duplicatingId}
+                onToggleExpand={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
+                onCancel={() => setConfirmCancel(order)}
+                onDuplicate={() => client && draft.handlePrepareDuplicate(client.id, order)}
+              />
+            ))}
+          </div>
 
-            return (
-              <div key={order.id} ref={order.id === highlightId ? highlightRef : undefined} className={`glass-card-solid overflow-hidden transition-all duration-500 ${highlightedId === order.id ? "ring-2 ring-primary bg-primary/5" : ""}`}>
-                {/* Header */}
-                <div
-                  className="p-5 flex items-center justify-between cursor-pointer hover:bg-secondary/50 transition-colors"
-                  onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      status === "delivered" ? "bg-success/10" :
-                      status === "confirmed" || status === "processing" ? "bg-primary/10" :
-                      "bg-muted"
-                    }`}>
-                      <Package size={18} className="text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-heading font-bold text-foreground">
-                        {(order as any).order_code || `Order #${order.id.slice(0, 8).toUpperCase()}`}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(order.created_at), "dd MMM yyyy, HH:mm")}
-                        {items.length > 0 && <span className="ml-2">· {items.length} product{items.length > 1 ? "s" : ""}</span>}
-                        {(order as any).payment_due_date && (
-                          <span className="ml-2">· Due: <span className={`font-semibold ${
-                            (order as any).payment_status === "paid" ? "text-success" :
-                            new Date((order as any).payment_due_date) < new Date() ? "text-destructive" :
-                            differenceInDays(new Date((order as any).payment_due_date), new Date()) <= 7 ? "text-warning" :
-                            "text-foreground"
-                          }`}>{format(new Date((order as any).payment_due_date), "dd/MM/yyyy")}</span></span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                     {isDraft && <Badge className="border-0 text-xs bg-muted text-muted-foreground">Draft</Badge>}
-                    {isSubmitted && <Badge className="border-0 text-xs bg-blue-100 text-blue-700">Submitted - Awaiting confirmation</Badge>}
-                    {!isDraft && !isSubmitted && <Badge className={`border-0 text-xs ${statusColor}`}>{statusLabel}</Badge>}
-                    <span className="font-heading font-bold text-foreground text-lg">
-                      €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </span>
-                    {isSubmitted && (
-                      <Button
-                        variant="ghost" size="sm"
-                        className="h-7 text-destructive hover:text-destructive/80 text-xs"
-                        onClick={(e) => { e.stopPropagation(); setConfirmCancel(order); }}
-                        title="Cancel Order"
-                      >
-                        <XCircle size={14} className="mr-1" /> Cancel
-                      </Button>
-                    )}
-                    {!isCancelled && (
-                      <Button
-                        variant="ghost" size="sm"
-                        className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
-                        disabled={duplicatingId === order.id}
-                        onClick={(e) => { e.stopPropagation(); handlePrepareDuplicate(order); }}
-                        title="Duplicate Order"
-                      >
-                        {duplicatingId === order.id ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
-                      </Button>
-                    )}
-                    {isExpanded ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
-                  </div>
-                </div>
-
-                {isExpanded && (
-                  <div className="border-t border-border">
-                    {/* Status message */}
-                     {statusMessage && (
-                      <div className="px-5 py-3 bg-primary/5 border-b border-border flex items-start gap-3">
-                        <Bell size={14} className="text-primary mt-0.5 shrink-0" />
-                        <p className="text-sm text-foreground">{statusMessage}</p>
-                      </div>
-                    )}
-                    {isSalesOrder && (
-                      <div className="px-5 py-2 bg-muted/50 border-b border-border">
-                        <p className="text-xs text-muted-foreground italic">📋 Order created by sales representative</p>
-                      </div>
-                    )}
-
-                    {/* Progress timeline */}
-                    {isCancelled ? (
-                      <div className="px-5 py-4 border-b border-border">
-                        <div className="flex items-center gap-2 text-destructive">
-                          <XCircle size={16} />
-                          <span className="text-sm font-semibold">Order Cancelled</span>
-                        </div>
-                      </div>
-                    ) : phaseIdx >= 0 && (
-                      <div className="px-5 py-4 border-b border-border">
-                        <div className="flex items-center justify-between">
-                          {ORDER_PHASES.map((phase, i) => {
-                            const isComplete = i <= phaseIdx;
-                            const isCurrent = i === phaseIdx && !isPaid;
-                            const PhaseIcon = phase.icon;
-                            return (
-                              <div key={phase.key} className="flex items-center flex-1 last:flex-none">
-                                <div className="flex flex-col items-center">
-                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${
-                                    isCurrent ? "bg-primary text-primary-foreground ring-2 ring-primary/30" :
-                                    isComplete ? "bg-success/20 text-success" :
-                                    "bg-muted text-muted-foreground"
-                                  }`}>
-                                    <PhaseIcon size={14} />
-                                  </div>
-                                  <span className={`text-[9px] mt-1 text-center max-w-[70px] leading-tight ${
-                                    isCurrent ? "font-bold text-primary" :
-                                    isComplete ? "text-success" :
-                                    "text-muted-foreground"
-                                  }`}>{phase.label}</span>
-                                </div>
-                                {i < ORDER_PHASES.length - 1 && (
-                                  <div className={`flex-1 h-0.5 mx-1 mt-[-14px] ${
-                                    i < phaseIdx ? "bg-success" : "bg-border"
-                                  }`} />
-                                )}
-                              </div>
-                            );
-                          })}
-                          {/* Pagato step */}
-                          <div className="flex items-center flex-none">
-                            <div className={`flex-1 h-0.5 w-6 mx-1 mt-[-14px] ${isPaid ? "bg-success" : "bg-border"}`} />
-                            <div className="flex flex-col items-center">
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${
-                                isPaid ? "bg-success text-success-foreground ring-2 ring-success/30" : "bg-muted text-muted-foreground"
-                              }`}>
-                                <DollarSign size={14} />
-                              </div>
-                              <span className={`text-[9px] mt-1 text-center max-w-[70px] leading-tight ${
-                                isPaid ? "font-bold text-success" : "text-muted-foreground"
-                              }`}>Paid</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Tracking */}
-                    {order.tracking_number && (
-                      <div className="px-5 py-3 bg-secondary/30 flex items-center justify-between border-b border-border">
-                        <div className="flex items-center gap-2">
-                          <Truck size={14} className="text-primary" />
-                          <span className="text-xs text-muted-foreground">Tracking: </span>
-                          <span className="text-xs font-mono font-semibold text-foreground">{order.tracking_number}</span>
-                        </div>
-                        {order.tracking_url && (
-                          <a href={order.tracking_url} target="_blank" rel="noopener noreferrer">
-                            <Button variant="ghost" size="sm" className="text-primary text-xs gap-1">
-                              Track shipment <ExternalLink size={12} />
-                            </Button>
-                          </a>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Notes */}
-                    {order.notes && (
-                      <div className="px-5 py-2 bg-secondary/20 border-b border-border">
-                        <p className="text-xs text-muted-foreground"><span className="font-semibold">Your notes:</span> {order.notes}</p>
-                      </div>
-                    )}
-
-                    {/* Items */}
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                         <TableHead className="text-xs">Product</TableHead>
-                          <TableHead className="text-xs text-right">Qty</TableHead>
-                          <TableHead className="text-xs text-right">Price</TableHead>
-                          <TableHead className="text-xs text-right">Discount</TableHead>
-                          <TableHead className="text-xs text-right">Subtotal</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {items.map((item: any) => (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              <p className="text-sm font-heading font-semibold text-foreground">{item.products?.name || "—"}</p>
-                              <p className="text-xs text-muted-foreground font-mono">{item.products?.sku}</p>
-                            </TableCell>
-                            <TableCell className="text-right text-sm">{item.quantity}</TableCell>
-                            <TableCell className="text-right text-sm">€{Number(item.unit_price).toFixed(2)}</TableCell>
-                            <TableCell className="text-right text-sm text-success">{item.discount_pct ? `-${item.discount_pct}%` : "—"}</TableCell>
-                            <TableCell className="text-right text-sm font-semibold">€{Number(item.subtotal).toFixed(2)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-
-                    {/* Totals */}
-                    <div className="px-5 py-3 border-t border-border space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Products</span>
-                         <span className="font-semibold text-foreground">€{Number(order.total_amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                       </div>
-                       <div className="flex justify-between text-sm">
-                         <span className="text-muted-foreground">Shipping</span>
-                         <span className={shippingCost > 0 ? "font-semibold text-foreground" : "text-muted-foreground italic text-xs"}>
-                           {shippingCost > 0 ? `€${shippingCost.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "Being calculated"}
-                         </span>
-                       </div>
-                       <div className="flex justify-between pt-2 border-t border-border">
-                         <span className="font-heading font-bold text-foreground">Total</span>
-                         <span className="font-heading text-xl font-bold text-foreground">
-                           €{(Number(order.total_amount || 0) + shippingCost).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                         </span>
-                       </div>
-                    </div>
-
-                    {/* Documents */}
-                    <div className="px-5 py-4 border-t border-border bg-secondary/20">
-                      <h4 className="font-heading text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                        <FileText size={14} /> Documents
-                      </h4>
-                      {docs.length === 0 ? (
-                        <p className="text-xs text-muted-foreground italic">
-                          No documents available. Documents will be uploaded after order confirmation.
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {docs.map((doc: any) => (
-                            <button
-                              key={doc.id}
-                              onClick={() => handleDownloadDoc(doc.file_path)}
-                              className="flex items-center justify-between bg-background/50 rounded-lg px-4 py-3 hover:bg-background/80 transition-colors group w-full text-left"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                  <FileText size={14} className="text-primary" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                                    {DOC_TYPE_LABELS[doc.doc_type] || doc.doc_type}
-                                  </p>
-                                  <p className="text-[10px] text-muted-foreground">
-                                    {doc.file_name} · {format(new Date(doc.created_at), "dd MMM yyyy")}
-                                  </p>
-                                </div>
-                              </div>
-                              <Download size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Notification History */}
-                    <div className="px-5 py-4 border-t border-border bg-secondary/10">
-                      <h4 className="font-heading text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                        <Bell size={14} /> Notification History
-                      </h4>
-                      <OrderEventsTimeline orderId={order.id} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <TablePagination
-          currentPage={page}
-          totalPages={totalPages}
-          totalItems={nonDraftOrders.length}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
-        />
-      </>
+          <TablePagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={nonDraftOrders.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          />
+        </>
       )}
 
       {/* Price Check Dialog */}
-      <Dialog open={!!priceCheckData} onOpenChange={() => setPriceCheckData(null)}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Price check before duplicating</DialogTitle>
-          </DialogHeader>
-          {priceCheckData && (
-            <>
-              <div className="border border-border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Product</TableHead>
-                      <TableHead className="text-xs text-right">Orig. Price</TableHead>
-                      <TableHead className="text-xs text-right">Current Price</TableHead>
-                      <TableHead className="text-xs text-right">Change</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {priceCheckData.items.map((item) => {
-                      const diff = item.available && item.currentPrice !== null ? item.currentPrice - item.originalPrice : null;
-                      return (
-                        <TableRow key={item.product_id}>
-                          <TableCell>
-                            <p className="text-xs font-medium">{item.name}</p>
-                            <p className="text-[10px] text-muted-foreground font-mono">{item.sku}</p>
-                          </TableCell>
-                          <TableCell className="text-xs text-right font-mono">€{item.originalPrice.toFixed(2)}</TableCell>
-                          <TableCell className="text-xs text-right font-mono">
-                            {!item.available || item.currentPrice === null
-                              ? <span className="text-destructive font-medium">Unavailable</span>
-                              : `€${item.currentPrice.toFixed(2)}`}
-                          </TableCell>
-                          <TableCell className="text-xs text-right font-medium">
-                            {!item.available || item.currentPrice === null ? (
-                              <span className="text-destructive">Removed</span>
-                            ) : diff === 0 ? (
-                              <span className="text-success">Unchanged</span>
-                            ) : diff! > 0 ? (
-                              <span className="text-destructive">+€{diff!.toFixed(2)} ↑</span>
-                            ) : (
-                              <span className="text-success">-€{Math.abs(diff!).toFixed(2)} ↓</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-              <div className="flex justify-between text-sm mt-2 p-3 bg-secondary/50 rounded-lg">
-                <span className="text-muted-foreground">
-                  Original total: <span className="font-mono font-semibold text-foreground">€{priceCheckData.originalTotal.toFixed(2)}</span>
-                </span>
-                <span className="text-muted-foreground">
-                  New total: <span className="font-mono font-semibold text-primary">€{priceCheckData.newTotal.toFixed(2)}</span>
-                </span>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setPriceCheckData(null)}>Cancel</Button>
-                <Button onClick={() => executeDuplicate(priceCheckData.order, priceCheckData.items)} disabled={!!duplicatingId}>
-                  {duplicatingId ? "Duplicating..." : "Duplicate with current prices"}
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <PriceCheckDialog
+        data={draft.priceCheckData}
+        duplicating={!!draft.duplicatingId}
+        onConfirm={() => client && draft.priceCheckData && draft.executeDuplicate(client.id, draft.priceCheckData.order, draft.priceCheckData.items)}
+        onCancel={() => draft.setPriceCheckData(null)}
+      />
 
       {/* Confirm Cancel Dialog */}
       <Dialog open={!!confirmCancel} onOpenChange={() => setConfirmCancel(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Cancel Order</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to cancel this order? This action cannot be undone.
-          </p>
+          <DialogHeader><DialogTitle>Cancel Order</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Are you sure you want to cancel this order? This action cannot be undone.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmCancel(null)}>Back</Button>
-            <Button variant="destructive" onClick={() => handleCancelOrder(confirmCancel)} disabled={!!cancellingId}>
-              {cancellingId ? "Cancelling..." : "Cancel Order"}
+            <Button variant="destructive" onClick={() => { if (confirmCancel) { draft.handleCancelOrder(confirmCancel); setConfirmCancel(null); } }} disabled={!!draft.cancellingId}>
+              {draft.cancellingId ? "Cancelling..." : "Cancel Order"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -868,178 +148,43 @@ const DealerOrders = () => {
       {/* Confirm Delete Draft Dialog */}
       <Dialog open={!!confirmDeleteDraft} onOpenChange={() => setConfirmDeleteDraft(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Draft</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete this draft? This action cannot be undone.
-          </p>
+          <DialogHeader><DialogTitle>Delete Draft</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Are you sure you want to delete this draft? This action cannot be undone.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmDeleteDraft(null)}>Back</Button>
-            <Button variant="destructive" onClick={() => handleDeleteDraft(confirmDeleteDraft)} disabled={!!deletingDraftId}>
-              {deletingDraftId ? "Deleting..." : "Delete Draft"}
+            <Button variant="destructive" onClick={() => { if (confirmDeleteDraft) { draft.handleDeleteDraft(confirmDeleteDraft); setConfirmDeleteDraft(null); } }} disabled={!!draft.deletingDraftId}>
+              {draft.deletingDraftId ? "Deleting..." : "Delete Draft"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Draft Editor Dialog */}
-      <Dialog open={!!editingDraft} onOpenChange={() => setEditingDraft(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Complete Order — {editingDraft?.order_code || `#${editingDraft?.id?.slice(0, 8).toUpperCase()}`}
-            </DialogTitle>
-          </DialogHeader>
-          {editingDraft && (
-            <div className="space-y-4">
-              {draftItems.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6">No products in this draft. Add products from the catalog.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Product</TableHead>
-                      <TableHead className="text-xs text-right">Price</TableHead>
-                      <TableHead className="text-xs text-center w-[130px]">Quantity</TableHead>
-                      <TableHead className="text-xs text-right">Subtotal</TableHead>
-                      <TableHead className="w-10" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {draftItems.map((item: any) => (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          <p className="text-sm font-medium">{item.name}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{item.sku}</p>
-                        </TableCell>
-                        <TableCell className="text-right text-sm">€{Number(item.unit_price).toFixed(2)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateDraftItemQty(item.id, item.quantity - 1)}>
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <Input
-                              type="number"
-                              min={1}
-                              value={item.quantity}
-                              onChange={(e) => updateDraftItemQty(item.id, parseInt(e.target.value) || 1)}
-                              className="w-16 h-7 text-center text-sm"
-                            />
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateDraftItemQty(item.id, item.quantity + 1)}>
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right text-sm font-medium">€{(Number(item.unit_price) * item.quantity).toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeDraftItem(item.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-              <div className="flex items-center justify-between">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShowAddProductsToDraft(true)}>
-                  <PackagePlus className="h-4 w-4" /> Add Products
-                </Button>
-                <div className="text-lg font-bold">Total: €{draftTotal.toFixed(2)}</div>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Notes (optional)</label>
-                <Textarea
-                  placeholder="Add notes to your order..."
-                  value={draftNotes}
-                  onChange={(e) => setDraftNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEditingDraft(null)}>Close</Button>
-                <Button onClick={submitDraft} disabled={submittingDraft || draftItems.length === 0}>
-                  {submittingDraft ? "Submitting..." : "Submit Order"}
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <DraftEditorDialog
+        order={draft.editingDraft}
+        items={draft.draftItems}
+        notes={draft.draftNotes}
+        total={draft.draftTotal}
+        isSubmitting={draft.submittingDraft}
+        onUpdateQuantity={draft.updateDraftItemQty}
+        onRemoveItem={draft.removeDraftItem}
+        onUpdateNotes={draft.setDraftNotes}
+        onSubmit={draft.submitDraft}
+        onClose={() => draft.setEditingDraft(null)}
+        onAddProducts={() => setShowAddProducts(true)}
+      />
 
       {/* Add Products to Draft Dialog */}
-      <Dialog open={showAddProductsToDraft} onOpenChange={v => { if (!v) { setShowAddProductsToDraft(false); setAddProductSearch(""); setAddProductQtys({}); } }}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add Products to Draft</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-              <Input
-                placeholder="Search products..."
-                value={addProductSearch}
-                onChange={e => setAddProductSearch(e.target.value)}
-                className="pl-9 text-sm"
-              />
-            </div>
-            <div className="max-h-[50vh] overflow-y-auto space-y-1">
-              {(() => {
-                const existingIds = new Set(draftItems.map(i => i.product_id));
-                const available = (priceListProducts || [])
-                  .filter((p: any) => {
-                    const product = p.products;
-                    if (!product) return false;
-                    const q = addProductSearch.toLowerCase();
-                    return !q || product.name.toLowerCase().includes(q) || (product.sku || "").toLowerCase().includes(q);
-                  });
-                if (!available.length) return <p className="text-sm text-muted-foreground text-center py-4">No products found</p>;
-                return available.map((plItem: any) => {
-                  const product = plItem.products;
-                  const isAlreadyInDraft = existingIds.has(product.id);
-                  const qty = addProductQtys[product.id] || 0;
-                  return (
-                    <div key={product.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{product.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{product.sku} · €{Number(plItem.custom_price).toFixed(2)}</p>
-                        {isAlreadyInDraft && <Badge variant="outline" className="text-[10px]">Already in draft</Badge>}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" disabled={qty <= 0}
-                          onClick={() => setAddProductQtys(prev => ({ ...prev, [product.id]: Math.max(0, qty - 1) }))}>
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={qty}
-                          onChange={e => setAddProductQtys(prev => ({ ...prev, [product.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
-                          className="w-14 h-7 text-center text-sm"
-                        />
-                        <Button variant="ghost" size="icon" className="h-7 w-7"
-                          onClick={() => setAddProductQtys(prev => ({ ...prev, [product.id]: qty + 1 }))}>
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowAddProductsToDraft(false); setAddProductQtys({}); }}>Cancel</Button>
-            <Button
-              onClick={handleAddProductsToDraft}
-              disabled={savingDraftItems || Object.values(addProductQtys).every(q => q === 0)}
-            >
-              {savingDraftItems ? "Adding..." : `Add ${Object.values(addProductQtys).filter(q => q > 0).length} Products`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {draft.editingDraft && client && (
+        <AddProductsDialog
+          open={showAddProducts}
+          onClose={() => setShowAddProducts(false)}
+          clientId={client.id}
+          editingDraft={draft.editingDraft}
+          draftItems={draft.draftItems}
+          onItemsAdded={(newItems) => draft.setDraftItems((prev) => [...prev, ...newItems])}
+        />
+      )}
     </div>
   );
 };
