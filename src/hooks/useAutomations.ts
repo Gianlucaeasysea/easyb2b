@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 type TriggerType =
   | "lead_created"
@@ -48,7 +49,7 @@ export async function checkAndRunAutomations(
       await executeAction(rule.action_type, ac, triggerData, user?.id);
     }
   } catch (err) {
-    console.error("[Automations] Error:", err);
+    logger.error("Automations", "Error processing automations", err);
   }
 }
 
@@ -131,7 +132,7 @@ async function executeAction(
     case "send_email": {
       if (ac.template_id) {
         // Trigger via edge function would be ideal; for now log
-        console.log("[Automation] send_email template_id:", ac.template_id);
+        logger.debug("Automations", "send_email template_id", ac.template_id);
         toast.info("⚡ Automazione: email in coda");
       }
       break;

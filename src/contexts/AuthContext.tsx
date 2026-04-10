@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 type AppRole = "admin" | "dealer" | "sales" | "operations";
 
@@ -74,7 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         return null;
       } catch (err) {
-        console.error(`[AuthContext] fetchRole attempt ${attempt}/${retries} failed:`, err);
+        logger.error("AuthContext", `fetchRole attempt ${attempt}/${retries} failed`, err);
         if (attempt < retries) {
           await new Promise(r => setTimeout(r, 500 * attempt));
         }

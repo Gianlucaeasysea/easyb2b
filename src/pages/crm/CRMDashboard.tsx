@@ -8,6 +8,7 @@ import {
 import OrderDetailsTable from "@/components/crm/OrderDetailsTable";
 import { getOrderStatusLabel, getOrderStatusColor } from "@/lib/constants";
 import { format, isToday, isPast, differenceInDays, isValid } from "date-fns";
+import { logger } from "@/lib/logger";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -232,7 +233,7 @@ const CRMDashboard = () => {
         await supabase.functions.invoke('send-order-notification', {
           body: { orderId: id, orderCode, type: 'status_update' },
         });
-      } catch (e) { console.error("Email failed:", e); }
+      } catch (e) { logger.error("CRMDashboard", "Confirm order email failed", e); }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-orders-dash"] });
@@ -252,7 +253,7 @@ const CRMDashboard = () => {
         await supabase.functions.invoke('send-order-notification', {
           body: { orderId: id, orderCode, type: 'status_update' },
         });
-      } catch (e) { console.error("Email failed:", e); }
+      } catch (e) { logger.error("CRMDashboard", "Reject order email failed", e); }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-orders-dash"] });

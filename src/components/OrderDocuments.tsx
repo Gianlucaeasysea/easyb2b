@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { FileText, Upload, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 
 const DOC_TYPES = [
@@ -96,7 +97,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
           body: { orderId, type: 'documents_uploaded' },
         });
       } catch (emailErr) {
-        console.error("Document notification email failed:", emailErr);
+        logger.error("OrderDocuments", "Document notification email failed", emailErr);
       }
 
       // In-app notification for dealer
@@ -112,7 +113,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
           });
         }
       } catch (notifErr) {
-        console.error("In-app notification failed:", notifErr);
+        logger.error("OrderDocuments", "In-app notification failed", notifErr);
       }
 
       setUploadNote("");
