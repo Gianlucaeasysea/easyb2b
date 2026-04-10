@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Activity, Building2, HelpCircle, Inbox, UserPlus, Handshake, KanbanSquare, MailPlus, CheckSquare, BarChart3, Zap, Package } from "lucide-react";
+import { LayoutDashboard, Users, Activity, Building2, HelpCircle, Inbox, UserPlus, Handshake, KanbanSquare, MailPlus, CheckSquare, BarChart3, Zap, Package, Tags } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +31,7 @@ const items: SidebarItem[] = [
   { title: "Tasks", url: "/crm/tasks", icon: CheckSquare, badgeKey: "overdue_tasks" },
   { title: "Analytics", url: "/crm/analytics", icon: BarChart3 },
   { title: "Email Templates", url: "/crm/email-templates", icon: MailPlus },
+  { title: "Price Lists", url: "/crm/price-lists", icon: Tags },
   { title: "Automations", url: "/crm/automations", icon: Zap, adminOnly: true },
   { title: "Help", url: "/crm/help", icon: HelpCircle },
 ];
