@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, ShoppingBag, TrendingUp, ArrowUpRight, Clock, CheckCircle, Truck, CreditCard, FileText, Tag } from "lucide-react";
+import { Package, ShoppingBag, TrendingUp, ArrowUpRight, CreditCard, FileText, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
