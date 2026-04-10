@@ -121,8 +121,9 @@ Deno.serve(async (req) => {
     // Send credentials email
     let emailSent = false;
     try {
-      const portalUrl = "https://easyb2b.lovable.app/login";
-      await sendCredentialsEmail(supabaseAdmin, email, password, portalUrl);
+      const portalUrl = Deno.env.get("APP_URL") || "https://b2b.easysea.org";
+      const loginUrl = `${portalUrl}/login`;
+      await sendCredentialsEmail(supabaseAdmin, email, password, loginUrl);
       emailSent = true;
     } catch (emailErr) {
       console.error("Failed to send credentials email:", emailErr);

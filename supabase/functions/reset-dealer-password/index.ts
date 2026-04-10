@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: "https://easyb2b.lovable.app/login" },
+      options: { redirectTo: `${Deno.env.get("APP_URL") || "https://b2b.easysea.org"}/login` },
     });
     if (error) throw error;
 
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      const recoveryLink = data?.properties?.action_link || "https://easyb2b.lovable.app/login";
+      const recoveryLink = data?.properties?.action_link || `${Deno.env.get("APP_URL") || "https://b2b.easysea.org"}/login`;
 
       const subject = "EasySea - Reset Password Portale Dealer";
       const body = `Ciao,

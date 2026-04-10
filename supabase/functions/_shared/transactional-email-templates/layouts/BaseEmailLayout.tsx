@@ -17,7 +17,7 @@ interface BaseEmailLayoutProps {
   children: React.ReactNode
 }
 
-const APP_URL = Deno.env.get('APP_URL') ?? 'https://easyb2b.lovable.app'
+const APP_URL = Deno.env.get('APP_URL') ?? 'https://b2b.easysea.org'
 
 const styles = {
   body: {

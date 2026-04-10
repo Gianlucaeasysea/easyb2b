@@ -4,7 +4,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const APP_URL = Deno.env.get("APP_URL") ?? "https://easyb2b.lovable.app";
+const APP_URL = Deno.env.get("APP_URL") ?? "https://b2b.easysea.org";
 
 // Fallback values if DB lookup fails
 const FALLBACK_ADMIN_EMAILS = ["g.scotto@easysea.org", "business@easysea.org", "gianluca@easysea.org"];
