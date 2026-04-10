@@ -83,7 +83,7 @@ async function generateOAuthState(userId: string): Promise<string> {
   // Persist to DB for backend validation
   const { error } = await supabase
     .from('oauth_states')
-    .insert({ user_id: userId, nonce } as Record<string, unknown>);
+    .insert([{ user_id: userId, nonce }] as any);
 
   if (error) {
     throw new Error('Failed to initialize OAuth state. Please try again.');
