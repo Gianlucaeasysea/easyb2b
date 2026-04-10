@@ -306,12 +306,12 @@ const AdminOrders = () => {
           <p className="text-muted-foreground">No orders found.</p>
         </div>
       ) : (
-        <div className={`glass-card-solid overflow-x-auto ${isFetching ? "opacity-60" : ""}`}>
+        <div data-testid="admin-orders-list" className={`glass-card-solid overflow-x-auto ${isFetching ? "opacity-60" : ""}`}>
           <Table>
             <TableHeader>{tableHeaders}</TableHeader>
             <TableBody>
               {orders.map(o => (
-                <TableRow key={o.id} className="cursor-pointer hover:bg-secondary/50">
+                <TableRow key={o.id} data-testid="order-row" className="cursor-pointer hover:bg-secondary/50">
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Checkbox checked={selected.has(o.id)} onCheckedChange={() => toggleSelect(o.id)} />
                   </TableCell>

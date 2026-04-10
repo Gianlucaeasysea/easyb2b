@@ -224,7 +224,7 @@ const DealerCatalog = () => {
             <Link to="/portal/cart">
               <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold text-xs gap-1.5 rounded-lg">
                 <ShoppingCart size={14} />
-                Cart ({totalItems})
+                Cart (<span data-testid="cart-badge">{totalItems}</span>)
               </Button>
             </Link>
           )}
@@ -320,6 +320,7 @@ const DealerCatalog = () => {
             return (
               <div
                 key={p.id}
+                data-testid="product-card"
                 className={`flex items-center gap-4 p-3 hover:bg-muted/50 cursor-pointer transition-colors ${i > 0 ? "border-t" : ""}`}
                 onClick={() => setSelectedProduct(p)}
               >
@@ -423,6 +424,7 @@ const DealerCatalog = () => {
             return (
               <div
                 key={p.id}
+                data-testid="product-card"
                 className="glass-card-solid overflow-hidden group hover:border-primary/30 transition-colors cursor-pointer"
                 onClick={() => setSelectedProduct(p)}
               >

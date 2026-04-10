@@ -262,7 +262,7 @@ const AdminClients = () => {
           <p className="text-muted-foreground">{search ? "Nessun risultato." : "Nessun cliente."}</p>
         </div>
       ) : (
-        <div className={`glass-card-solid overflow-hidden ${isFetching ? "opacity-60" : ""}`}>
+        <div data-testid="admin-clients-list" className={`glass-card-solid overflow-hidden ${isFetching ? "opacity-60" : ""}`}>
           <Table>
             <TableHeader>
               <TableRow>
@@ -280,7 +280,7 @@ const AdminClients = () => {
             </TableHeader>
             <TableBody>
               {filtered.map(c => (
-                <TableRow key={c.id} className="cursor-pointer hover:bg-secondary/50">
+                <TableRow key={c.id} data-testid="client-row" className="cursor-pointer hover:bg-secondary/50">
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggleSelect(c.id)} />
                   </TableCell>
