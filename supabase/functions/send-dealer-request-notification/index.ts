@@ -11,7 +11,6 @@ const STAFF_EMAILS = [
 
 function validateInput(body: any): string | null {
   const { companyName, contactName, email, phone } = body;
-
   if (!companyName || typeof companyName !== "string" || companyName.trim().length < 2 || companyName.length > 200) {
     return "Company name is required (2-200 characters)";
   }
@@ -24,8 +23,66 @@ function validateInput(body: any): string | null {
   if (!phone || typeof phone !== "string" || phone.trim().length < 5 || phone.length > 30) {
     return "A valid phone number is required";
   }
-
   return null;
+}
+
+function getOAuthCredentials() {
+  const clientId = Deno.env.get("GOOGLE_CLIENT_ID") || Deno.env.get("CLIENTI_ID") || "";
+  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET") || Deno.env.get("CLIENT_SECRET") || "";
+  return { clientId, clientSecret };
+}
+
+async function refreshAccessToken(
+  supabaseAdmin: any,
+  tokenRow: any,
+  clientId: string,
+  clientSecret: string,
+): Promise<string | null> {
+  console.log("Refreshing Gmail access token...");
+  const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: tokenRow.refresh_token,
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
+  });
+  const data = await refreshRes.json();
+  if (data.access_token) {
+    console.log("Token refresh successful");
+    await supabaseAdmin.from("gmail_tokens").update({
+      access_token: data.access_token,
+      expires_at: new Date(Date.now() + (data.expires_in || 3600) * 1000).toISOString(),
+    }).eq("id", tokenRow.id);
+    return data.access_token;
+  }
+  console.error("Token refresh failed:", JSON.stringify(data));
+  return null;
+}
+
+async function sendGmail(accessToken: string, fromEmail: string, fromName: string, to: string, subject: string, body: string) {
+  const rawMessage = `From: ${fromName} <${fromEmail}>\r\nTo: ${to}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
+  const encodedMessage = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ raw: encodedMessage }),
+  });
+
+  if (!gmailRes.ok) {
+    const errText = await gmailRes.text();
+    console.error(`Gmail API error sending to ${to} (${gmailRes.status}):`, errText);
+    return { ok: false, status: gmailRes.status, error: errText };
+  }
+
+  await gmailRes.json();
+  return { ok: true, status: 200, error: null };
 }
 
 Deno.serve(async (req) => {
@@ -35,79 +92,76 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   try {
     let body: any;
     try {
       body = await req.json();
     } catch {
-      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Invalid JSON body" }, 400);
     }
 
     const validationError = validateInput(body);
     if (validationError) {
-      return new Response(JSON.stringify({ error: validationError }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: validationError }, 400);
     }
 
     const { companyName, contactName, email, phone, zone, country, businessType, website, message, vatNumber } = body;
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
     const { data: tokenData } = await supabaseAdmin.from("gmail_tokens").select("*").limit(1).single();
 
     if (!tokenData) {
       console.warn("No Gmail tokens found, skipping email send");
-      return new Response(JSON.stringify({ success: true, skipped: true, reason: "no_gmail_tokens" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ success: true, skipped: true, reason: "no_gmail_tokens" });
     }
 
+    const { clientId, clientSecret } = getOAuthCredentials();
+    if (!clientId || !clientSecret) {
+      console.warn("Missing Google OAuth credentials (CLIENTI_ID / CLIENT_SECRET)");
+      return json({ success: true, skipped: true, reason: "missing_oauth_credentials" });
+    }
+
+    // Get a valid access token — refresh if expired
     let accessToken = tokenData.access_token;
-    if (new Date(tokenData.expires_at) < new Date()) {
-      const clientId = Deno.env.get("GOOGLE_CLIENT_ID") || Deno.env.get("CLIENTI_ID") || "";
-      const clientSecret = Deno.env.get("CLIENT_SECRET") || "";
-      
-      if (!clientId || !clientSecret) {
-        console.warn("Missing Google OAuth credentials, skipping email send");
-        return new Response(JSON.stringify({ success: true, skipped: true, reason: "missing_oauth_credentials" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    const tokenExpired = new Date(tokenData.expires_at) < new Date();
+    if (tokenExpired) {
+      const refreshed = await refreshAccessToken(supabaseAdmin, tokenData, clientId, clientSecret);
+      if (!refreshed) {
+        return json({ success: true, skipped: true, reason: "token_refresh_failed" });
       }
-
-      const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          grant_type: "refresh_token",
-          refresh_token: tokenData.refresh_token,
-          client_id: clientId,
-          client_secret: clientSecret,
-        }),
-      });
-      const refreshData = await refreshRes.json();
-      if (refreshData.access_token) {
-        accessToken = refreshData.access_token;
-        await supabaseAdmin.from("gmail_tokens").update({
-          access_token: accessToken,
-          expires_at: new Date(Date.now() + (refreshData.expires_in || 3600) * 1000).toISOString(),
-        }).eq("id", tokenData.id);
-      } else {
-        console.warn("Token refresh failed:", JSON.stringify(refreshData));
-        return new Response(JSON.stringify({ success: true, skipped: true, reason: "token_refresh_failed" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      accessToken = refreshed;
     }
+
     const fromEmail = "business@easysea.org";
     const fromName = "Easysea B2B";
 
-    // 1. Send confirmation email to customer
+    // Helper: send with auto-retry on 401
+    async function sendWithRetry(to: string, subject: string, emailBody: string): Promise<{ ok: boolean; error?: string }> {
+      let result = await sendGmail(accessToken, fromEmail, fromName, to, subject, emailBody);
+      if (!result.ok && result.status === 401) {
+        console.log("Got 401, forcing token refresh and retrying...");
+        const refreshed = await refreshAccessToken(supabaseAdmin, tokenData, clientId, clientSecret);
+        if (refreshed) {
+          accessToken = refreshed;
+          result = await sendGmail(accessToken, fromEmail, fromName, to, subject, emailBody);
+        }
+      }
+      return { ok: result.ok, error: result.ok ? undefined : (result.error || "unknown") };
+    }
+
+    const emailErrors: string[] = [];
+
+    // 1. Confirmation to customer
     const clientSubject = "We received your dealer application — Easysea";
     const clientBody = `Dear ${contactName},
 
@@ -117,16 +171,10 @@ Best regards,
 The Easysea Team
 business@easysea.org`;
 
-    let emailErrors: string[] = [];
+    const clientResult = await sendWithRetry(email, clientSubject, clientBody);
+    if (!clientResult.ok) emailErrors.push(`client: ${clientResult.error}`);
 
-    try {
-      await sendGmail(accessToken, fromEmail, fromName, email, clientSubject, clientBody);
-    } catch (e) {
-      console.warn("Failed to send client confirmation email:", e);
-      emailErrors.push(`client: ${e.message}`);
-    }
-
-    // 2. Send notification to ALL staff
+    // 2. Notification to staff
     const staffSubject = `New dealer application — ${companyName}`;
     const staffBody = `NEW DEALER APPLICATION
 
@@ -147,47 +195,16 @@ ${message || "(no message)"}
 Review in the CRM: Dealer Requests section`;
 
     for (const staffEmail of STAFF_EMAILS) {
-      try {
-        await sendGmail(accessToken, fromEmail, fromName, staffEmail, staffSubject, staffBody);
-      } catch (e) {
-        console.warn(`Failed to send staff email to ${staffEmail}:`, e);
-        emailErrors.push(`staff(${staffEmail}): ${e.message}`);
-      }
+      const r = await sendWithRetry(staffEmail, staffSubject, staffBody);
+      if (!r.ok) emailErrors.push(`staff(${staffEmail}): ${r.error}`);
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      emailErrors: emailErrors.length > 0 ? emailErrors : undefined 
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return json({
+      success: true,
+      emailErrors: emailErrors.length > 0 ? emailErrors : undefined,
     });
   } catch (e) {
     console.error("send-dealer-request-notification error:", e);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: "Internal server error" }, 500);
   }
 });
-
-async function sendGmail(accessToken: string, fromEmail: string, fromName: string, to: string, subject: string, body: string) {
-  const rawMessage = `From: ${fromName} <${fromEmail}>\r\nTo: ${to}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
-  const encodedMessage = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-
-  const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ raw: encodedMessage }),
-  });
-
-  if (!gmailRes.ok) {
-    const errText = await gmailRes.text();
-    console.error(`Gmail API error sending to ${to}:`, errText);
-    throw new Error(`Gmail API error: ${gmailRes.status}`);
-  }
-
-  return await gmailRes.json();
-}
