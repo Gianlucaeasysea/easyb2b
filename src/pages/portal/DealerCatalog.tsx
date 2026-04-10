@@ -60,6 +60,7 @@ const DealerCatalog = () => {
     return saved === "list" ? "list" : "grid";
   });
   const [showRetailPrices, setShowRetailPrices] = useState(false);
+  const [justAdded, setJustAdded] = useState<string | null>(null);
 
   const handleViewModeChange = (mode: "grid" | "list") => {
     setViewMode(mode);
@@ -187,8 +188,6 @@ const DealerCatalog = () => {
     ? Math.round((1 - selectedB2bPrice / selectedRetailPrice) * 100)
     : 0;
 
-  const [justAdded, setJustAdded] = useState<string | null>(null);
-
   const handleAddToCart = (p: any) => {
     const plEntry = priceListProductMap.get(p.id);
     if (!plEntry) return;
@@ -305,7 +304,7 @@ const DealerCatalog = () => {
       </div>
 
       {loadingPriceList ? (
-        <p className="text-muted-foreground">Loading catalog...</p>
+        <CatalogSkeleton />
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
           <Package className="mx-auto text-muted-foreground mb-4" size={48} />
@@ -417,7 +416,12 @@ const DealerCatalog = () => {
         </div>
       ) : (
         /* GRID VIEW */
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        >
           {filtered.map((p, i) => {
             const plEntry = priceListProductMap.get(p.id);
             const b2bPrice = plEntry?.customPrice ?? 0;
@@ -427,10 +431,13 @@ const DealerCatalog = () => {
             const inStock = (p.stock_quantity ?? 0) > 0;
             const detail = getDetailForProduct(p);
             const leadTime = (detail as any)?.lead_time;
+            const isJustAdded = justAdded === p.id;
 
             return (
-              <div
+              <motion.div
                 key={p.id}
+                variants={staggerItem}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
                 data-testid="product-card"
                 className="glass-card-solid overflow-hidden group hover:border-primary/30 transition-colors cursor-pointer"
                 onClick={() => setSelectedProduct(p)}
