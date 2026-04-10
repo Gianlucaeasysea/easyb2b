@@ -8,6 +8,7 @@ type GmailOAuthPopupMessage =
       type: "success";
       code: string;
       redirectUri: string;
+      state?: string;
     }
   | {
       source: "gmail-oauth-popup";
@@ -61,7 +62,34 @@ const GMAIL_SCOPES = [
 ].join(" ");
 export const GMAIL_POPUP_BRIDGE_URL = "https://b2b.easysea.org/oauth/gmail-popup";
 
+const OAUTH_STATE_KEY = "gmail_oauth_state";
+
 let googleIdentityScriptPromise: Promise<void> | null = null;
+
+/**
+ * Generates a cryptographically random state nonce for CSRF protection
+ * and stores it in sessionStorage for later validation.
+ */
+function generateOAuthState(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  const state = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  sessionStorage.setItem(OAUTH_STATE_KEY, state);
+  return state;
+}
+
+/**
+ * Validates the state parameter returned from the OAuth flow.
+ * Consumes the stored state (one-time use).
+ * Returns true if valid, false otherwise.
+ */
+function validateOAuthState(returnedState: string | undefined | null): boolean {
+  const savedState = sessionStorage.getItem(OAUTH_STATE_KEY);
+  sessionStorage.removeItem(OAUTH_STATE_KEY);
+
+  if (!savedState || !returnedState) return false;
+  return savedState === returnedState;
+}
 
 function createGmailAuthorizationCodeRequest(loginHint = "business@easysea.org") {
   return new Promise<string>((resolve, reject) => {
@@ -188,9 +216,11 @@ export async function requestGmailAuthorizationCodeOnCurrentOrigin(loginHint = "
 
 function requestGmailAuthorizationCodeFromPublishedBridge(loginHint: string) {
   return new Promise<GmailAuthorizationCodeResult>((resolve, reject) => {
+    const state = generateOAuthState();
     const popupBridgeUrl = new URL(GMAIL_POPUP_BRIDGE_URL);
     popupBridgeUrl.searchParams.set("targetOrigin", window.location.origin);
     popupBridgeUrl.searchParams.set("loginHint", loginHint);
+    popupBridgeUrl.searchParams.set("oauthState", state);
 
     const popup = window.open(popupBridgeUrl.toString(), "gmail-oauth-popup", getPopupFeatures());
 
@@ -204,6 +234,7 @@ function requestGmailAuthorizationCodeFromPublishedBridge(loginHint: string) {
     const cleanup = () => {
       window.removeEventListener("message", handleMessage);
       window.clearInterval(closeWatcher);
+      sessionStorage.removeItem(OAUTH_STATE_KEY);
     };
 
     const handleMessage = (event: MessageEvent) => {
@@ -218,6 +249,11 @@ function requestGmailAuthorizationCodeFromPublishedBridge(loginHint: string) {
       }
 
       if (event.data.type === "success") {
+        // Validate CSRF state
+        if (!validateOAuthState(event.data.state)) {
+          reject(new Error("OAuth state mismatch — possible CSRF attack. Please retry."));
+          return;
+        }
         resolve({
           code: event.data.code,
           redirectUri: event.data.redirectUri,

@@ -36,12 +36,14 @@ const GmailOAuthPopup = () => {
     const stateParam = params.get("state");
 
     if (code) {
-      // Returning from Google consent — parse targetOrigin from state
+      // Returning from Google consent — parse targetOrigin and oauthState from state
       let resolvedTargetOrigin = targetOrigin;
+      let oauthState: string | undefined;
       if (stateParam) {
         try {
           const parsed = JSON.parse(stateParam);
           if (parsed.targetOrigin) resolvedTargetOrigin = parsed.targetOrigin;
+          if (parsed.oauthState) oauthState = parsed.oauthState;
         } catch { /* ignore */ }
       }
 
@@ -54,6 +56,7 @@ const GmailOAuthPopup = () => {
           type: "success",
           code,
           redirectUri: window.location.origin,
+          state: oauthState,
         },
         resolvedTargetOrigin,
       );
@@ -84,8 +87,9 @@ const GmailOAuthPopup = () => {
     // Build the redirect URI pointing back to this same page
     const redirectUri = window.location.origin + window.location.pathname;
 
-    // Encode targetOrigin in state so we can recover it on return
-    const stateValue = JSON.stringify({ targetOrigin });
+    // Encode targetOrigin and oauthState in state so we can recover them on return
+    const oauthState = searchParams.get("oauthState") || "";
+    const stateValue = JSON.stringify({ targetOrigin, oauthState });
 
     try {
       const gw = window as Window & { google?: any };
