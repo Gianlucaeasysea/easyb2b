@@ -133,7 +133,8 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.error("create-dealer-account error:", e);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
+    const message = e instanceof Error ? e.message : "Internal server error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
