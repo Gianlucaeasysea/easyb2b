@@ -63,21 +63,31 @@ Deno.serve(async (req) => {
 
     if (!tokenData) {
       console.warn("No Gmail tokens found, skipping email send");
-      return new Response(JSON.stringify({ success: true, skipped: true }), {
+      return new Response(JSON.stringify({ success: true, skipped: true, reason: "no_gmail_tokens" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     let accessToken = tokenData.access_token;
     if (new Date(tokenData.expires_at) < new Date()) {
+      const clientId = Deno.env.get("GOOGLE_CLIENT_ID") || Deno.env.get("CLIENTI_ID") || "";
+      const clientSecret = Deno.env.get("CLIENT_SECRET") || "";
+      
+      if (!clientId || !clientSecret) {
+        console.warn("Missing Google OAuth credentials, skipping email send");
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: "missing_oauth_credentials" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           grant_type: "refresh_token",
           refresh_token: tokenData.refresh_token,
-          client_id: Deno.env.get("GOOGLE_CLIENT_ID") || "",
-          client_secret: Deno.env.get("CLIENT_SECRET") || "",
+          client_id: clientId,
+          client_secret: clientSecret,
         }),
       });
       const refreshData = await refreshRes.json();
@@ -87,9 +97,13 @@ Deno.serve(async (req) => {
           access_token: accessToken,
           expires_at: new Date(Date.now() + (refreshData.expires_in || 3600) * 1000).toISOString(),
         }).eq("id", tokenData.id);
+      } else {
+        console.warn("Token refresh failed:", JSON.stringify(refreshData));
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: "token_refresh_failed" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
-
     const fromEmail = "business@easysea.org";
     const fromName = "Easysea B2B";
 
