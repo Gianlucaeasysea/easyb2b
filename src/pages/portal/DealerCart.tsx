@@ -11,7 +11,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { showErrorToast } from "@/lib/errorHandler";
-import { useAutoAnimate } from "@formkit/auto-animate/react";
+
 import { motion } from "framer-motion";
 import { fadeInUp } from "@/lib/animations";
 import { OrderSubmitAnimation } from "@/components/portal/ui/OrderSubmitAnimation";
@@ -64,7 +64,7 @@ const DealerCart = () => {
   const [savingDraft, setSavingDraft] = useState(false);
   const [showOrderAnimation, setShowOrderAnimation] = useState(false);
   const [submittedOrderCode, setSubmittedOrderCode] = useState("");
-  const [listRef] = useAutoAnimate({ duration: 250, easing: 'ease-out' });
+  
 
   const { data: client } = useQuery({
     queryKey: ["my-client"],
@@ -213,7 +213,7 @@ const DealerCart = () => {
         </div>
       )}
 
-      <div ref={listRef} className="space-y-3 mb-8">
+      <div className="space-y-3 mb-8">
         {items.map(item => {
           const leadTime = getLeadTime(item.name);
           const outOfStock = item.stock <= 0;
