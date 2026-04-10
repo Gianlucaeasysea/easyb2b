@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
     try {
       const portalUrl = Deno.env.get("APP_URL") || "https://b2b.easysea.org";
       const loginUrl = `${portalUrl}/login`;
-      await sendCredentialsEmail(supabaseAdmin, email, password, portalUrl);
+      await sendCredentialsEmail(supabaseAdmin, email, password, loginUrl);
       emailSent = true;
     } catch (emailErr) {
       console.error("Failed to send credentials email:", emailErr);
