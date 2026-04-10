@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import { showErrorToast } from "@/lib/errorHandler";
-import { canTransitionTo, getOrderStatusLabel } from "@/lib/constants";
+import { canTransitionTo } from "@/lib/constants";
 import type { Order, DraftItem, PriceCheckData } from "@/types/orders";
 
 export function useOrderDraft() {
