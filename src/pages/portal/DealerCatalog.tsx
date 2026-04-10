@@ -187,6 +187,8 @@ const DealerCatalog = () => {
     ? Math.round((1 - selectedB2bPrice / selectedRetailPrice) * 100)
     : 0;
 
+  const [justAdded, setJustAdded] = useState<string | null>(null);
+
   const handleAddToCart = (p: any) => {
     const plEntry = priceListProductMap.get(p.id);
     if (!plEntry) return;
@@ -206,6 +208,8 @@ const DealerCatalog = () => {
       quantity: qty,
     });
     toast.success(`${qty}x ${p.name} added`);
+    setJustAdded(p.id);
+    setTimeout(() => setJustAdded(null), 1200);
     setQuantities(prev => ({ ...prev, [p.id]: 1 }));
   };
 
