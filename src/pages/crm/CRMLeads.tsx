@@ -160,6 +160,23 @@ const CRMLeads = () => {
         });
       }
 
+      // Create a deal linked to this lead and the new client
+      const { error: dealError } = await supabase.from("deals").insert({
+        client_id: newClient.id,
+        lead_id: lead.id,
+        title: `Deal — ${lead.company_name ?? lead.contact_name}`,
+        stage: "draft",
+        value: 0,
+        probability: 20,
+        assigned_to: lead.assigned_to ?? user?.id,
+        source: lead.source,
+        notes: `Converted from lead on ${new Date().toLocaleDateString('en-GB')}`,
+      });
+
+      if (dealError) {
+        console.error('Failed to create deal from lead conversion', dealError);
+      }
+
       await supabase.from("activities").update({ client_id: newClient.id }).eq("lead_id", lead.id);
       await supabase.from("leads").update({ status: "won" }).eq("id", lead.id);
       return newClient;
@@ -167,6 +184,7 @@ const CRMLeads = () => {
     onSuccess: (newClient) => {
       queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       queryClient.invalidateQueries({ queryKey: ["crm-organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
       toast({ title: "Lead convertito in organizzazione", description: newClient.company_name });
     },
     onError: (error) => showErrorToast(error, "CRMLeads.convertToOrg"),

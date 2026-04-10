@@ -113,13 +113,18 @@ const CRMDeals = () => {
     enabled: !!detailDeal?.client_id,
   });
 
-  // Detail: activities for this deal
+  // Detail: activities for this deal (search by deal_id OR linked lead_id)
   const { data: detailActivities } = useQuery({
-    queryKey: ["crm-deal-activities", detailDeal?.id],
+    queryKey: ["crm-deal-activities", detailDeal?.id, detailDeal?.lead_id],
     queryFn: async () => {
       if (!detailDeal?.id) return [];
-      const { data } = await supabase.from("activities").select("id, title, type, scheduled_at, completed_at, created_at").eq("lead_id", detailDeal.id).order("created_at", { ascending: false });
-      // Also check if deal_id concept exists in tasks
+      const filters = [`deal_id.eq.${detailDeal.id}`];
+      if (detailDeal.lead_id) filters.push(`lead_id.eq.${detailDeal.lead_id}`);
+      const { data } = await supabase
+        .from("activities")
+        .select("id, title, type, scheduled_at, completed_at, created_at")
+        .or(filters.join(","))
+        .order("created_at", { ascending: false });
       return data || [];
     },
     enabled: !!detailDeal?.id,

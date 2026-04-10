@@ -81,14 +81,26 @@ const DealerCatalog = () => {
   const { data: myPriceListItems, isLoading: loadingPriceList } = useQuery({
     queryKey: ["my-price-list-items", client?.id],
     queryFn: async () => {
-      const { data: assignments } = await supabase
+      // Prefer the primary price list; fall back to all assigned lists
+      const { data: primaryAssignment } = await supabase
         .from("price_list_clients")
         .select("price_list_id")
-        .eq("client_id", client!.id);
+        .eq("client_id", client!.id)
+        .eq("is_primary", true)
+        .maybeSingle();
 
-      if (!assignments?.length) return [];
+      let plIds: string[];
+      if (primaryAssignment) {
+        plIds = [primaryAssignment.price_list_id];
+      } else {
+        const { data: allAssignments } = await supabase
+          .from("price_list_clients")
+          .select("price_list_id")
+          .eq("client_id", client!.id);
+        if (!allAssignments?.length) return [];
+        plIds = allAssignments.map(a => a.price_list_id);
+      }
 
-      const plIds = assignments.map(a => a.price_list_id);
       const { data: items, error } = await supabase
         .from("price_list_items")
         .select("*, products!inner(*)")
