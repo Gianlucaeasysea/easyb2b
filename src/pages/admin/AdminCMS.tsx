@@ -136,7 +136,10 @@ const AdminCMS = () => {
   };
 
   const handleSave = () => {
-    if (!form.video_url) return toast.error("Video URL obbligatorio");
+    if (!form.video_url) {
+      toast.error("Video URL obbligatorio");
+      return;
+    }
     saveMutation.mutate({ ...form, id: editing?.id, sort_order: editing?.sort_order });
   };
 

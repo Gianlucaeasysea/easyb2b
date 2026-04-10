@@ -59,7 +59,7 @@ const GmailOAuthPopup = () => {
       );
 
       window.setTimeout(() => window.close(), 300);
-      return;
+      return undefined;
     }
 
     // No code — preload Google Identity Services script

@@ -45,7 +45,7 @@ const AnimatedCount = ({ value }: { value: number }) => {
   const prev = useRef(value);
 
   useEffect(() => {
-    if (prev.current === value) return;
+    if (prev.current === value) return undefined;
     const from = prev.current;
     const diff = value - from;
     const steps = Math.min(Math.abs(diff), 12);

@@ -10,7 +10,7 @@ export function useNewOrderNotifications() {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) return undefined;
     const channel = supabase
       .channel(`admin-new-orders-${user.id}`)
       .on(

@@ -45,7 +45,7 @@ const PortalHeader = () => {
 
   // Real-time subscription for new notifications
   useEffect(() => {
-    if (!client?.id) return;
+    if (!client?.id) return undefined;
 
     const channel = supabase
       .channel(`dealer-notifications-${client.id}`)
