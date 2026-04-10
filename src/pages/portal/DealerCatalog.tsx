@@ -557,10 +557,10 @@ const DealerCatalog = () => {
                     </>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       {/* Product Detail Modal */}
