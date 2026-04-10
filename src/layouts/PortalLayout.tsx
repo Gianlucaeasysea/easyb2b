@@ -13,6 +13,8 @@ import { CartProvider } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import logo from "@/assets/white_logo.png";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { PortalPageTransition } from "@/components/portal/ui/PortalPageTransition";
+import { motion, AnimatePresence } from "framer-motion";
 
 const PortalHeader = () => {
   const { signOut, user } = useAuth();
@@ -43,7 +45,6 @@ const PortalHeader = () => {
     refetchInterval: 30000,
   });
 
-  // Real-time subscription for new notifications
   useEffect(() => {
     if (!client?.id) return undefined;
 
@@ -59,10 +60,8 @@ const PortalHeader = () => {
         },
         (payload) => {
           const n = payload.new as { title?: string; body?: string };
-          // Refresh counts and notification list
           queryClient.invalidateQueries({ queryKey: ["unread-notifications-count"] });
           queryClient.invalidateQueries({ queryKey: ["client-notifications"] });
-          // Show toast
           toast(n.title || "Nuova notifica", {
             description: n.body ? (n.body.length > 80 ? n.body.substring(0, 80) + "…" : n.body) : undefined,
           });
@@ -91,11 +90,20 @@ const PortalHeader = () => {
           onClick={() => navigate("/portal/notifications")}
         >
           <Bell size={18} />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
-              {displayCount}
-            </span>
-          )}
+          <AnimatePresence>
+            {unreadCount > 0 && (
+              <motion.span
+                key={unreadCount}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold"
+              >
+                {displayCount}
+              </motion.span>
+            )}
+          </AnimatePresence>
         </Button>
         <span className="text-[11px] text-muted-foreground hidden sm:block ml-1 font-heading">{user?.email}</span>
         <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground hover:text-foreground">
@@ -171,7 +179,9 @@ const PortalLayout = () => {
               <main className="flex-1 p-6 overflow-auto">
                 <PortalBreadcrumbs />
                 <ErrorBoundary section="dealer portal">
-                  <Outlet />
+                  <PortalPageTransition>
+                    <Outlet />
+                  </PortalPageTransition>
                 </ErrorBoundary>
               </main>
             </div>
