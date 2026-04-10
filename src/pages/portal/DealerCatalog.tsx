@@ -537,7 +537,7 @@ const DealerCatalog = () => {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 shrink-0"
-                          disabled={!inStock}
+                          disabled={!inStock || !hasValidPrice}
                           onClick={(e) => {
                             e.stopPropagation();
                             const curr = quantities[p.id] || 1;
@@ -558,13 +558,13 @@ const DealerCatalog = () => {
                           }}
                           onClick={(e) => e.stopPropagation()}
                           className="w-14 text-center h-8 text-sm"
-                          disabled={!inStock}
+                          disabled={!inStock || !hasValidPrice}
                         />
                         <Button
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 shrink-0"
-                          disabled={!inStock || (quantities[p.id] || 1) >= (p.stock_quantity ?? 999)}
+                          disabled={!inStock || !hasValidPrice || (quantities[p.id] || 1) >= (p.stock_quantity ?? 999)}
                           onClick={(e) => {
                             e.stopPropagation();
                             const curr = quantities[p.id] || 1;
@@ -574,7 +574,7 @@ const DealerCatalog = () => {
                           <Plus size={12} />
                         </Button>
                         <motion.button
-                          disabled={!inStock}
+                          disabled={!inStock || !hasValidPrice}
                           className={`flex-1 rounded-lg gap-1.5 font-heading font-semibold text-xs h-8 flex items-center justify-center px-3 transition-colors ${
                             isJustAdded
                               ? 'bg-success text-success-foreground'
