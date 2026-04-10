@@ -221,7 +221,7 @@ const DealerCart = () => {
           const outOfStock = item.stock <= 0;
 
           return (
-            <div key={item.productId} className="glass-card-solid p-4 flex items-center gap-4">
+            <div key={item.productId} data-testid="cart-item" className="glass-card-solid p-4 flex items-center gap-4">
               <div className="w-16 h-16 bg-secondary rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                 {item.image ? (
                   <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
@@ -249,7 +249,7 @@ const DealerCart = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity - 1)}><Minus size={14} /></Button>
-                <Input type="number" min={1} max={item.stock} value={item.quantity} onChange={e => updateQuantity(item.productId, parseInt(e.target.value) || 1)} className="w-16 text-center h-8 text-sm" />
+                <Input data-testid="cart-item-quantity" type="number" min={1} max={item.stock} value={item.quantity} onChange={e => updateQuantity(item.productId, parseInt(e.target.value) || 1)} className="w-16 text-center h-8 text-sm" />
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock}><Plus size={14} /></Button>
               </div>
               <p className="font-heading font-bold text-foreground w-24 text-right">€{(item.b2bPrice * item.quantity).toFixed(2)}</p>
@@ -277,7 +277,7 @@ const DealerCart = () => {
           <div className="border-t border-border pt-3 mb-2">
             <div className="flex justify-between items-center mb-1">
               <span className="text-sm text-muted-foreground">Products subtotal</span>
-              <span className="font-heading font-semibold text-foreground">€{totalAmount.toFixed(2)}</span>
+              <span data-testid="cart-subtotal" className="font-heading font-semibold text-foreground">€{totalAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center mb-1">
               <span className="text-sm text-muted-foreground">Shipping</span>

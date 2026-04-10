@@ -96,7 +96,7 @@ const DealerOrders = () => {
             onDeleteDraft={(o) => setConfirmDeleteDraft(o)}
           />
 
-          <div className="space-y-4">
+          <div className="space-y-4" data-testid="orders-list">
             {pageData.map((order) => (
               <OrderCard
                 key={order.id}

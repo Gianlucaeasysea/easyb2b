@@ -381,7 +381,7 @@ const CRMLeads = () => {
           <p className="text-muted-foreground">No leads found.</p>
         </div>
       ) : viewMode === "list" ? (
-        <div className="glass-card-solid overflow-hidden">
+        <div data-testid="leads-list" className="glass-card-solid overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -398,7 +398,7 @@ const CRMLeads = () => {
             </TableHeader>
             <TableBody>
               {pageLeads.map(l => (
-                <TableRow key={l.id} className="cursor-pointer">
+                <TableRow key={l.id} data-testid="lead-row" className="cursor-pointer">
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggleSelect(l.id)} />
                   </TableCell>
