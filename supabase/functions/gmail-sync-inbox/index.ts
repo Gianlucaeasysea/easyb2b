@@ -103,7 +103,8 @@ Deno.serve(async (req) => {
   try {
     accessToken = await refreshTokenIfNeeded(supabase, tokenRow)
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: 'Token refresh failed', details: err.message, needs_auth: true }), {
+    console.error('Token refresh failed:', err)
+    return new Response(JSON.stringify({ error: 'Token refresh failed', needs_auth: true }), {
       status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
