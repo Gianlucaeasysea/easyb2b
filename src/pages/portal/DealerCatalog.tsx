@@ -542,17 +542,26 @@ const DealerCatalog = () => {
                         >
                           <Plus size={12} />
                         </Button>
-                        <Button
+                        <motion.button
                           disabled={!inStock}
-                          size="sm"
-                          className="flex-1 rounded-lg bg-foreground text-background hover:bg-foreground/90 gap-1.5 font-heading font-semibold text-xs h-8"
+                          className={`flex-1 rounded-lg gap-1.5 font-heading font-semibold text-xs h-8 flex items-center justify-center px-3 transition-colors ${
+                            isJustAdded
+                              ? 'bg-success text-success-foreground'
+                              : 'bg-foreground text-background hover:bg-foreground/90'
+                          }`}
+                          animate={isJustAdded ? { scale: [1, 1.08, 1] } : {}}
+                          whileTap={{ scale: 0.96 }}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAddToCart(p);
                           }}
                         >
-                          <ShoppingCart size={12} /> Add
-                        </Button>
+                          {isJustAdded ? (
+                            <><Check size={12} /> Added!</>
+                          ) : (
+                            <><ShoppingCart size={12} /> Add</>
+                          )}
+                        </motion.button>
                       </div>
                     </>
                   )}
