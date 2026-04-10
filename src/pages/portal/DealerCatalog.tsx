@@ -618,10 +618,10 @@ const DealerCatalog = () => {
           retailPrice={selectedRetailPrice}
           discountPct={selectedDiscountPct}
           isClientMode={isClientMode}
-          canAddToCart={selectedHasPrice && (selectedProduct?.stock_quantity ?? 0) > 0}
+          canAddToCart={selectedHasValidPrice && (selectedProduct?.stock_quantity === null || (selectedProduct?.stock_quantity ?? 0) > 0)}
           onAddToCart={() => {
-            if (!selectedHasPrice) {
-              toast.error("Cannot add: price not available");
+            if (!selectedHasValidPrice) {
+              toast.error("Cannot add: no valid B2B price");
               return;
             }
             handleAddToCart(selectedProduct);
