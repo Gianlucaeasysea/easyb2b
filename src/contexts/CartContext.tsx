@@ -63,6 +63,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
   const initializedForUser = useRef<string | null>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const latestItemsRef = useRef<CartItem[]>([]);
 
   // Load & validate cart when user changes
   useEffect(() => {
@@ -130,18 +132,41 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     validate();
   }, [user?.id]);
 
-  // Persist to localStorage on every change (after init)
+  // Flush pending save on unmount
+  useEffect(() => {
+    return () => {
+      if (saveDebounceRef.current && user?.id) {
+        clearTimeout(saveDebounceRef.current);
+        try { localStorage.setItem(getCartKey(user.id), JSON.stringify(latestItemsRef.current)); } catch {}
+      }
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    latestItemsRef.current = items;
+  }, [items]);
+
+  // Debounced persist to localStorage (after init)
   useEffect(() => {
     if (!user?.id || initializedForUser.current !== user.id) return;
 
-    saveCartToStorage(user.id, items);
+    // Cancel previous debounce
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
 
-    // Show saved indicator briefly
-    if (items.length > 0) {
-      setShowSavedIndicator(true);
-      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
-      savedTimerRef.current = setTimeout(() => setShowSavedIndicator(false), 1500);
-    }
+    saveDebounceRef.current = setTimeout(() => {
+      saveCartToStorage(user.id, items);
+
+      // Show saved indicator briefly
+      if (items.length > 0) {
+        setShowSavedIndicator(true);
+        if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+        savedTimerRef.current = setTimeout(() => setShowSavedIndicator(false), 1500);
+      }
+    }, 500);
+
+    return () => {
+      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    };
   }, [items, user?.id]);
 
   const addItem = useCallback((newItem: Omit<CartItem, "quantity"> & { quantity?: number }) => {
@@ -179,6 +204,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const clearCart = useCallback(() => {
+    // Cancel any pending debounced save
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
     setItems([]);
     if (user?.id) {
       saveCartToStorage(user.id, []);
