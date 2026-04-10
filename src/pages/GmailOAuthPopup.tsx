@@ -87,8 +87,9 @@ const GmailOAuthPopup = () => {
     // Build the redirect URI pointing back to this same page
     const redirectUri = window.location.origin + window.location.pathname;
 
-    // Encode targetOrigin in state so we can recover it on return
-    const stateValue = JSON.stringify({ targetOrigin });
+    // Encode targetOrigin and oauthState in state so we can recover them on return
+    const oauthState = searchParams.get("oauthState") || "";
+    const stateValue = JSON.stringify({ targetOrigin, oauthState });
 
     try {
       const gw = window as Window & { google?: any };
