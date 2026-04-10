@@ -22,7 +22,7 @@ const safeFormat = (dateStr: string | null | undefined, fmt: string) => {
 };
 import {
   Phone, Mail, MessageCircle, StickyNote, Video,
-  Plus, Check, Clock, User, Building, MapPin, Globe,
+  Plus, Check, User, Building, MapPin, Globe,
   Edit2, Save, X, Trash2,
 } from "lucide-react";
 

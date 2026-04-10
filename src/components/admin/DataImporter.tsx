@@ -11,11 +11,6 @@ import { showErrorToast } from "@/lib/errorHandler";
 
 type ImportType = "clients" | "orders";
 
-interface _FieldMapping {
-  fileColumn: string;
-  platformField: string;
-}
-
 const CLIENT_FIELDS = [
   { key: "company_name", label: "Business Name", required: true, aliases: ["business", "ragione sociale", "company", "azienda"] },
   { key: "business_type", label: "Type", required: false, aliases: ["type", "tipo", "business type"] },
