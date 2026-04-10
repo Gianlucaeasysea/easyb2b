@@ -10,7 +10,7 @@ interface Props {
   isImporting: boolean;
 }
 
-export function ImportValidationReport({ result, totalRows, onConfirm, onCancel, isImporting }: Props) {
+export function ImportValidationReport({ result, onConfirm, onCancel, isImporting }: Props) {
   const hasErrors = result.errors.length > 0;
   const hasWarnings = result.warnings.length > 0;
   const canImport = result.valid.length > 0;
