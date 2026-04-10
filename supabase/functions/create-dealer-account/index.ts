@@ -175,10 +175,11 @@ async function sendCredentialsEmail(supabaseAdmin: any, email: string, password:
     }
   }
 
-  const subject = "EasySea — Your Dealer Portal Credentials";
+  const subject = "EasySea - Your Dealer Portal Credentials";
   const body = `Welcome to the EasySea Dealer Portal!\n\nYour account has been created. Here are your login credentials:\n\nEmail: ${email}\nPassword: ${password}\n\nLogin here: ${portalUrl}\n\nPlease change your password after your first login.\n\nBest regards,\nThe EasySea Team`;
 
-  const rawMessage = `From: EasySea <business@easysea.org>\r\nTo: ${email}\r\nBcc: g.scotto@easysea.org\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
+  const encodedSubject = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`;
+  const rawMessage = `From: EasySea <business@easysea.org>\r\nTo: ${email}\r\nBcc: g.scotto@easysea.org\r\nSubject: ${encodedSubject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
   const encoded = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
   const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
