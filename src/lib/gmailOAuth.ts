@@ -8,6 +8,7 @@ type GmailOAuthPopupMessage =
       type: "success";
       code: string;
       redirectUri: string;
+      state?: string;
     }
   | {
       source: "gmail-oauth-popup";
