@@ -50,7 +50,7 @@ const getProductFamily = (name: string): string | null => {
 
 const DealerCatalog = () => {
   const { user } = useAuth();
-  const { isClientMode } = useClientMode();
+  const { isClientMode, toggleClientMode } = useClientMode();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { addItem, totalItems } = useCart();
