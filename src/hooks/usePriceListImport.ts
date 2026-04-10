@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { validateImportRows, normalizePrice as normalizePriceUtil, type ParsedImportRow, type ValidationResult } from "@/lib/priceListImportValidator";
+import { validateImportRows, type ParsedImportRow, type ValidationResult } from "@/lib/priceListImportValidator";
 
 export interface ParsedRow {
   [key: string]: any;
