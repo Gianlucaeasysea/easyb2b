@@ -63,7 +63,9 @@ async function refreshAccessToken(
 }
 
 async function sendGmail(accessToken: string, fromEmail: string, fromName: string, to: string, subject: string, body: string) {
-  const rawMessage = `From: ${fromName} <${fromEmail}>\r\nTo: ${to}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
+  // RFC 2047 encode subject for UTF-8 safety
+  const encodedSubject = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`;
+  const rawMessage = `From: ${fromName} <${fromEmail}>\r\nTo: ${to}\r\nSubject: ${encodedSubject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
   const encodedMessage = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
   const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
