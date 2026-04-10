@@ -344,10 +344,11 @@ const DealerCatalog = () => {
           {filtered.map((p, i) => {
             const plEntry = priceListProductMap.get(p.id);
             const b2bPrice = plEntry?.customPrice ?? 0;
+            const hasValidPrice = b2bPrice != null && b2bPrice > 0;
             const retailPrice = Number(p.compare_at_price || p.price || 0);
-            const discountPct = retailPrice > 0 && b2bPrice < retailPrice
+            const discountPct = hasValidPrice && retailPrice > 0 && b2bPrice < retailPrice
               ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
-            const inStock = (p.stock_quantity ?? 0) > 0;
+            const inStock = p.stock_quantity === null || p.stock_quantity > 0;
             const detail = getDetailForProduct(p);
             const leadTime = (detail as any)?.lead_time;
 
@@ -427,13 +428,14 @@ const DealerCatalog = () => {
                       setQuantities(prev => ({ ...prev, [p.id]: val }));
                     }}
                     className="w-14 text-center h-8 text-sm"
-                    disabled={!inStock}
+                    disabled={!inStock || !hasValidPrice}
                   />
                   <Button
-                    disabled={!inStock}
+                    disabled={!inStock || !hasValidPrice}
                     size="sm"
                     className="rounded-lg bg-foreground text-background hover:bg-foreground/90 font-heading font-semibold text-xs h-8 px-3"
                     onClick={() => handleAddToCart(p)}
+                    title={!hasValidPrice ? 'No valid price in your price list' : undefined}
                   >
                     <ShoppingCart size={12} />
                   </Button>
