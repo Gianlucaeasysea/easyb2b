@@ -148,11 +148,11 @@ async function sendCredentialsEmail(supabaseAdmin: any, email: string, password:
     return;
   }
 
-  let accessToken = tokenData.access_token;
-  if (new Date(tokenData.expires_at) < new Date()) {
-    const clientId = Deno.env.get("GOOGLE_CLIENT_ID") || Deno.env.get("CLIENTI_ID") || "";
-    const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET") || Deno.env.get("CLIENT_SECRET") || "";
+  const clientId = Deno.env.get("GOOGLE_CLIENT_ID") || Deno.env.get("CLIENTI_ID") || "";
+  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET") || Deno.env.get("CLIENT_SECRET") || "";
 
+  async function refreshToken(): Promise<string | null> {
+    if (!clientId || !clientSecret) return null;
     const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -163,17 +163,26 @@ async function sendCredentialsEmail(supabaseAdmin: any, email: string, password:
         client_secret: clientSecret,
       }),
     });
-    const refreshData = await refreshRes.json();
-    if (refreshData.access_token) {
-      accessToken = refreshData.access_token;
+    const data = await refreshRes.json();
+    if (data.access_token) {
       await supabaseAdmin.from("gmail_tokens").update({
-        access_token: accessToken,
-        expires_at: new Date(Date.now() + (refreshData.expires_in || 3600) * 1000).toISOString(),
+        access_token: data.access_token,
+        expires_at: new Date(Date.now() + (data.expires_in || 3600) * 1000).toISOString(),
       }).eq("id", tokenData.id);
-    } else {
-      console.error("Gmail token refresh failed:", refreshData);
-      throw new Error("Gmail token refresh failed");
+      return data.access_token;
     }
+    console.error("Gmail token refresh failed:", JSON.stringify(data));
+    return null;
+  }
+
+  let accessToken = tokenData.access_token;
+  if (new Date(tokenData.expires_at) < new Date()) {
+    const refreshed = await refreshToken();
+    if (!refreshed) {
+      console.warn("Token refresh failed, skipping credentials email");
+      return;
+    }
+    accessToken = refreshed;
   }
 
   const subject = "EasySea - Your Dealer Portal Credentials";
@@ -183,18 +192,31 @@ async function sendCredentialsEmail(supabaseAdmin: any, email: string, password:
   const rawMessage = `From: EasySea <business@easysea.org>\r\nTo: ${email}\r\nBcc: g.scotto@easysea.org\r\nSubject: ${encodedSubject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
   const encoded = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
-  const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ raw: encoded }),
-  });
+  async function sendRaw(token: string): Promise<Response> {
+    return fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ raw: encoded }),
+    });
+  }
+
+  let gmailRes = await sendRaw(accessToken);
+  // Auto-retry on 401
+  if (gmailRes.status === 401) {
+    await gmailRes.text();
+    console.log("Gmail 401, refreshing token and retrying...");
+    const refreshed = await refreshToken();
+    if (refreshed) {
+      accessToken = refreshed;
+      gmailRes = await sendRaw(accessToken);
+    }
+  }
 
   if (!gmailRes.ok) {
     const errText = await gmailRes.text();
     console.error("Gmail API error sending credentials:", errText);
-    throw new Error(`Gmail API error: ${gmailRes.status}`);
+    // Don't throw - account was created successfully, just email failed
+  } else {
+    await gmailRes.json();
   }
 }
