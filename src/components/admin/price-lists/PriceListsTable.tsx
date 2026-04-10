@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Copy, ChevronRight, Package, Users, Tag, Eye } from "lucide-react";
+import { Pencil, Trash2, Copy, ChevronRight, Package, Users, Tag } from "lucide-react";
 
 interface PriceListsTableProps {
   priceLists: any[];
