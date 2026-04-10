@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { logger } from "@/lib/logger";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -24,7 +25,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`[ErrorBoundary:${this.props.section || "unknown"}]`, error, errorInfo);
+    logger.error(`ErrorBoundary:${this.props.section || "unknown"}`, error.message, { error, errorInfo });
   }
 
   handleReset = () => {

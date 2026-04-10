@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 /**
  * Extracts a user-friendly message from any error type.
@@ -25,6 +26,6 @@ function getErrorMessage(error: unknown): string {
  */
 export function showErrorToast(error: unknown, context: string): void {
   const message = getErrorMessage(error);
-  console.error(`[${context}]`, message);
+  logger.error(context, message, error);
   toast.error(message);
 }
