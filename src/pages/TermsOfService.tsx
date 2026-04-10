@@ -5,99 +5,99 @@ const TermsOfService = () => (
   <div className="min-h-screen bg-background">
     <div className="container mx-auto px-4 py-16 max-w-3xl">
       <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8">
-        <ArrowLeft size={16} /> Torna alla Home
+        <ArrowLeft size={16} /> Back to Home
       </Link>
-      <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-2">Termini e Condizioni di Servizio</h1>
-      <p className="text-sm text-muted-foreground mb-10">Ultimo aggiornamento: 9 Aprile 2026</p>
+      <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-2">Terms & Conditions of Service</h1>
+      <p className="text-sm text-muted-foreground mb-10">Last updated: April 9, 2026</p>
 
       <div className="prose prose-invert prose-sm max-w-none space-y-6 text-foreground/80">
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">1. Informazioni Generali</h2>
-          <p>Il presente sito web e la piattaforma B2B sono gestiti da:</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">1. General Information</h2>
+          <p>This website and the B2B platform are operated by:</p>
           <p>
-            <strong>Easysea Srl</strong> — Startup Innovativa<br />
-            Sede legale: Via Per Curnasco 52, 24127 Bergamo (BG), Italia<br />
-            P.IVA / C.F.: IT15126351004<br />
-            Capitale Sociale: € 13.781,28 i.v.<br />
+            <strong>Easysea Srl</strong> — Italian Innovative Startup<br />
+            Registered office: Via Per Curnasco 52, 24127 Bergamo (BG), Italy<br />
+            VAT / Tax ID: IT15126351004<br />
+            Share Capital: € 13,781.28 fully paid-in<br />
             Email: <strong>business@easysea.org</strong><br />
-            Sito web: <a href="https://easysea.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">easysea.org</a>
+            Website: <a href="https://easysea.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">easysea.org</a>
           </p>
-          <p>Easysea progetta e distribuisce accessori nautici innovativi a livello mondiale, tra cui il boat hook Jake™ e il winch handle pieghevole Flipper™.</p>
+          <p>Easysea designs and distributes innovative nautical accessories worldwide, including the boat hook Jake™ and the folding winch handle Flipper™.</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">2. Ambito di Applicazione</h2>
-          <p>I presenti Termini regolano l'accesso e l'utilizzo della piattaforma B2B di Easysea, inclusi il portale dealer, il catalogo prodotti, il sistema di ordini, il materiale marketing e tutti i servizi correlati. L'accesso alla piattaforma è riservato esclusivamente a operatori commerciali (B2B) preventivamente approvati da Easysea, quali negozi nautici, cantieri, charter company, distributori e rivenditori autorizzati.</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">2. Scope of Application</h2>
+          <p>These Terms govern access to and use of the Easysea B2B platform, including the dealer portal, product catalog, order system, marketing materials and all related services. Access to the platform is reserved exclusively for business operators (B2B) previously approved by Easysea, such as nautical shops, shipyards, charter companies, distributors and authorized resellers.</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">3. Registrazione e Account</h2>
+          <h2 className="font-heading text-xl font-bold text-foreground">3. Registration and Account</h2>
           <ul className="list-disc pl-6 space-y-1">
-            <li>L'accesso al portale dealer richiede la compilazione del modulo "Become a Dealer" e la successiva approvazione da parte di Easysea</li>
-            <li>Le credenziali di accesso (email e password) sono strettamente personali e non cedibili a terzi</li>
-            <li>L'utente è responsabile della riservatezza delle proprie credenziali e di ogni attività svolta tramite il proprio account</li>
-            <li>Easysea si riserva il diritto di sospendere o revocare l'accesso in caso di violazione dei presenti Termini, uso improprio della piattaforma o mancato rispetto degli accordi commerciali</li>
-            <li>L'utente è tenuto a comunicare tempestivamente eventuali variazioni dei propri dati aziendali (ragione sociale, P.IVA, sede, etc.)</li>
+            <li>Access to the dealer portal requires completing the "Become a Dealer" form and subsequent approval by Easysea</li>
+            <li>Login credentials (email and password) are strictly personal and non-transferable</li>
+            <li>The user is responsible for the confidentiality of their credentials and for all activities performed through their account</li>
+            <li>Easysea reserves the right to suspend or revoke access in case of violation of these Terms, improper use of the platform or failure to comply with commercial agreements</li>
+            <li>The user must promptly communicate any changes to their business data (company name, VAT number, registered office, etc.)</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">4. Ordini e Prezzi</h2>
+          <h2 className="font-heading text-xl font-bold text-foreground">4. Orders and Pricing</h2>
           <ul className="list-disc pl-6 space-y-1">
-            <li>I prezzi indicati sul portale sono prezzi B2B riservati ai dealer approvati, espressi al netto di IVA e spese di spedizione</li>
-            <li>A ciascun dealer può essere assegnata una classe di sconto e/o un listino personalizzato, visibile nel proprio portale</li>
-            <li>L'invio di un ordine tramite il portale costituisce una proposta d'acquisto vincolante da parte del dealer</li>
-            <li>Easysea si riserva il diritto di accettare o rifiutare ordini a propria discrezione, in base a disponibilità di magazzino, solvibilità del cliente e altri fattori commerciali</li>
-            <li>I prezzi possono essere soggetti a variazioni senza preavviso; fanno fede i prezzi visualizzati al momento della conferma dell'ordine</li>
-            <li>L'ordine minimo e le condizioni specifiche possono variare in base agli accordi individuali con ciascun dealer</li>
+            <li>Prices shown on the portal are B2B prices reserved for approved dealers, stated net of VAT and shipping costs</li>
+            <li>Each dealer may be assigned a discount class and/or a custom price list, visible in their portal</li>
+            <li>Submitting an order through the portal constitutes a binding purchase proposal by the dealer</li>
+            <li>Easysea reserves the right to accept or reject orders at its discretion, based on stock availability, customer creditworthiness and other commercial factors</li>
+            <li>Prices may be subject to change without notice; the prices displayed at the time of order confirmation shall prevail</li>
+            <li>Minimum order requirements and specific conditions may vary based on individual agreements with each dealer</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">5. Spedizioni e Consegne</h2>
-          <p>Le spedizioni vengono effettuate tramite corrieri selezionati da Easysea verso destinazioni nazionali e internazionali. I tempi di consegna indicati sono stimati e non vincolanti. Easysea non è responsabile per ritardi imputabili al vettore, alla dogana o a cause di forza maggiore. Il tracking della spedizione, ove disponibile, sarà comunicato al dealer tramite il portale e/o via email.</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">5. Shipping and Delivery</h2>
+          <p>Shipments are made through carriers selected by Easysea to domestic and international destinations. Indicated delivery times are estimates and not binding. Easysea is not responsible for delays attributable to the carrier, customs or force majeure events. Shipment tracking, where available, will be communicated to the dealer through the portal and/or via email.</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">6. Pagamenti</h2>
-          <p>Le condizioni di pagamento (bonifico anticipato, 30/60/90 giorni data fattura, etc.) sono stabilite nell'accordo commerciale individuale tra Easysea e il dealer. In caso di mancato pagamento entro i termini concordati, Easysea si riserva il diritto di:</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">6. Payments</h2>
+          <p>Payment terms (advance bank transfer, 30/60/90 days from invoice date, etc.) are established in the individual commercial agreement between Easysea and the dealer. In case of non-payment within the agreed terms, Easysea reserves the right to:</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li>Sospendere le forniture e l'accesso al portale dealer</li>
-            <li>Applicare interessi di mora secondo la normativa vigente (D.Lgs. 231/2002)</li>
-            <li>Affidare il recupero del credito a soggetti terzi</li>
+            <li>Suspend supplies and access to the dealer portal</li>
+            <li>Apply late payment interest in accordance with applicable legislation (Italian Legislative Decree 231/2002)</li>
+            <li>Assign debt recovery to third parties</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">7. Proprietà Intellettuale</h2>
-          <p>Tutti i contenuti del sito e della piattaforma (testi, immagini, loghi, marchi registrati — inclusi Jake™ e Flipper™ —, video, schede tecniche, materiale marketing, design dei prodotti) sono di proprietà esclusiva di Easysea Srl e sono protetti dalle leggi italiane, europee e internazionali sulla proprietà intellettuale. È vietata la riproduzione, distribuzione, modifica o utilizzo non autorizzato senza preventiva autorizzazione scritta di Easysea.</p>
-          <p>Il materiale marketing scaricabile dal portale dealer è concesso in licenza d'uso limitata alla promozione dei prodotti Easysea nel territorio concordato.</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">7. Intellectual Property</h2>
+          <p>All content on the website and platform (texts, images, logos, registered trademarks — including Jake™ and Flipper™ —, videos, technical sheets, marketing materials, product designs) are the exclusive property of Easysea Srl and are protected by Italian, European and international intellectual property laws. Reproduction, distribution, modification or unauthorized use is prohibited without prior written authorization from Easysea.</p>
+          <p>Marketing materials downloadable from the dealer portal are granted under a limited license for the promotion of Easysea products within the agreed territory.</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">8. Garanzia e Resi</h2>
-          <p>I prodotti Easysea sono coperti da garanzia legale di conformità ai sensi della normativa vigente. Eventuali difetti di conformità devono essere segnalati per iscritto a <strong>business@easysea.org</strong> entro 8 giorni dalla consegna. Le condizioni di reso sono regolate dagli accordi commerciali individuali.</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">8. Warranty and Returns</h2>
+          <p>Easysea products are covered by the legal warranty of conformity under applicable regulations. Any defects of conformity must be reported in writing to <strong>business@easysea.org</strong> within 8 days of delivery. Return conditions are governed by individual commercial agreements.</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">9. Limitazione di Responsabilità</h2>
-          <p>Easysea non garantisce la disponibilità ininterrotta della piattaforma e non sarà responsabile per danni diretti o indiretti derivanti dall'utilizzo o dall'impossibilità di utilizzo della stessa, inclusi danni da interruzione dell'attività commerciale, perdita di dati o mancato guadagno, salvo i casi di dolo o colpa grave previsti dalla legge.</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">9. Limitation of Liability</h2>
+          <p>Easysea does not guarantee uninterrupted availability of the platform and shall not be liable for direct or indirect damages arising from its use or inability to use it, including damages from business interruption, data loss or lost profits, except in cases of willful misconduct or gross negligence as provided by law.</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">10. Riservatezza</h2>
-          <p>Il dealer si impegna a mantenere riservati i prezzi, le condizioni commerciali, i listini e qualsiasi informazione riservata di cui venga a conoscenza tramite il portale. La violazione di tale obbligo può comportare la risoluzione immediata del rapporto commerciale.</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">10. Confidentiality</h2>
+          <p>The dealer undertakes to keep confidential all prices, commercial conditions, price lists and any proprietary information accessed through the portal. Violation of this obligation may result in immediate termination of the commercial relationship.</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">11. Legge Applicabile e Foro Competente</h2>
-          <p>I presenti Termini sono regolati dalla legge italiana. Per qualsiasi controversia derivante dall'interpretazione o esecuzione dei presenti Termini sarà competente in via esclusiva il Foro di Bergamo, Italia.</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">11. Governing Law and Jurisdiction</h2>
+          <p>These Terms are governed by Italian law. Any dispute arising from the interpretation or performance of these Terms shall be subject to the exclusive jurisdiction of the Court of Bergamo, Italy.</p>
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-bold text-foreground">12. Contatti</h2>
-          <p>Per qualsiasi domanda relativa ai presenti Termini:<br /><strong>business@easysea.org</strong></p>
-          <p>Easysea Srl — Via Per Curnasco 52, 24127 Bergamo (BG), Italia<br />P.IVA IT15126351004</p>
+          <h2 className="font-heading text-xl font-bold text-foreground">12. Contact</h2>
+          <p>For any questions regarding these Terms:<br /><strong>business@easysea.org</strong></p>
+          <p>Easysea Srl — Via Per Curnasco 52, 24127 Bergamo (BG), Italy<br />VAT IT15126351004</p>
         </section>
       </div>
     </div>
