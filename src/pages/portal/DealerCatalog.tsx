@@ -183,7 +183,7 @@ const DealerCatalog = () => {
   const selectedDetail = selectedProduct ? getDetailForProduct(selectedProduct) : null;
   const selectedPlEntry = selectedProduct ? priceListProductMap.get(selectedProduct.id) : null;
   const selectedRetailPrice = selectedProduct ? Number(selectedProduct.compare_at_price || selectedProduct.price) : 0;
-  const selectedHasPrice = !!selectedPlEntry;
+  
   const selectedB2bPrice = selectedPlEntry?.customPrice ?? 0;
   const selectedHasValidPrice = selectedB2bPrice > 0;
   const selectedDiscountPct = selectedHasValidPrice && selectedRetailPrice > 0 && selectedB2bPrice < selectedRetailPrice
