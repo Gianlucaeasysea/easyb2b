@@ -64,7 +64,7 @@ const DealerInvoices = () => {
   });
 
   const handleDownload = async (filePath: string, _fileName: string) => {
-    const { data, error } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 300);
+    const { data, error } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 3600);
     if (error || !data?.signedUrl) {
       toast.error("Error downloading document");
       return;

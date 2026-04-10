@@ -141,7 +141,7 @@ const OrderDocuments = ({ orderId, readOnly = false }: OrderDocumentsProps) => {
   };
 
   const handleDownload = async (filePath: string) => {
-    const { data } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 300);
+    const { data } = await supabase.storage.from("order-documents").createSignedUrl(filePath, 3600);
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   };
 
