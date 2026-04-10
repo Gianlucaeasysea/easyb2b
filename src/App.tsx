@@ -179,6 +179,7 @@ const App = () => (
               <Route path="tasks" element={<CRMTasks />} />
               <Route path="analytics" element={<CRMAnalytics />} />
               <Route path="automations" element={<CRMAutomations />} />
+              <Route path="price-lists" element={<AdminPriceLists />} />
               <Route path="help" element={<CRMHelp />} />
             </Route>
 
