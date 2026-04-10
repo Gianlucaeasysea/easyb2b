@@ -22,6 +22,7 @@ export type Database = {
           contact_id: string | null
           created_at: string
           created_by: string | null
+          deal_id: string | null
           id: string
           lead_id: string | null
           scheduled_at: string | null
@@ -35,6 +36,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          deal_id?: string | null
           id?: string
           lead_id?: string | null
           scheduled_at?: string | null
@@ -48,6 +50,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          deal_id?: string | null
           id?: string
           lead_id?: string | null
           scheduled_at?: string | null
@@ -67,6 +70,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "client_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
           {
@@ -1372,18 +1382,21 @@ export type Database = {
           client_id: string
           created_at: string
           id: string
+          is_primary: boolean
           price_list_id: string
         }
         Insert: {
           client_id: string
           created_at?: string
           id?: string
+          is_primary?: boolean
           price_list_id: string
         }
         Update: {
           client_id?: string
           created_at?: string
           id?: string
+          is_primary?: boolean
           price_list_id?: string
         }
         Relationships: [
