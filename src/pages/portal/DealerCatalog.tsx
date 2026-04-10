@@ -185,13 +185,17 @@ const DealerCatalog = () => {
   const selectedRetailPrice = selectedProduct ? Number(selectedProduct.compare_at_price || selectedProduct.price) : 0;
   const selectedHasPrice = !!selectedPlEntry;
   const selectedB2bPrice = selectedPlEntry?.customPrice ?? 0;
-  const selectedDiscountPct = selectedRetailPrice > 0 && selectedB2bPrice < selectedRetailPrice
+  const selectedHasValidPrice = selectedB2bPrice > 0;
+  const selectedDiscountPct = selectedHasValidPrice && selectedRetailPrice > 0 && selectedB2bPrice < selectedRetailPrice
     ? Math.round((1 - selectedB2bPrice / selectedRetailPrice) * 100)
     : 0;
 
   const handleAddToCart = (p: any) => {
     const plEntry = priceListProductMap.get(p.id);
-    if (!plEntry) return;
+    if (!plEntry || !plEntry.customPrice || plEntry.customPrice <= 0) {
+      toast.error("This product has no valid B2B price in your price list");
+      return;
+    }
     const b2bPrice = plEntry.customPrice;
     const retailPrice = Number(p.compare_at_price || p.price || 0);
     const discountPct = retailPrice > 0 && b2bPrice < retailPrice ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
