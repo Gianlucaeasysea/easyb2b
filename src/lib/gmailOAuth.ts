@@ -234,6 +234,7 @@ function requestGmailAuthorizationCodeFromPublishedBridge(loginHint: string) {
     const cleanup = () => {
       window.removeEventListener("message", handleMessage);
       window.clearInterval(closeWatcher);
+      sessionStorage.removeItem(OAUTH_STATE_KEY);
     };
 
     const handleMessage = (event: MessageEvent) => {
