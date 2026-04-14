@@ -137,8 +137,10 @@ const AdminPriceLists = () => {
     let totalDiscount = 0, count = 0, totalValue = 0;
     priceListItems.forEach(item => {
       const prod = products.find(p => p.id === item.product_id);
-      if (prod?.price && prod.price > 0) {
-        totalDiscount += (1 - item.custom_price / prod.price) * 100;
+      const grossPrice = prod?.price || 0;
+      const netPrice = grossPrice / 1.22; // scorporo IVA 22%
+      if (netPrice > 0) {
+        totalDiscount += (1 - item.custom_price / netPrice) * 100;
         count++;
       }
       totalValue += item.custom_price;

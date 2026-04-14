@@ -209,7 +209,8 @@ const DealerCatalog = () => {
       return;
     }
     const b2bPrice = plEntry.customPrice;
-    const retailPrice = Number(p.compare_at_price || p.price || 0);
+    const retailPriceGross = Number(p.compare_at_price || p.price || 0);
+    const retailPrice = retailPriceGross / 1.22; // scorporo IVA 22%
     const discountPct = retailPrice > 0 && b2bPrice < retailPrice ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
     const qty = quantities[p.id] || 1;
     addItem({
@@ -361,7 +362,8 @@ const DealerCatalog = () => {
             const plEntry = priceListProductMap.get(p.id);
             const b2bPrice = plEntry?.customPrice ?? 0;
             const hasValidPrice = b2bPrice != null && b2bPrice > 0;
-            const retailPrice = Number(p.compare_at_price || p.price || 0);
+            const retailPriceGross = Number(p.compare_at_price || p.price || 0);
+            const retailPrice = retailPriceGross / 1.22; // scorporo IVA 22%
             const discountPct = hasValidPrice && retailPrice > 0 && b2bPrice < retailPrice
               ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
             const inStock = p.stock_quantity === null || p.stock_quantity > 0;
@@ -472,7 +474,8 @@ const DealerCatalog = () => {
             const plEntry = priceListProductMap.get(p.id);
             const b2bPrice = plEntry?.customPrice ?? 0;
             const hasValidPrice = b2bPrice != null && b2bPrice > 0;
-            const retailPrice = Number(p.compare_at_price || p.price || 0);
+            const retailPriceGross = Number(p.compare_at_price || p.price || 0);
+            const retailPrice = retailPriceGross / 1.22; // scorporo IVA 22%
             const discountPct = hasValidPrice && retailPrice > 0 && b2bPrice < retailPrice
               ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
             const inStock = p.stock_quantity === null || p.stock_quantity > 0;

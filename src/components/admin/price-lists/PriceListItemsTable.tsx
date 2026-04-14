@@ -75,7 +75,8 @@ export default function PriceListItemsTable({
           <TableBody>
             {filteredItems.map(item => {
               const prod = products?.find(p => p.id === item.product_id);
-              const shopifyPrice = prod?.price || 0;
+              const shopifyPriceGross = prod?.price || 0;
+              const shopifyPrice = shopifyPriceGross / 1.22; // scorporo IVA 22%
               const discount = shopifyPrice > 0 ? Math.round((1 - item.custom_price / shopifyPrice) * 100) : 0;
               return (
                 <TableRow key={item.id}>
