@@ -60,6 +60,19 @@ export default function PriceListEditor({
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label>Regione</Label>
+            <Select
+              value={form.region || "EU"}
+              onValueChange={v => setForm(f => ({ ...f, region: v }))}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="EU">🇪🇺 EU (sconto su netto IVA)</SelectItem>
+                <SelectItem value="EXTRA_EU">🌍 Extra EU (sconto su prezzo lordo)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {isCreate && (
             <>
               <div>
