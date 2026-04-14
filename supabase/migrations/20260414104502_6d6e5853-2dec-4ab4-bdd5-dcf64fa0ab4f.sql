@@ -1,0 +1,1 @@
+ALTER TABLE public.price_lists ADD COLUMN region text NOT NULL DEFAULT 'EU';
