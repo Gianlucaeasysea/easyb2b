@@ -64,7 +64,7 @@ const CRMOrders = () => {
   };
 
   const { data: orders, isLoading } = useQuery({
-    queryKey: ["crm-orders"],
+    queryKey: ["crm-orders", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
