@@ -30,8 +30,8 @@ const AdminPriceLists = () => {
   const [showNewList, setShowNewList] = useState(false);
   const [showEditList, setShowEditList] = useState(false);
   const [tierForm, setTierForm] = useState({ name: "", label: "", discount_pct: 0, sort_order: 0 });
-  const [listForm, setListForm] = useState({ name: "", description: "", discount_tier_id: "", client_id: "", base_discount_pct: 0 });
-  const [editForm, setEditForm] = useState({ id: "", name: "", description: "", discount_tier_id: "" });
+  const [listForm, setListForm] = useState({ name: "", description: "", discount_tier_id: "", client_id: "", base_discount_pct: 0, region: "EU" });
+  const [editForm, setEditForm] = useState({ id: "", name: "", description: "", discount_tier_id: "", region: "EU" });
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [shopifySearch, setShopifySearch] = useState("");
   const [syncing, setSyncing] = useState(false);
@@ -134,19 +134,20 @@ const AdminPriceLists = () => {
 
   const activeListStats = useMemo(() => {
     if (!priceListItems || !products) return { avgDiscount: 0, totalValue: 0 };
+    const isEU = (activeList as any)?.region !== "EXTRA_EU";
     let totalDiscount = 0, count = 0, totalValue = 0;
     priceListItems.forEach(item => {
       const prod = products.find(p => p.id === item.product_id);
       const grossPrice = prod?.price || 0;
-      const netPrice = grossPrice / 1.22; // scorporo IVA 22%
-      if (netPrice > 0) {
-        totalDiscount += (1 - item.custom_price / netPrice) * 100;
+      const basePrice = isEU ? grossPrice / 1.22 : grossPrice;
+      if (basePrice > 0) {
+        totalDiscount += (1 - item.custom_price / basePrice) * 100;
         count++;
       }
       totalValue += item.custom_price;
     });
     return { avgDiscount: count > 0 ? Math.round(totalDiscount / count) : 0, totalValue };
-  }, [priceListItems, products]);
+  }, [priceListItems, products, activeList]);
 
   // ─── Shopify Sync ───
   const syncShopify = async () => {
@@ -200,7 +201,7 @@ const AdminPriceLists = () => {
 
   const createList = useMutation({
     mutationFn: async () => {
-      const payload: any = { name: listForm.name, description: listForm.description || null, discount_tier_id: listForm.discount_tier_id || null, client_id: listForm.client_id || null };
+      const payload: any = { name: listForm.name, description: listForm.description || null, discount_tier_id: listForm.discount_tier_id || null, client_id: listForm.client_id || null, region: listForm.region || "EU" };
       const { data, error } = await supabase.from("price_lists").insert(payload).select().single();
       if (error) throw error;
       if (listForm.client_id) {
@@ -229,7 +230,7 @@ const AdminPriceLists = () => {
         }
       }
       setShowNewList(false);
-      setListForm({ name: "", description: "", discount_tier_id: "", client_id: "", base_discount_pct: 0 });
+      setListForm({ name: "", description: "", discount_tier_id: "", client_id: "", base_discount_pct: 0, region: "EU" });
       setActiveListId(data.id);
       toast.success("Listino prezzi creato");
     },
@@ -239,7 +240,7 @@ const AdminPriceLists = () => {
   const updateList = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("price_lists").update({
-        name: editForm.name, description: editForm.description || null, discount_tier_id: editForm.discount_tier_id || null,
+        name: editForm.name, description: editForm.description || null, discount_tier_id: editForm.discount_tier_id || null, region: editForm.region || "EU",
       } as any).eq("id", editForm.id);
       if (error) throw error;
     },
@@ -270,7 +271,7 @@ const AdminPriceLists = () => {
   const duplicateList = async (pl: any) => {
     try {
       const { data: newList, error: listErr } = await supabase.from("price_lists").insert({
-        name: `${pl.name} (copia)`, description: pl.description || null, discount_tier_id: pl.discount_tier_id || null,
+        name: `${pl.name} (copia)`, description: pl.description || null, discount_tier_id: pl.discount_tier_id || null, region: (pl as any).region || "EU",
       } as any).select().single();
       if (listErr) throw listErr;
       const { data: items } = await supabase.from("price_list_items").select("*").eq("price_list_id", pl.id);
@@ -484,7 +485,7 @@ const AdminPriceLists = () => {
             onSelect={(id) => { setActiveListId(id); setSelectedProducts(new Set()); setActiveTab("items"); }}
             onDuplicate={duplicateList}
             onEdit={(pl) => {
-              setEditForm({ id: pl.id, name: pl.name, description: pl.description || "", discount_tier_id: pl.discount_tier_id || "" });
+              setEditForm({ id: pl.id, name: pl.name, description: pl.description || "", discount_tier_id: pl.discount_tier_id || "", region: (pl as any).region || "EU" });
               setShowEditList(true);
             }}
             onDelete={(id) => deleteList.mutate(id)}
@@ -569,6 +570,7 @@ const AdminPriceLists = () => {
                       bulkDiscount={bulkDiscount}
                       onBulkDiscountChange={setBulkDiscount}
                       onApplyBulkDiscount={applyBulkDiscount}
+                      region={(activeList as any)?.region || "EU"}
                     />
                   </TabsContent>
 

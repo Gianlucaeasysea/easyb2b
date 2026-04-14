@@ -15,11 +15,12 @@ interface PriceListItemsTableProps {
   bulkDiscount: string;
   onBulkDiscountChange: (val: string) => void;
   onApplyBulkDiscount: () => void;
+  region?: string;
 }
 
 export default function PriceListItemsTable({
   items, products, onUpdatePrice, onRemoveItem, onSwitchToAdd,
-  bulkDiscount, onBulkDiscountChange, onApplyBulkDiscount,
+  bulkDiscount, onBulkDiscountChange, onApplyBulkDiscount, region,
 }: PriceListItemsTableProps) {
   const [itemSearch, setItemSearch] = useState("");
 
@@ -76,7 +77,8 @@ export default function PriceListItemsTable({
             {filteredItems.map(item => {
               const prod = products?.find(p => p.id === item.product_id);
               const shopifyPriceGross = prod?.price || 0;
-              const shopifyPrice = shopifyPriceGross / 1.22; // scorporo IVA 22%
+              const isEU = region !== "EXTRA_EU";
+              const shopifyPrice = isEU ? shopifyPriceGross / 1.22 : shopifyPriceGross;
               const discount = shopifyPrice > 0 ? Math.round((1 - item.custom_price / shopifyPrice) * 100) : 0;
               return (
                 <TableRow key={item.id}>

@@ -1460,6 +1460,7 @@ export type Database = {
           discount_tier_id: string | null
           id: string
           name: string
+          region: string
           updated_at: string
         }
         Insert: {
@@ -1469,6 +1470,7 @@ export type Database = {
           discount_tier_id?: string | null
           id?: string
           name: string
+          region?: string
           updated_at?: string
         }
         Update: {
@@ -1478,6 +1480,7 @@ export type Database = {
           discount_tier_id?: string | null
           id?: string
           name?: string
+          region?: string
           updated_at?: string
         }
         Relationships: [

@@ -78,7 +78,7 @@ const DealerCatalog = () => {
   });
 
   // Get price lists assigned to this client via junction table
-  const { data: myPriceListItems, isLoading: loadingPriceList } = useQuery({
+  const { data: myPriceListData, isLoading: loadingPriceList } = useQuery({
     queryKey: ["my-price-list-items", client?.id],
     queryFn: async () => {
       // Prefer the primary price list; fall back to all assigned lists
@@ -97,9 +97,17 @@ const DealerCatalog = () => {
           .from("price_list_clients")
           .select("price_list_id")
           .eq("client_id", client!.id);
-        if (!allAssignments?.length) return [];
+        if (!allAssignments?.length) return { items: [], region: "EU" };
         plIds = allAssignments.map(a => a.price_list_id);
       }
+
+      // Fetch price list metadata to get region
+      const { data: plMeta } = await supabase
+        .from("price_lists")
+        .select("id, region")
+        .in("id", plIds)
+        .limit(1)
+        .maybeSingle();
 
       const { data: items, error } = await supabase
         .from("price_list_items")
@@ -108,10 +116,15 @@ const DealerCatalog = () => {
 
       if (error) throw error;
       // Only keep items where the product exists and is active for B2B
-      return (items || []).filter((item: any) => item.products && item.products.active_b2b === true);
+      const filtered = (items || []).filter((item: any) => item.products && item.products.active_b2b === true);
+      return { items: filtered, region: (plMeta as any)?.region || "EU" };
     },
     enabled: !!client?.id,
   });
+
+  const myPriceListItems = myPriceListData?.items;
+  const isEU = (myPriceListData?.region || "EU") !== "EXTRA_EU";
+  const getBasePrice = (grossPrice: number) => isEU ? grossPrice / 1.22 : grossPrice;
 
   // Fetch product details for enrichment
   const { data: productDetails } = useQuery({
@@ -195,7 +208,7 @@ const DealerCatalog = () => {
   const selectedDetail = selectedProduct ? getDetailForProduct(selectedProduct) : null;
   const selectedPlEntry = selectedProduct ? priceListProductMap.get(selectedProduct.id) : null;
   const selectedRetailPriceGross = selectedProduct ? Number(selectedProduct.compare_at_price || selectedProduct.price) : 0;
-  const selectedRetailPrice = selectedRetailPriceGross / 1.22; // scorporo IVA 22%
+  const selectedRetailPrice = getBasePrice(selectedRetailPriceGross);
   
   const selectedB2bPrice = selectedPlEntry?.customPrice ?? 0;
   const selectedHasValidPrice = selectedB2bPrice > 0;
@@ -211,7 +224,7 @@ const DealerCatalog = () => {
     }
     const b2bPrice = plEntry.customPrice;
     const retailPriceGross = Number(p.compare_at_price || p.price || 0);
-    const retailPrice = retailPriceGross / 1.22; // scorporo IVA 22%
+    const retailPrice = getBasePrice(retailPriceGross);
     const discountPct = retailPrice > 0 && b2bPrice < retailPrice ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
     const qty = quantities[p.id] || 1;
     addItem({
@@ -364,7 +377,7 @@ const DealerCatalog = () => {
             const b2bPrice = plEntry?.customPrice ?? 0;
             const hasValidPrice = b2bPrice != null && b2bPrice > 0;
             const retailPriceGross = Number(p.compare_at_price || p.price || 0);
-            const retailPrice = retailPriceGross / 1.22; // scorporo IVA 22%
+            const retailPrice = getBasePrice(retailPriceGross);
             const discountPct = hasValidPrice && retailPrice > 0 && b2bPrice < retailPrice
               ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
             const inStock = p.stock_quantity === null || p.stock_quantity > 0;
@@ -476,7 +489,7 @@ const DealerCatalog = () => {
             const b2bPrice = plEntry?.customPrice ?? 0;
             const hasValidPrice = b2bPrice != null && b2bPrice > 0;
             const retailPriceGross = Number(p.compare_at_price || p.price || 0);
-            const retailPrice = retailPriceGross / 1.22; // scorporo IVA 22%
+            const retailPrice = getBasePrice(retailPriceGross);
             const discountPct = hasValidPrice && retailPrice > 0 && b2bPrice < retailPrice
               ? Math.round((1 - b2bPrice / retailPrice) * 100) : 0;
             const inStock = p.stock_quantity === null || p.stock_quantity > 0;
