@@ -123,8 +123,8 @@ const DealerCatalog = () => {
   });
 
   const myPriceListItems = myPriceListData?.items;
-  const priceListRegion = myPriceListData?.region || "EU";
-  const getBasePrice = (grossPrice: number) => isEUPriceList ? grossPrice / 1.22 : grossPrice;
+  const isEU = (myPriceListData?.region || "EU") !== "EXTRA_EU";
+  const getBasePrice = (grossPrice: number) => isEU ? grossPrice / 1.22 : grossPrice;
 
   // Fetch product details for enrichment
   const { data: productDetails } = useQuery({
