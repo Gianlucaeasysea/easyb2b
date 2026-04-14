@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { TablePagination } from "@/components/ui/TablePagination";
-import { Clock, Truck, CheckCircle, Search, ShoppingBag, Plus } from "lucide-react";
+import { Clock, Truck, CheckCircle, Search, ShoppingBag, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 
@@ -42,6 +42,26 @@ const CRMOrders = () => {
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("gsheet-sync", {
+        body: { source: "manual" },
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["crm-orders"] });
+      toast.success(
+        `Sync completata: ${data?.newOrders ?? 0} nuovi, ${data?.updatedOrders ?? 0} aggiornati`
+      );
+    } catch (err: any) {
+      console.error("Sync error:", err);
+      toast.error("Errore durante la sincronizzazione");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["crm-orders", user?.id],
@@ -130,9 +150,15 @@ const CRMOrders = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl font-bold text-foreground">Orders</h1>
-        <Button onClick={() => navigate("/crm/orders/new")}>
-          <Plus className="h-4 w-4 mr-1" /> Create Order
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleSync} disabled={syncing}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing..." : "Sync Sheet"}
+          </Button>
+          <Button onClick={() => navigate("/crm/orders/new")}>
+            <Plus className="h-4 w-4 mr-1" /> Create Order
+          </Button>
+        </div>
       </div>
 
       {/* Summary cards */}
