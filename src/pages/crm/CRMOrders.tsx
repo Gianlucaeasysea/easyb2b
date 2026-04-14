@@ -150,9 +150,15 @@ const CRMOrders = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl font-bold text-foreground">Orders</h1>
-        <Button onClick={() => navigate("/crm/orders/new")}>
-          <Plus className="h-4 w-4 mr-1" /> Create Order
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleSync} disabled={syncing}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing..." : "Sync Sheet"}
+          </Button>
+          <Button onClick={() => navigate("/crm/orders/new")}>
+            <Plus className="h-4 w-4 mr-1" /> Create Order
+          </Button>
+        </div>
       </div>
 
       {/* Summary cards */}
