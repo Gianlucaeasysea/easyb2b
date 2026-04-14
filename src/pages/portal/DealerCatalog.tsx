@@ -78,7 +78,7 @@ const DealerCatalog = () => {
   });
 
   // Get price lists assigned to this client via junction table
-  const { data: myPriceListItems, isLoading: loadingPriceList } = useQuery({
+  const { data: myPriceListData, isLoading: loadingPriceList } = useQuery({
     queryKey: ["my-price-list-items", client?.id],
     queryFn: async () => {
       // Prefer the primary price list; fall back to all assigned lists
@@ -97,9 +97,17 @@ const DealerCatalog = () => {
           .from("price_list_clients")
           .select("price_list_id")
           .eq("client_id", client!.id);
-        if (!allAssignments?.length) return [];
+        if (!allAssignments?.length) return { items: [], region: "EU" };
         plIds = allAssignments.map(a => a.price_list_id);
       }
+
+      // Fetch price list metadata to get region
+      const { data: plMeta } = await supabase
+        .from("price_lists")
+        .select("id, region")
+        .in("id", plIds)
+        .limit(1)
+        .maybeSingle();
 
       const { data: items, error } = await supabase
         .from("price_list_items")
@@ -108,10 +116,15 @@ const DealerCatalog = () => {
 
       if (error) throw error;
       // Only keep items where the product exists and is active for B2B
-      return (items || []).filter((item: any) => item.products && item.products.active_b2b === true);
+      const filtered = (items || []).filter((item: any) => item.products && item.products.active_b2b === true);
+      return { items: filtered, region: (plMeta as any)?.region || "EU" };
     },
     enabled: !!client?.id,
   });
+
+  const myPriceListItems = myPriceListData?.items;
+  const priceListRegion = myPriceListData?.region || "EU";
+  const isEUPriceList = priceListRegion !== "EXTRA_EU";
 
   // Fetch product details for enrichment
   const { data: productDetails } = useQuery({
