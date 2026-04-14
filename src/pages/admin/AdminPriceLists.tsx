@@ -570,6 +570,7 @@ const AdminPriceLists = () => {
                       bulkDiscount={bulkDiscount}
                       onBulkDiscountChange={setBulkDiscount}
                       onApplyBulkDiscount={applyBulkDiscount}
+                      region={(activeList as any)?.region || "EU"}
                     />
                   </TabsContent>
 
