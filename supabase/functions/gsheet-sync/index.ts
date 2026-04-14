@@ -142,6 +142,47 @@ function shouldSkipRow(row: SheetRow): boolean {
   return type === "B2C" || type === "CUSTOM" || typeOrder.includes("B2C") || typeOrder === "CUSTOM";
 }
 
+function mapOrderStatus(raw: string): string {
+  const lower = raw.toLowerCase().trim();
+  const statusMap: Record<string, string> = {
+    "delivered": "delivered",
+    "shipped": "shipped",
+    "processing": "processing",
+    "confirmed": "confirmed",
+    "submitted": "submitted",
+    "ready to ship": "ready_to_ship",
+    "ready_to_ship": "ready_to_ship",
+    "cancelled": "cancelled",
+    "canceled": "cancelled",
+    "returned": "returned",
+    "draft": "draft",
+    "lost": "cancelled",
+    "to be prepared": "processing",
+    "to be shipped": "ready_to_ship",
+    "in progress": "processing",
+    "in production": "processing",
+    "waiting": "confirmed",
+    "pending": "submitted",
+  };
+  return statusMap[lower] || "confirmed";
+}
+
+function mapPaymentStatus(raw: string | null): string | null {
+  if (!raw) return null;
+  const lower = raw.toLowerCase().trim();
+  const paymentMap: Record<string, string> = {
+    "paid": "paid",
+    "payed": "paid",
+    "unpaid": "unpaid",
+    "pending": "pending",
+    "to be paid": "unpaid",
+    "to be invoiced": "unpaid",
+    "lost": "unpaid",
+    "partial": "pending",
+  };
+  return paymentMap[lower] || "unpaid";
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -257,8 +298,10 @@ serve(async (req) => {
 
       const shippingClient = parseEuroPrice(firstRow["Client Shipping costs"] || "");
       const shippingEasysea = parseEuroPrice(firstRow["Shipping costs (EASYSEA)"] || "");
-      const status = firstRow["Status order"]?.trim() || "draft";
-      const paymentStatus = firstRow["Status Payement"]?.trim() || null;
+      const rawStatus = firstRow["Status order"]?.trim() || "draft";
+      const status = mapOrderStatus(rawStatus);
+      const rawPaymentStatus = firstRow["Status Payement"]?.trim() || null;
+      const paymentStatus = mapPaymentStatus(rawPaymentStatus);
       const orderDate = parseDate(firstRow["Order date"]?.trim() || "");
       const payedDate = parseDate(firstRow["Payed date"]?.trim() || "");
       const deliveryDate = parseDate(firstRow["Delivery Date"]?.trim() || "");
