@@ -257,8 +257,10 @@ serve(async (req) => {
 
       const shippingClient = parseEuroPrice(firstRow["Client Shipping costs"] || "");
       const shippingEasysea = parseEuroPrice(firstRow["Shipping costs (EASYSEA)"] || "");
-      const status = firstRow["Status order"]?.trim() || "draft";
-      const paymentStatus = firstRow["Status Payement"]?.trim() || null;
+      const rawStatus = firstRow["Status order"]?.trim() || "draft";
+      const status = mapOrderStatus(rawStatus);
+      const rawPaymentStatus = firstRow["Status Payement"]?.trim() || null;
+      const paymentStatus = mapPaymentStatus(rawPaymentStatus);
       const orderDate = parseDate(firstRow["Order date"]?.trim() || "");
       const payedDate = parseDate(firstRow["Payed date"]?.trim() || "");
       const deliveryDate = parseDate(firstRow["Delivery Date"]?.trim() || "");
