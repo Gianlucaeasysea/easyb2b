@@ -194,7 +194,8 @@ const DealerCatalog = () => {
 
   const selectedDetail = selectedProduct ? getDetailForProduct(selectedProduct) : null;
   const selectedPlEntry = selectedProduct ? priceListProductMap.get(selectedProduct.id) : null;
-  const selectedRetailPrice = selectedProduct ? Number(selectedProduct.compare_at_price || selectedProduct.price) : 0;
+  const selectedRetailPriceGross = selectedProduct ? Number(selectedProduct.compare_at_price || selectedProduct.price) : 0;
+  const selectedRetailPrice = selectedRetailPriceGross / 1.22; // scorporo IVA 22%
   
   const selectedB2bPrice = selectedPlEntry?.customPrice ?? 0;
   const selectedHasValidPrice = selectedB2bPrice > 0;
