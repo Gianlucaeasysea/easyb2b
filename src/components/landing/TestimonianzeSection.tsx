@@ -1,7 +1,7 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Star, Play } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,67 +34,96 @@ const getEmbedUrl = (url: string, type: string) => {
   return url;
 };
 
-const VideoTestimonial = ({ url, type }: { url: string; type: string }) => {
+const getPreviewTime = (video: HTMLVideoElement) => {
+  if (!Number.isFinite(video.duration) || video.duration <= 0) return 0;
+  return Math.min(Math.max(video.duration * 0.1, 0.35), 1.25);
+};
+
+const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string }>(({ url, type }, ref) => {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isEmbed = type === "youtube" || type === "vimeo";
 
-  // Start muted autoplay preview once video can play
+  const startPreview = useCallback(async () => {
+    const vid = videoRef.current;
+    if (!vid || isEmbed || playing) return;
+
+    vid.pause();
+    vid.muted = true;
+    vid.loop = true;
+    vid.controls = false;
+    vid.playsInline = true;
+
+    const previewTime = getPreviewTime(vid);
+    if (previewTime > 0) {
+      vid.currentTime = previewTime;
+    }
+
+    try {
+      await vid.play();
+    } catch {
+      vid.pause();
+    }
+  }, [isEmbed, playing]);
+
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid || isEmbed) return;
 
-    const onCanPlay = () => {
-      vid.muted = true;
-      vid.loop = true;
-      vid.playsInline = true;
-      // Seek past any black intro frame
-      if (vid.duration > 1) {
-        vid.currentTime = Math.min(vid.duration * 0.1, 1);
-      }
-      vid.play().catch(() => undefined);
+    const onReady = () => {
+      void startPreview();
     };
 
-    vid.addEventListener("canplay", onCanPlay);
-    // If already ready
-    if (vid.readyState >= 3) onCanPlay();
+    vid.addEventListener("loadedmetadata", onReady);
+    vid.addEventListener("canplay", onReady);
 
-    return () => vid.removeEventListener("canplay", onCanPlay);
-  }, [url, isEmbed]);
+    if (vid.readyState >= 1) {
+      void startPreview();
+    }
 
-  const handlePlay = () => {
+    return () => {
+      vid.removeEventListener("loadedmetadata", onReady);
+      vid.removeEventListener("canplay", onReady);
+    };
+  }, [url, isEmbed, startPreview]);
+
+  const handlePlay = async () => {
     if (isEmbed) {
       setPlaying(true);
-    } else if (videoRef.current) {
-      videoRef.current.muted = false;
-      videoRef.current.loop = false;
-      videoRef.current.controls = true;
-      videoRef.current.currentTime = 0;
-      videoRef.current.play();
+      return;
+    }
+
+    const vid = videoRef.current;
+    if (!vid) return;
+
+    try {
+      vid.pause();
+      vid.currentTime = 0;
+      vid.muted = false;
+      vid.loop = false;
+      vid.controls = true;
+      vid.playsInline = true;
+      await vid.play();
       setPlaying(true);
+    } catch {
+      setPlaying(false);
+      vid.controls = true;
     }
   };
 
   const handleResetPreview = () => {
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-      videoRef.current.muted = true;
-      videoRef.current.loop = true;
-      videoRef.current.controls = false;
-      void videoRef.current.play().catch(() => undefined);
-    }
     setPlaying(false);
+    void startPreview();
   };
 
   return (
-    <div className="relative rounded-2xl overflow-hidden bg-card border border-border hover:border-primary/20 transition-colors aspect-[9/16] h-[380px] md:h-[440px] flex-shrink-0">
+    <div ref={ref} className="relative rounded-2xl overflow-hidden bg-card border border-border hover:border-primary/20 transition-colors aspect-[9/16] h-[380px] md:h-[440px] flex-shrink-0">
       {isEmbed ? (
         playing ? (
           <iframe src={getEmbedUrl(url, type)} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen />
         ) : (
           <div className="w-full h-full bg-muted flex items-center justify-center">
-            <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/10 hover:bg-foreground/20 transition-colors cursor-pointer">
+            <button type="button" onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/10 hover:bg-foreground/20 transition-colors cursor-pointer">
               <div className="w-16 h-16 rounded-full gradient-blue flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 transition-transform">
                 <Play size={28} className="text-primary-foreground ml-1" />
               </div>
@@ -111,9 +140,14 @@ const VideoTestimonial = ({ url, type }: { url: string; type: string }) => {
             preload="metadata"
             className="w-full h-full object-cover"
             onEnded={handleResetPreview}
+            onPause={() => {
+              if (!videoRef.current?.ended) {
+                setPlaying(false);
+              }
+            }}
           />
           {!playing && (
-            <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/10 hover:bg-foreground/20 transition-colors cursor-pointer">
+            <button type="button" onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/10 hover:bg-foreground/20 transition-colors cursor-pointer">
               <div className="w-16 h-16 rounded-full gradient-blue flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 transition-transform">
                 <Play size={28} className="text-primary-foreground ml-1" />
               </div>
@@ -123,7 +157,9 @@ const VideoTestimonial = ({ url, type }: { url: string; type: string }) => {
       )}
     </div>
   );
-};
+});
+
+VideoTestimonial.displayName = "VideoTestimonial";
 
 const testimonialCardVariants = {
   hidden: { opacity: 0, y: 40, scale: 0.95 },
