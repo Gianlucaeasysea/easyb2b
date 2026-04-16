@@ -41,8 +41,15 @@ export async function getValidGmailAccessToken(): Promise<string> {
   const encryptionKey = Deno.env.get('TOKEN_ENCRYPTION_KEY') ?? 'fallback-key-change-in-production'
   const { clientId, clientSecret } = getOAuthConfig()
 
-  // Deobfuscate the stored refresh token
-  const refreshToken = deobfuscateToken(tokenRow.refresh_token, encryptionKey)
+  // Try to deobfuscate; if it looks like a raw Google token, use as-is
+  let refreshToken: string
+  const storedToken = tokenRow.refresh_token
+  if (storedToken.startsWith('1//') || storedToken.startsWith('1/')) {
+    // Already plaintext Google refresh token
+    refreshToken = storedToken
+  } else {
+    refreshToken = deobfuscateToken(storedToken, encryptionKey)
+  }
 
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
