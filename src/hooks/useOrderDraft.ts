@@ -200,8 +200,6 @@ export function useOrderDraft() {
       }
 
       let priceMap: Record<string, number> = {};
-      // priceListFetchFailed used for logging only
-
       try {
         const { data: priceListClients } = await supabase
           .from("price_list_clients")
@@ -218,7 +216,6 @@ export function useOrderDraft() {
           });
         }
       } catch {
-        priceListFetchFailed = true;
         console.warn("Price list fetch failed (RLS or network), using original prices");
       }
 
