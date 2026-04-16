@@ -1,31 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { getGmailOAuthConfig } from '../_shared/gmail-oauth-config.ts'
 import { getCorsHeaders } from '../_shared/cors.ts'
-
-async function refreshTokenIfNeeded(supabase: any, tokenRow: any): Promise<string> {
-  if (new Date(tokenRow.expires_at) > new Date(Date.now() + 60000)) {
-    return tokenRow.access_token
-  }
-  const { clientId, clientSecret } = getGmailOAuthConfig()
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: tokenRow.refresh_token,
-      grant_type: 'refresh_token',
-    }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(`Token refresh failed: ${JSON.stringify(data)}`)
-  const expiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString()
-  await supabase
-    .from('gmail_tokens')
-    .update({ access_token: data.access_token, expires_at: expiresAt, updated_at: new Date().toISOString() })
-    .eq('id', tokenRow.id)
-  return data.access_token
-}
+import { getValidGmailAccessToken } from '../_shared/gmail-token-utils.ts'
 
 function extractEmail(headerValue: string): string {
   const match = headerValue.match(/<([^>]+)>/)
