@@ -200,7 +200,7 @@ export function useOrderDraft() {
       }
 
       let priceMap: Record<string, number> = {};
-      let priceListFetchFailed = false;
+      // priceListFetchFailed used for logging only
 
       try {
         const { data: priceListClients } = await supabase
