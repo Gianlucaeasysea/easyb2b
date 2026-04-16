@@ -44,25 +44,19 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isEmbed = type === "youtube" || type === "vimeo";
 
-  const startPreview = useCallback(async () => {
+  const startPreview = useCallback(() => {
     const vid = videoRef.current;
     if (!vid || isEmbed || playing) return;
 
     vid.pause();
     vid.muted = true;
-    vid.loop = true;
-    vid.controls = false;
+    vid.loop = false;
+    vid.controls = true;
     vid.playsInline = true;
 
     const previewTime = getPreviewTime(vid);
     if (previewTime > 0) {
       vid.currentTime = previewTime;
-    }
-
-    try {
-      await vid.play();
-    } catch {
-      vid.pause();
     }
   }, [isEmbed, playing]);
 
@@ -71,14 +65,14 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
     if (!vid || isEmbed) return;
 
     const onReady = () => {
-      void startPreview();
+      startPreview();
     };
 
     vid.addEventListener("loadedmetadata", onReady);
     vid.addEventListener("canplay", onReady);
 
     if (vid.readyState >= 1) {
-      void startPreview();
+      startPreview();
     }
 
     return () => {
@@ -96,8 +90,6 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
     const vid = videoRef.current;
     if (!vid) return;
 
-    vid.pause();
-    vid.currentTime = 0;
     vid.loop = false;
     vid.controls = true;
     vid.playsInline = true;
@@ -112,7 +104,6 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
         await vid.play();
       } catch {
         vid.pause();
-        vid.controls = false;
         setPlaying(false);
       }
     }
@@ -120,7 +111,7 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
 
   const handleResetPreview = () => {
     setPlaying(false);
-    void startPreview();
+    startPreview();
   };
 
   return (
@@ -130,7 +121,7 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
           <iframe src={getEmbedUrl(url, type)} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen />
         ) : (
           <div className="w-full h-full bg-muted flex items-center justify-center">
-            <button type="button" onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/10 hover:bg-foreground/20 transition-colors cursor-pointer">
+            <button type="button" onClick={handlePlay} className="absolute inset-0 z-10 flex items-center justify-center bg-foreground/10 hover:bg-foreground/20 transition-colors cursor-pointer">
               <div className="w-16 h-16 rounded-full gradient-blue flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 transition-transform">
                 <Play size={28} className="text-primary-foreground ml-1" />
               </div>
@@ -138,30 +129,27 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
           </div>
         )
       ) : (
-        <>
-          <video
-            ref={videoRef}
-            src={url}
-            playsInline
-            muted
-            preload="metadata"
-            className="w-full h-full object-cover"
-            onPlay={() => setPlaying(true)}
-            onEnded={handleResetPreview}
-            onPause={() => {
-              if (!videoRef.current?.ended) {
-                setPlaying(false);
-              }
-            }}
-          />
-          {!playing && (
-            <button type="button" onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-foreground/10 hover:bg-foreground/20 transition-colors cursor-pointer">
-              <div className="w-16 h-16 rounded-full gradient-blue flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 transition-transform">
-                <Play size={28} className="text-primary-foreground ml-1" />
-              </div>
-            </button>
-          )}
-        </>
+        <video
+          ref={videoRef}
+          src={url}
+          playsInline
+          muted
+          controls
+          preload="metadata"
+          className="w-full h-full object-cover"
+          onPlay={() => setPlaying(true)}
+          onClick={() => {
+            if (!playing) {
+              void handlePlay();
+            }
+          }}
+          onEnded={handleResetPreview}
+          onPause={() => {
+            if (!videoRef.current?.ended) {
+              setPlaying(false);
+            }
+          }}
+        />
       )}
     </div>
   );
