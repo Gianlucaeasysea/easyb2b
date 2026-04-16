@@ -313,9 +313,11 @@ const AdminCMS = () => {
 
   const reorderVideoMutation = useMutation({
     mutationFn: async (items: { id: string; sort_order: number }[]) => {
-      for (const item of items) {
-        await supabase.from("testimonials").update({ sort_order: item.sort_order }).eq("id", item.id);
-      }
+      await Promise.all(
+        items.map(item =>
+          supabase.from("testimonials").update({ sort_order: item.sort_order }).eq("id", item.id)
+        )
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-testimonials"] });
