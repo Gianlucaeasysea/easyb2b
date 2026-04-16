@@ -1,6 +1,6 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Star, Play } from "lucide-react";
+import { Star, Play, VideoOff } from "lucide-react";
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +41,7 @@ const getPreviewTime = (video: HTMLVideoElement) => {
 
 const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string }>(({ url, type }, ref) => {
   const [playing, setPlaying] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isEmbed = type === "youtube" || type === "vimeo";
 
@@ -65,6 +66,7 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
     if (!vid || isEmbed) return;
 
     const onReady = () => {
+      setLoadError(false);
       startPreview();
     };
 
@@ -114,6 +116,15 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
     startPreview();
   };
 
+  if (loadError && !isEmbed) {
+    return (
+      <div ref={ref} className="relative rounded-2xl overflow-hidden bg-card border border-border aspect-[9/16] h-[380px] md:h-[440px] flex-shrink-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+        <VideoOff size={40} />
+        <p className="text-sm">Video non disponibile</p>
+      </div>
+    );
+  }
+
   return (
     <div ref={ref} className="relative rounded-2xl overflow-hidden bg-card border border-border hover:border-primary/20 transition-colors aspect-[9/16] h-[380px] md:h-[440px] flex-shrink-0">
       {isEmbed ? (
@@ -149,6 +160,7 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
               setPlaying(false);
             }
           }}
+          onError={() => setLoadError(true)}
         />
       )}
     </div>
@@ -178,7 +190,28 @@ const TestimonialsSection = () => {
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
-      return (data || []) as VideoTestimonialData[];
+
+      const items = (data || []) as VideoTestimonialData[];
+
+      // Generate signed URLs for uploaded videos
+      const signed = await Promise.all(
+        items.map(async (t) => {
+          if (t.video_type !== "upload") return t;
+          try {
+            const parts = t.video_url.split("/videos/");
+            const storagePath = decodeURIComponent(parts[parts.length - 1]);
+            const { data: signedData, error } = await supabase.storage
+              .from("videos")
+              .createSignedUrl(storagePath, 3600);
+            if (error || !signedData?.signedUrl) return t;
+            return { ...t, video_url: signedData.signedUrl };
+          } catch {
+            return t;
+          }
+        })
+      );
+
+      return signed;
     },
   });
 
