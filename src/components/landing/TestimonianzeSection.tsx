@@ -190,7 +190,28 @@ const TestimonialsSection = () => {
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
-      return (data || []) as VideoTestimonialData[];
+
+      const items = (data || []) as VideoTestimonialData[];
+
+      // Generate signed URLs for uploaded videos
+      const signed = await Promise.all(
+        items.map(async (t) => {
+          if (t.video_type !== "upload") return t;
+          try {
+            const parts = t.video_url.split("/videos/");
+            const storagePath = decodeURIComponent(parts[parts.length - 1]);
+            const { data: signedData, error } = await supabase.storage
+              .from("videos")
+              .createSignedUrl(storagePath, 3600);
+            if (error || !signedData?.signedUrl) return t;
+            return { ...t, video_url: signedData.signedUrl };
+          } catch {
+            return t;
+          }
+        })
+      );
+
+      return signed;
     },
   });
 
