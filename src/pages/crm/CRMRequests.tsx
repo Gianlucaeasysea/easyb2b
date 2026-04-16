@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Check, X, Building2 } from "lucide-react";
+import { FileText, Check, X, Building2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -138,6 +138,9 @@ const CRMRequests = () => {
                       )}
                       {r.status === "converted" && <Badge className="bg-success/20 text-success border-0 text-[10px]">In Pipeline</Badge>}
                       {r.status === "rejected" && <Badge className="bg-destructive/20 text-destructive border-0 text-[10px]">Rifiutato</Badge>}
+                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive h-8" onClick={() => { if (confirm("Eliminare questa richiesta?")) deleteRequest.mutate(r.id); }} title="Elimina">
+                        <Trash2 size={14} />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -203,6 +206,11 @@ const CRMRequests = () => {
                     }>{selectedRequest.status === "converted" ? "In Pipeline" : "Rifiutato"}</Badge>
                   </div>
                 )}
+                <div className="pt-2 border-t border-border">
+                  <Button variant="outline" size="sm" className="gap-1 text-destructive hover:text-destructive" onClick={() => { if (confirm("Eliminare questa richiesta?")) deleteRequest.mutate(selectedRequest.id); }}>
+                    <Trash2 size={14} /> Elimina richiesta
+                  </Button>
+                </div>
               </div>
             </>
           )}
