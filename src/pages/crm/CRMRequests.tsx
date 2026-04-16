@@ -56,6 +56,22 @@ const CRMRequests = () => {
     },
   });
 
+  const deleteRequest = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("distributor_requests").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-dealer-requests"] });
+      toast({ title: "Request deleted" });
+      setSelectedRequest(null);
+    },
+    onError: (e: unknown) => {
+      const message = e instanceof Error ? e.message : "Unknown error";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    },
+  });
+
   const newRequests = requests?.filter(r => r.status === "new") || [];
   const approvedRequests = requests?.filter(r => r.status === "approved") || [];
 
