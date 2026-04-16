@@ -196,7 +196,7 @@ const CRMCreateOrder = () => {
 
       if (error) throw error;
 
-      const orderId = (data as any)?.id;
+      const orderId = (data as any)?.order_id;
       const orderCode = (data as any)?.order_code;
 
       // If submitted, send notifications
