@@ -1,7 +1,7 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Star, Play } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,23 +34,33 @@ const getEmbedUrl = (url: string, type: string) => {
   return url;
 };
 
-const primeVideoPreview = (video: HTMLVideoElement | null) => {
-  if (!video) return;
-
-  const previewTime = Math.min(Math.max(video.duration * 0.15, 0.35), 1.5);
-  if (Number.isFinite(previewTime) && previewTime > 0 && Math.abs(video.currentTime - previewTime) > 0.05) {
-    try {
-      video.currentTime = previewTime;
-    } catch {
-      return;
-    }
-  }
-};
-
 const VideoTestimonial = ({ url, type }: { url: string; type: string }) => {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isEmbed = type === "youtube" || type === "vimeo";
+
+  // Start muted autoplay preview once video can play
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid || isEmbed) return;
+
+    const onCanPlay = () => {
+      vid.muted = true;
+      vid.loop = true;
+      vid.playsInline = true;
+      // Seek past any black intro frame
+      if (vid.duration > 1) {
+        vid.currentTime = Math.min(vid.duration * 0.1, 1);
+      }
+      vid.play().catch(() => undefined);
+    };
+
+    vid.addEventListener("canplay", onCanPlay);
+    // If already ready
+    if (vid.readyState >= 3) onCanPlay();
+
+    return () => vid.removeEventListener("canplay", onCanPlay);
+  }, [url, isEmbed]);
 
   const handlePlay = () => {
     if (isEmbed) {
@@ -59,6 +69,7 @@ const VideoTestimonial = ({ url, type }: { url: string; type: string }) => {
       videoRef.current.muted = false;
       videoRef.current.loop = false;
       videoRef.current.controls = true;
+      videoRef.current.currentTime = 0;
       videoRef.current.play();
       setPlaying(true);
     }
@@ -95,14 +106,10 @@ const VideoTestimonial = ({ url, type }: { url: string; type: string }) => {
           <video
             ref={videoRef}
             src={url}
-            controls={playing}
             playsInline
-            muted={!playing}
-            loop={!playing}
-            autoPlay
-            preload="auto"
+            muted
+            preload="metadata"
             className="w-full h-full object-cover"
-            onLoadedData={(e) => primeVideoPreview(e.currentTarget)}
             onEnded={handleResetPreview}
           />
           {!playing && (
