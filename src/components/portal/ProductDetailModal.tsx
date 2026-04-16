@@ -129,10 +129,12 @@ const ProductDetailModal = ({
                     -{discountPct}%
                   </Badge>
                 )}
-                <p className={`text-sm font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
-                  {inStock ? `${product.stock_quantity} in stock` : "Esaurito"}
-                </p>
-                {!inStock && detail?.lead_time && (
+                {!isClientMode && (
+                  <p className={`text-sm font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
+                    {inStock ? `${product.stock_quantity} in stock` : "Esaurito"}
+                  </p>
+                )}
+                {!isClientMode && !inStock && detail?.lead_time && (
                   <p className="text-xs font-semibold text-destructive/80">Rientro: {detail.lead_time}</p>
                 )}
               </div>
