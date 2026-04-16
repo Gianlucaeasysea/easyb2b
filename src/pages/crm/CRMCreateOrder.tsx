@@ -196,7 +196,7 @@ const CRMCreateOrder = () => {
 
       if (error) throw error;
 
-      const orderId = (data as any)?.id;
+      const orderId = (data as any)?.order_id;
       const orderCode = (data as any)?.order_code;
 
       // If submitted, send notifications
@@ -223,7 +223,7 @@ const CRMCreateOrder = () => {
       toast.success("Order created successfully");
       navigate("/crm/orders");
     } catch (err: any) {
-      toast.error("Error creating order: " + (err.message || "unknown error"));
+      toast.error(`Errore creazione ordine: ${err.message || err.details || "errore sconosciuto"}`);
     } finally {
       setSubmitting(false);
     }
