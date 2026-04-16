@@ -1,7 +1,7 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Star, Play } from "lucide-react";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -36,7 +36,6 @@ const getEmbedUrl = (url: string, type: string) => {
 
 const VideoTestimonial = ({ url, type }: { url: string; type: string }) => {
   const [playing, setPlaying] = useState(false);
-  const [canPlay, setCanPlay] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isEmbed = type === "youtube" || type === "vimeo";
 
@@ -46,7 +45,6 @@ const VideoTestimonial = ({ url, type }: { url: string; type: string }) => {
     if (!vid || isEmbed) return;
 
     const onCanPlay = () => {
-      setCanPlay(true);
       vid.muted = true;
       vid.loop = true;
       vid.playsInline = true;
