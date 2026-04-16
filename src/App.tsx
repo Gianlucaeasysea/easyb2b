@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -10,7 +11,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { ClientModeProvider } from "@/contexts/ClientModeContext";
 import { ComingSoon } from "@/components/portal/ui/ComingSoon";
 
-// Public pages
+// Public pages (static — needed immediately)
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import BecomeADealer from "./pages/BecomeADealer";
@@ -21,64 +22,66 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 
-// Layouts
+// Layouts (static — wrapping routes)
 import PortalLayout from "./layouts/PortalLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import CRMLayout from "./layouts/CRMLayout";
 
-// Dealer Portal
-import DealerDashboard from "./pages/portal/DealerDashboard";
-import DealerCatalog from "./pages/portal/DealerCatalog";
-import DealerOrders from "./pages/portal/DealerOrders";
-// TODO: Re-enable when page is implemented
-// import DealerPromos from "./pages/portal/DealerPromos";
-// import DealerGoals from "./pages/portal/DealerGoals";
-// import DealerMarketing from "./pages/portal/DealerMarketing";
-import DealerSupport from "./pages/portal/DealerSupport";
-import DealerCart from "./pages/portal/DealerCart";
-import DealerProfile from "./pages/portal/DealerProfile";
-import DealerNotifications from "./pages/portal/DealerNotifications";
-import DealerInvoices from "./pages/portal/DealerInvoices";
+// ─── Lazy: Dealer Portal ───
+const DealerDashboard = lazy(() => import("./pages/portal/DealerDashboard"));
+const DealerCatalog = lazy(() => import("./pages/portal/DealerCatalog"));
+const DealerOrders = lazy(() => import("./pages/portal/DealerOrders"));
+const DealerSupport = lazy(() => import("./pages/portal/DealerSupport"));
+const DealerCart = lazy(() => import("./pages/portal/DealerCart"));
+const DealerProfile = lazy(() => import("./pages/portal/DealerProfile"));
+const DealerNotifications = lazy(() => import("./pages/portal/DealerNotifications"));
+const DealerInvoices = lazy(() => import("./pages/portal/DealerInvoices"));
 
-// Admin Panel
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminClients from "./pages/admin/AdminClients";
-import AdminProducts from "./pages/admin/AdminProducts";
-import AdminOrders from "./pages/admin/AdminOrders";
-import AdminRequests from "./pages/admin/AdminRequests";
-import AdminNewOrders from "./pages/admin/AdminNewOrders";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminClientDetail from "./pages/admin/AdminClientDetail";
-import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
-import AdminImport from "./pages/admin/AdminImport";
-import AdminPriceLists from "./pages/admin/AdminPriceLists";
-import AdminProductDetail from "./pages/admin/AdminProductDetail";
-import AdminSystemMap from "./pages/admin/AdminSystemMap";
-import AdminMarketing from "./pages/admin/AdminMarketing";
-import AdminCMS from "./pages/admin/AdminCMS";
-import AdminChangelog from "./pages/admin/AdminChangelog";
-import AdminNotifications from "./pages/admin/AdminNotifications";
-import AdminAuditLog from "./pages/admin/AdminAuditLog";
+// ─── Lazy: Admin Panel ───
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminClients = lazy(() => import("./pages/admin/AdminClients"));
+const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
+const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
+const AdminRequests = lazy(() => import("./pages/admin/AdminRequests"));
+const AdminNewOrders = lazy(() => import("./pages/admin/AdminNewOrders"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminClientDetail = lazy(() => import("./pages/admin/AdminClientDetail"));
+const AdminOrderDetail = lazy(() => import("./pages/admin/AdminOrderDetail"));
+const AdminImport = lazy(() => import("./pages/admin/AdminImport"));
+const AdminPriceLists = lazy(() => import("./pages/admin/AdminPriceLists"));
+const AdminProductDetail = lazy(() => import("./pages/admin/AdminProductDetail"));
+const AdminSystemMap = lazy(() => import("./pages/admin/AdminSystemMap"));
+const AdminMarketing = lazy(() => import("./pages/admin/AdminMarketing"));
+const AdminCMS = lazy(() => import("./pages/admin/AdminCMS"));
+const AdminChangelog = lazy(() => import("./pages/admin/AdminChangelog"));
+const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
+const AdminAuditLog = lazy(() => import("./pages/admin/AdminAuditLog"));
 
-// CRM
-import CRMDashboard from "./pages/crm/CRMDashboard";
-import CRMLeads from "./pages/crm/CRMLeads";
-// CRMPipeline removed — replaced by deals pipeline
-import CRMActivities from "./pages/crm/CRMActivities";
-import CRMOrganizations from "./pages/crm/CRMOrganizations";
-import CRMOrganizationDetail from "./pages/crm/CRMOrganizationDetail";
-import CRMContactsPeople from "./pages/crm/CRMContactsPeople";
-import CRMDeals from "./pages/crm/CRMDeals";
-import CRMDealsPipeline from "./pages/crm/CRMDealsPipeline";
-import CRMRequests from "./pages/crm/CRMRequests";
-import CRMEmailTemplates from "./pages/crm/CRMEmailTemplates";
-import CRMTasks from "./pages/crm/CRMTasks";
-import CRMAnalytics from "./pages/crm/CRMAnalytics";
-import CRMAutomations from "./pages/crm/CRMAutomations";
-import CRMHelp from "./pages/crm/CRMHelp";
-import CRMOrders from "./pages/crm/CRMOrders";
-import CRMOrderDetail from "./pages/crm/CRMOrderDetail";
-import CRMCreateOrder from "./pages/crm/CRMCreateOrder";
+// ─── Lazy: CRM ───
+const CRMDashboard = lazy(() => import("./pages/crm/CRMDashboard"));
+const CRMLeads = lazy(() => import("./pages/crm/CRMLeads"));
+const CRMActivities = lazy(() => import("./pages/crm/CRMActivities"));
+const CRMOrganizations = lazy(() => import("./pages/crm/CRMOrganizations"));
+const CRMOrganizationDetail = lazy(() => import("./pages/crm/CRMOrganizationDetail"));
+const CRMContactsPeople = lazy(() => import("./pages/crm/CRMContactsPeople"));
+const CRMDeals = lazy(() => import("./pages/crm/CRMDeals"));
+const CRMDealsPipeline = lazy(() => import("./pages/crm/CRMDealsPipeline"));
+const CRMRequests = lazy(() => import("./pages/crm/CRMRequests"));
+const CRMEmailTemplates = lazy(() => import("./pages/crm/CRMEmailTemplates"));
+const CRMTasks = lazy(() => import("./pages/crm/CRMTasks"));
+const CRMAnalytics = lazy(() => import("./pages/crm/CRMAnalytics"));
+const CRMAutomations = lazy(() => import("./pages/crm/CRMAutomations"));
+const CRMHelp = lazy(() => import("./pages/crm/CRMHelp"));
+const CRMOrders = lazy(() => import("./pages/crm/CRMOrders"));
+const CRMOrderDetail = lazy(() => import("./pages/crm/CRMOrderDetail"));
+const CRMCreateOrder = lazy(() => import("./pages/crm/CRMCreateOrder"));
+
+// ─── Loading Spinner ───
+const LazyFallback = () => (
+  <div className="flex items-center justify-center h-screen w-full">
+    <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -119,17 +122,17 @@ const App = () => (
                 </ClientModeProvider>
               </ProtectedRoute>
             }>
-              <Route index element={<DealerDashboard />} />
-              <Route path="catalog" element={<DealerCatalog />} />
-              <Route path="orders" element={<DealerOrders />} />
-              <Route path="cart" element={<DealerCart />} />
-              <Route path="invoices" element={<DealerInvoices />} />
+              <Route index element={<Suspense fallback={<LazyFallback />}><DealerDashboard /></Suspense>} />
+              <Route path="catalog" element={<Suspense fallback={<LazyFallback />}><DealerCatalog /></Suspense>} />
+              <Route path="orders" element={<Suspense fallback={<LazyFallback />}><DealerOrders /></Suspense>} />
+              <Route path="cart" element={<Suspense fallback={<LazyFallback />}><DealerCart /></Suspense>} />
+              <Route path="invoices" element={<Suspense fallback={<LazyFallback />}><DealerInvoices /></Suspense>} />
               <Route path="promos" element={<ComingSoon featureName="Promozioni" />} />
               <Route path="goals" element={<ComingSoon featureName="Obiettivi" />} />
               <Route path="marketing" element={<ComingSoon featureName="Marketing" />} />
-              <Route path="notifications" element={<DealerNotifications />} />
-              <Route path="profile" element={<DealerProfile />} />
-              <Route path="support" element={<DealerSupport />} />
+              <Route path="notifications" element={<Suspense fallback={<LazyFallback />}><DealerNotifications /></Suspense>} />
+              <Route path="profile" element={<Suspense fallback={<LazyFallback />}><DealerProfile /></Suspense>} />
+              <Route path="support" element={<Suspense fallback={<LazyFallback />}><DealerSupport /></Suspense>} />
             </Route>
 
             {/* Admin Panel */}
@@ -138,25 +141,25 @@ const App = () => (
                 <AdminLayout />
               </ProtectedRoute>
             }>
-              <Route index element={<AdminDashboard />} />
-              <Route path="clients" element={<AdminClients />} />
-              <Route path="clients/:id" element={<AdminClientDetail />} />
-              <Route path="products" element={<AdminProducts />} />
-              <Route path="products/:family" element={<AdminProductDetail />} />
-              <Route path="orders" element={<AdminOrders />} />
-              <Route path="orders/:id" element={<AdminOrderDetail />} />
-              <Route path="new-orders" element={<AdminNewOrders />} />
-              <Route path="requests" element={<AdminRequests />} />
-              <Route path="settings" element={<AdminSettings />} />
-              <Route path="import" element={<AdminImport />} />
-              <Route path="price-lists" element={<AdminPriceLists />} />
-              <Route path="system-map" element={<AdminSystemMap />} />
-              <Route path="marketing" element={<AdminMarketing />} />
-              <Route path="cms" element={<AdminCMS />} />
+              <Route index element={<Suspense fallback={<LazyFallback />}><AdminDashboard /></Suspense>} />
+              <Route path="clients" element={<Suspense fallback={<LazyFallback />}><AdminClients /></Suspense>} />
+              <Route path="clients/:id" element={<Suspense fallback={<LazyFallback />}><AdminClientDetail /></Suspense>} />
+              <Route path="products" element={<Suspense fallback={<LazyFallback />}><AdminProducts /></Suspense>} />
+              <Route path="products/:family" element={<Suspense fallback={<LazyFallback />}><AdminProductDetail /></Suspense>} />
+              <Route path="orders" element={<Suspense fallback={<LazyFallback />}><AdminOrders /></Suspense>} />
+              <Route path="orders/:id" element={<Suspense fallback={<LazyFallback />}><AdminOrderDetail /></Suspense>} />
+              <Route path="new-orders" element={<Suspense fallback={<LazyFallback />}><AdminNewOrders /></Suspense>} />
+              <Route path="requests" element={<Suspense fallback={<LazyFallback />}><AdminRequests /></Suspense>} />
+              <Route path="settings" element={<Suspense fallback={<LazyFallback />}><AdminSettings /></Suspense>} />
+              <Route path="import" element={<Suspense fallback={<LazyFallback />}><AdminImport /></Suspense>} />
+              <Route path="price-lists" element={<Suspense fallback={<LazyFallback />}><AdminPriceLists /></Suspense>} />
+              <Route path="system-map" element={<Suspense fallback={<LazyFallback />}><AdminSystemMap /></Suspense>} />
+              <Route path="marketing" element={<Suspense fallback={<LazyFallback />}><AdminMarketing /></Suspense>} />
+              <Route path="cms" element={<Suspense fallback={<LazyFallback />}><AdminCMS /></Suspense>} />
               {/* Automations accessible only via /crm/automations */}
-              <Route path="changelog" element={<AdminChangelog />} />
-              <Route path="notifications" element={<AdminNotifications />} />
-              <Route path="audit-log" element={<AdminAuditLog />} />
+              <Route path="changelog" element={<Suspense fallback={<LazyFallback />}><AdminChangelog /></Suspense>} />
+              <Route path="notifications" element={<Suspense fallback={<LazyFallback />}><AdminNotifications /></Suspense>} />
+              <Route path="audit-log" element={<Suspense fallback={<LazyFallback />}><AdminAuditLog /></Suspense>} />
             </Route>
 
             {/* CRM */}
@@ -165,25 +168,25 @@ const App = () => (
                 <CRMLayout />
               </ProtectedRoute>
             }>
-              <Route index element={<CRMDashboard />} />
-              <Route path="requests" element={<CRMRequests />} />
-              <Route path="leads" element={<CRMLeads />} />
-              <Route path="deals" element={<CRMDeals />} />
-              <Route path="deals/pipeline" element={<CRMDealsPipeline />} />
+              <Route index element={<Suspense fallback={<LazyFallback />}><CRMDashboard /></Suspense>} />
+              <Route path="requests" element={<Suspense fallback={<LazyFallback />}><CRMRequests /></Suspense>} />
+              <Route path="leads" element={<Suspense fallback={<LazyFallback />}><CRMLeads /></Suspense>} />
+              <Route path="deals" element={<Suspense fallback={<LazyFallback />}><CRMDeals /></Suspense>} />
+              <Route path="deals/pipeline" element={<Suspense fallback={<LazyFallback />}><CRMDealsPipeline /></Suspense>} />
               {/* /crm/pipeline removed — use /crm/deals/pipeline */}
-              <Route path="activities" element={<CRMActivities />} />
-              <Route path="organizations" element={<CRMOrganizations />} />
-              <Route path="organizations/:id" element={<CRMOrganizationDetail />} />
-              <Route path="contacts" element={<CRMContactsPeople />} />
-              <Route path="email-templates" element={<CRMEmailTemplates />} />
-              <Route path="orders" element={<CRMOrders />} />
-              <Route path="orders/new" element={<CRMCreateOrder />} />
-              <Route path="orders/:id" element={<CRMOrderDetail />} />
-              <Route path="tasks" element={<CRMTasks />} />
-              <Route path="analytics" element={<CRMAnalytics />} />
-              <Route path="automations" element={<CRMAutomations />} />
-              <Route path="price-lists" element={<AdminPriceLists />} />
-              <Route path="help" element={<CRMHelp />} />
+              <Route path="activities" element={<Suspense fallback={<LazyFallback />}><CRMActivities /></Suspense>} />
+              <Route path="organizations" element={<Suspense fallback={<LazyFallback />}><CRMOrganizations /></Suspense>} />
+              <Route path="organizations/:id" element={<Suspense fallback={<LazyFallback />}><CRMOrganizationDetail /></Suspense>} />
+              <Route path="contacts" element={<Suspense fallback={<LazyFallback />}><CRMContactsPeople /></Suspense>} />
+              <Route path="email-templates" element={<Suspense fallback={<LazyFallback />}><CRMEmailTemplates /></Suspense>} />
+              <Route path="orders" element={<Suspense fallback={<LazyFallback />}><CRMOrders /></Suspense>} />
+              <Route path="orders/new" element={<Suspense fallback={<LazyFallback />}><CRMCreateOrder /></Suspense>} />
+              <Route path="orders/:id" element={<Suspense fallback={<LazyFallback />}><CRMOrderDetail /></Suspense>} />
+              <Route path="tasks" element={<Suspense fallback={<LazyFallback />}><CRMTasks /></Suspense>} />
+              <Route path="analytics" element={<Suspense fallback={<LazyFallback />}><CRMAnalytics /></Suspense>} />
+              <Route path="automations" element={<Suspense fallback={<LazyFallback />}><CRMAutomations /></Suspense>} />
+              <Route path="price-lists" element={<Suspense fallback={<LazyFallback />}><AdminPriceLists /></Suspense>} />
+              <Route path="help" element={<Suspense fallback={<LazyFallback />}><CRMHelp /></Suspense>} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
