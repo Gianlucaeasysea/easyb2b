@@ -96,34 +96,52 @@ function VideoUploadArea({
       return;
     }
     setUploading(true);
-    setProgress(10);
+    setProgress(0);
 
     const ext = file.name.split(".").pop() || "mp4";
     const path = `homepage/${Date.now()}.${ext}`;
 
-    // Simulate progress
-    const interval = setInterval(() => setProgress((p) => Math.min(p + 15, 85)), 500);
+    // Use XMLHttpRequest for real upload progress
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token || supabaseKey;
 
-    const { error } = await supabase.storage.from("videos").upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${supabaseUrl}/storage/v1/object/videos/${path}`);
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.setRequestHeader("apikey", supabaseKey);
+        xhr.setRequestHeader("x-upsert", "false");
+        xhr.setRequestHeader("cache-control", "3600");
 
-    clearInterval(interval);
+        xhr.upload.addEventListener("progress", (e) => {
+          if (e.lengthComputable) {
+            setProgress(Math.round((e.loaded / e.total) * 95));
+          }
+        });
 
-    if (error) {
-      toast.error("Upload fallito: " + error.message);
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(xhr.responseText || `Upload failed (${xhr.status})`));
+        });
+        xhr.addEventListener("error", () => reject(new Error("Network error")));
+        xhr.addEventListener("abort", () => reject(new Error("Upload cancelled")));
+
+        xhr.send(file);
+      });
+
+      setProgress(100);
+      const { data: urlData } = supabase.storage.from("videos").getPublicUrl(path);
+      onUploaded(urlData.publicUrl);
+      toast.success("Video caricato!");
+    } catch (err: any) {
+      toast.error("Upload fallito: " + (err.message || "Errore sconosciuto"));
+    } finally {
       setUploading(false);
-      setProgress(0);
-      return;
+      setTimeout(() => setProgress(0), 800);
     }
-
-    setProgress(100);
-    const { data: urlData } = supabase.storage.from("videos").getPublicUrl(path);
-    onUploaded(urlData.publicUrl);
-    setUploading(false);
-    setTimeout(() => setProgress(0), 600);
-    toast.success("Video caricato!");
   };
 
   const handleDrop = (e: React.DragEvent) => {
