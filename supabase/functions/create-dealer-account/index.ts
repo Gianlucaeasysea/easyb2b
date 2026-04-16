@@ -186,11 +186,19 @@ async function sendCredentialsEmail(supabaseAdmin: any, email: string, password:
     accessToken = refreshed;
   }
 
-  const subject = "EasySea - Your Dealer Portal Credentials";
-  const body = `Welcome to the EasySea Dealer Portal!\n\nYour account has been created. Here are your login credentials:\n\nEmail: ${email}\nPassword: ${password}\n\nLogin here: ${portalUrl}\n\nPlease change your password after your first login.\n\nBest regards,\nThe EasySea Team`;
+  const subject = "Easysea - Your Dealer Portal Credentials";
+  const htmlBody = `
+<html><body style="font-family: Arial, sans-serif; color: #333;">
+<p>Welcome to the Easysea Dealer Portal!</p>
+<p>Your account has been created. Here are your login credentials:</p>
+<p><strong>Email:</strong> ${email}<br/><strong>Password:</strong> ${password}</p>
+<p>Login here: <a href="${portalUrl}" style="color: #0066cc; text-decoration: underline;">${portalUrl}</a></p>
+<p>Please change your password after your first login.</p>
+<p>Best regards,<br/>The Easysea Team</p>
+</body></html>`;
 
   const encodedSubject = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`;
-  const rawMessage = `From: EasySea <business@easysea.org>\r\nTo: ${email}\r\nBcc: g.scotto@easysea.org\r\nSubject: ${encodedSubject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
+  const rawMessage = `From: Easysea <business@easysea.org>\r\nTo: ${email}\r\nBcc: g.scotto@easysea.org\r\nSubject: ${encodedSubject}\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n${htmlBody}`;
   const encoded = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
   async function sendRaw(token: string): Promise<Response> {
