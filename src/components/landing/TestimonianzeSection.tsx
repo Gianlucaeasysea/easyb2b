@@ -96,18 +96,25 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
     const vid = videoRef.current;
     if (!vid) return;
 
+    vid.pause();
+    vid.currentTime = 0;
+    vid.loop = false;
+    vid.controls = true;
+    vid.playsInline = true;
+    setPlaying(true);
+
     try {
-      vid.pause();
-      vid.currentTime = 0;
       vid.muted = false;
-      vid.loop = false;
-      vid.controls = true;
-      vid.playsInline = true;
       await vid.play();
-      setPlaying(true);
     } catch {
-      setPlaying(false);
-      vid.controls = true;
+      try {
+        vid.muted = true;
+        await vid.play();
+      } catch {
+        vid.pause();
+        vid.controls = false;
+        setPlaying(false);
+      }
     }
   };
 
@@ -139,6 +146,7 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
             muted
             preload="metadata"
             className="w-full h-full object-cover"
+            onPlay={() => setPlaying(true)}
             onEnded={handleResetPreview}
             onPause={() => {
               if (!videoRef.current?.ended) {
