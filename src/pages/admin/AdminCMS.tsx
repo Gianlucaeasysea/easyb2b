@@ -164,7 +164,7 @@ function VideoUploadArea({
       >
         {currentUrl ? (
           <div className="space-y-2">
-            <video src={currentUrl} className="w-full max-h-40 rounded-lg object-contain bg-muted mx-auto" preload="metadata" />
+            <video src={currentUrl} className="w-full max-h-40 rounded-lg object-contain bg-muted mx-auto" preload="auto" autoPlay muted loop playsInline />
             <p className="text-xs text-muted-foreground">Clicca o trascina per sostituire</p>
           </div>
         ) : (
@@ -510,7 +510,7 @@ const AdminCMS = () => {
 
                             <div className={`rounded-lg overflow-hidden bg-muted flex-shrink-0 ${t.is_vertical ? "w-10 h-[72px]" : "w-20 h-12"}`}>
                               {t.video_type === "upload" ? (
-                                <video src={t.video_url} className="w-full h-full object-cover" preload="metadata" />
+                                <video src={t.video_url} className="w-full h-full object-cover" preload="auto" autoPlay muted loop playsInline />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                                   <Video className="h-4 w-4" />
