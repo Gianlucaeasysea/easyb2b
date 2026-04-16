@@ -41,6 +41,7 @@ const getPreviewTime = (video: HTMLVideoElement) => {
 
 const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string }>(({ url, type }, ref) => {
   const [playing, setPlaying] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isEmbed = type === "youtube" || type === "vimeo";
 
@@ -65,6 +66,7 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
     if (!vid || isEmbed) return;
 
     const onReady = () => {
+      setLoadError(false);
       startPreview();
     };
 
@@ -114,6 +116,15 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
     startPreview();
   };
 
+  if (loadError && !isEmbed) {
+    return (
+      <div ref={ref} className="relative rounded-2xl overflow-hidden bg-card border border-border aspect-[9/16] h-[380px] md:h-[440px] flex-shrink-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+        <VideoOff size={40} />
+        <p className="text-sm">Video non disponibile</p>
+      </div>
+    );
+  }
+
   return (
     <div ref={ref} className="relative rounded-2xl overflow-hidden bg-card border border-border hover:border-primary/20 transition-colors aspect-[9/16] h-[380px] md:h-[440px] flex-shrink-0">
       {isEmbed ? (
@@ -149,6 +160,7 @@ const VideoTestimonial = forwardRef<HTMLDivElement, { url: string; type: string 
               setPlaying(false);
             }
           }}
+          onError={() => setLoadError(true)}
         />
       )}
     </div>
