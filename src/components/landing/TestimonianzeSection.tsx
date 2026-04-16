@@ -1,16 +1,25 @@
+
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Star, Play } from "lucide-react";
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-type Testimonial = {
+type VideoTestimonialData = {
   id: string;
   video_url: string;
   video_type: string;
   is_vertical: boolean;
   title: string;
   client_name: string | null;
+};
+
+type TextTestimonialData = {
+  id: string;
+  name: string;
+  company: string;
+  quote: string;
+  stars: number;
 };
 
 const getEmbedUrl = (url: string, type: string) => {
@@ -69,18 +78,10 @@ const VideoTestimonial = ({ url, type }: { url: string; type: string }) => {
   );
 };
 
-const textTestimonials = [
-  { name: "Thomas Berger", company: "Segelshop Hamburg, Germany", quote: "Easysea products sell themselves. The Flipper winch handle is our #1 bestseller — customers love it.", stars: 5 },
-  { name: "Sophie Martin", company: "Voiles & Mer, France", quote: "The B2B portal makes ordering effortless. Real-time stock, dedicated pricing, and fast shipping across Europe.", stars: 5 },
-  { name: "James Whitfield", company: "SailTech UK, United Kingdom", quote: "250+ 5-star reviews speak for themselves. Easysea delivers quality and innovation like no other brand.", stars: 5 },
-];
-
 const testimonialCardVariants = {
   hidden: { opacity: 0, y: 40, scale: 0.95 },
   visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    scale: 1,
+    opacity: 1, y: 0, scale: 1,
     transition: { delay: i * 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
   }),
 };
@@ -98,26 +99,41 @@ const TestimonialsSection = () => {
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
-      return (data || []) as Testimonial[];
+      return (data || []) as VideoTestimonialData[];
     },
   });
+
+  const { data: textReviews } = useQuery({
+    queryKey: ["landing-text-testimonials"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("text_testimonials")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+      return (data || []) as TextTestimonialData[];
+    },
+  });
+
+  // Fallback hardcoded only if DB returns empty
+  const displayReviews = textReviews && textReviews.length > 0
+    ? textReviews
+    : [
+        { id: "1", name: "Thomas Berger", company: "Segelshop Hamburg, Germany", quote: "Easysea products sell themselves. The Flipper winch handle is our #1 bestseller — customers love it.", stars: 5 },
+        { id: "2", name: "Sophie Martin", company: "Voiles & Mer, France", quote: "The B2B portal makes ordering effortless. Real-time stock, dedicated pricing, and fast shipping across Europe.", stars: 5 },
+        { id: "3", name: "James Whitfield", company: "SailTech UK, United Kingdom", quote: "250+ 5-star reviews speak for themselves. Easysea delivers quality and innovation like no other brand.", stars: 5 },
+      ];
 
   return (
     <section ref={sectionRef} id="partners" className="py-32 bg-background overflow-hidden">
       <div className="container mx-auto px-4">
         <motion.div style={{ y: parallaxY }} className="text-center mb-20">
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+          <motion.p initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             className="text-[11px] uppercase tracking-[0.4em] text-primary font-heading font-bold mb-5"
           >
             Trusted worldwide
           </motion.p>
-          <motion.h2
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+          <motion.h2 initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             transition={{ delay: 0.1, duration: 0.8 }}
             className="font-heading text-3xl md:text-5xl lg:text-6xl font-black text-foreground"
           >
@@ -125,14 +141,9 @@ const TestimonialsSection = () => {
           </motion.h2>
         </motion.div>
 
-        {/* Video Testimonials */}
         {videos && videos.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="mb-16 flex flex-wrap items-center justify-center gap-6"
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            transition={{ duration: 0.8 }} className="mb-16 flex flex-wrap items-center justify-center gap-6"
           >
             {videos.map((v) => (
               <VideoTestimonial key={v.id} url={v.video_url} type={v.video_type} />
@@ -140,11 +151,10 @@ const TestimonialsSection = () => {
           </motion.div>
         )}
 
-        {/* Text Testimonials */}
         <div className="grid md:grid-cols-3 gap-5">
-          {textTestimonials.map((t, i) => (
+          {displayReviews.map((t, i) => (
             <motion.div
-              key={t.name}
+              key={t.id}
               custom={i}
               variants={testimonialCardVariants}
               initial="hidden"
@@ -155,12 +165,8 @@ const TestimonialsSection = () => {
             >
               <div className="flex gap-0.5 mb-5">
                 {Array.from({ length: t.stars }).map((_, j) => (
-                  <motion.div
-                    key={j}
-                    initial={{ opacity: 0, scale: 0 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.15 + j * 0.05, type: "spring", stiffness: 400 }}
+                  <motion.div key={j} initial={{ opacity: 0, scale: 0 }} whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }} transition={{ delay: i * 0.15 + j * 0.05, type: "spring", stiffness: 400 }}
                   >
                     <Star size={13} className="fill-warning text-warning" />
                   </motion.div>

@@ -1032,6 +1032,30 @@ export type Database = {
         }
         Relationships: []
       }
+      homepage_settings: {
+        Row: {
+          content: Json
+          id: string
+          section: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          content?: Json
+          id?: string
+          section: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          content?: Json
+          id?: string
+          section?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           assigned_to: string | null
@@ -1793,6 +1817,39 @@ export type Database = {
           updated_at?: string
           video_type?: string
           video_url?: string
+        }
+        Relationships: []
+      }
+      text_testimonials: {
+        Row: {
+          company: string
+          created_at: string | null
+          id: string
+          is_active: boolean
+          name: string
+          quote: string
+          sort_order: number
+          stars: number
+        }
+        Insert: {
+          company: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          quote: string
+          sort_order?: number
+          stars?: number
+        }
+        Update: {
+          company?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          quote?: string
+          sort_order?: number
+          stars?: number
         }
         Relationships: []
       }
