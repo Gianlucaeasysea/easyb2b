@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, GripVertical, Pencil, Video, Eye, EyeOff, Upload, FileVideo, Star, Save, Type, BarChart3 } from "lucide-react";
+import { Plus, Trash2, GripVertical, Pencil, Video, Eye, EyeOff, FileVideo, Star, Save, Type, BarChart3 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { Progress } from "@/components/ui/progress";
 
