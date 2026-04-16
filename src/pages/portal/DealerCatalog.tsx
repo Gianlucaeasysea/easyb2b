@@ -532,14 +532,6 @@ const DealerCatalog = () => {
                         <p className="font-heading text-lg font-bold text-foreground">€{Number(p.compare_at_price || p.price).toFixed(2)}</p>
                         <p className="text-xs text-muted-foreground">Retail price</p>
                       </div>
-                      <div className="text-right">
-                        <span className={`text-xs font-heading font-bold ${inStock ? "text-success" : "text-destructive"}`}>
-                          {inStock ? "Available" : "Out of Stock"}
-                        </span>
-                        {!inStock && leadTime && (
-                          <p className="text-[10px] font-semibold text-destructive/80">Restock: {leadTime}</p>
-                        )}
-                      </div>
                     </div>
                   ) : (
                     <>
@@ -643,9 +635,9 @@ const DealerCatalog = () => {
           onOpenChange={(open) => !open && setSelectedProduct(null)}
           product={selectedProduct}
           detail={selectedDetail}
-          b2bPrice={selectedB2bPrice}
-          retailPrice={selectedRetailPrice}
-          discountPct={selectedDiscountPct}
+          b2bPrice={isClientMode ? Number(selectedProduct.compare_at_price || selectedProduct.price || 0) : selectedB2bPrice}
+          retailPrice={isClientMode ? Number(selectedProduct.compare_at_price || selectedProduct.price || 0) : selectedRetailPrice}
+          discountPct={isClientMode ? 0 : selectedDiscountPct}
           isClientMode={isClientMode}
           canAddToCart={selectedHasValidPrice && (selectedProduct?.stock_quantity === null || (selectedProduct?.stock_quantity ?? 0) > 0)}
           onAddToCart={() => {
