@@ -199,9 +199,19 @@ const CRMCreateOrder = () => {
       const orderId = (data as any)?.order_id;
       const orderCode = (data as any)?.order_code;
 
+      // Notify dealer for draft orders
+      if (status === "draft" && orderId) {
+        await supabase.from("client_notifications").insert({
+          client_id: selectedClientId,
+          title: "Bozza ordine disponibile",
+          body: `Il tuo sales representative ha preparato una bozza d'ordine #${orderCode || orderId.slice(0, 8)} per te. Accedi al portale per rivederla e confermarla.`,
+          type: "order",
+          order_id: orderId,
+        });
+      }
+
       // If submitted, send notifications
       if (status === "submitted" && orderId) {
-        // Notify dealer
         await supabase.from("client_notifications").insert({
           client_id: selectedClientId,
           title: "New order created",
@@ -210,7 +220,6 @@ const CRMCreateOrder = () => {
           order_id: orderId,
         });
 
-        // Send admin notification via edge function
         try {
           await supabase.functions.invoke("send-order-notification", {
             body: { orderId, orderCode },
@@ -220,7 +229,7 @@ const CRMCreateOrder = () => {
         }
       }
 
-      toast.success("Order created successfully");
+      toast.success(status === "draft" ? "Bozza ordine creata e dealer notificato" : "Ordine inviato con successo");
       navigate("/crm/orders");
     } catch (err: any) {
       toast.error(`Errore creazione ordine: ${err.message || err.details || "errore sconosciuto"}`);
