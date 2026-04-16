@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -127,7 +128,15 @@ const DealerOrders = () => {
       <PriceCheckDialog
         data={draft.priceCheckData}
         duplicating={!!draft.duplicatingId}
-        onConfirm={() => client && draft.priceCheckData && draft.executeDuplicate(client.id, draft.priceCheckData.order, draft.priceCheckData.items)}
+        onConfirm={async () => {
+          try {
+            if (client && draft.priceCheckData) {
+              await draft.executeDuplicate(client.id, draft.priceCheckData.order, draft.priceCheckData.items);
+            }
+          } catch {
+            toast.error("Impossibile duplicare l'ordine. Riprova o contatta il supporto.");
+          }
+        }}
         onCancel={() => draft.setPriceCheckData(null)}
       />
 

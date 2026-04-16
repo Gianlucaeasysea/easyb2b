@@ -136,7 +136,7 @@ export function useOrderDraft() {
       const itemsToUse = comparisonItems || priceCheckData?.items;
       if (!itemsToUse) return;
 
-      const validItems = itemsToUse
+      let validItems = itemsToUse
         .filter((i) => i.available && i.currentPrice !== null)
         .map((i) => ({
           product_id: i.product_id,
@@ -144,6 +144,17 @@ export function useOrderDraft() {
           unit_price: i.currentPrice!,
           subtotal: i.currentPrice! * i.quantity,
         }));
+
+      // Fallback: if no valid items after filtering, use original order prices
+      if (!validItems.length) {
+        const originalItems = (order.order_items || []) as any[];
+        validItems = originalItems.map((i: any) => ({
+          product_id: i.product_id,
+          quantity: i.quantity,
+          unit_price: Number(i.unit_price),
+          subtotal: Number(i.unit_price) * i.quantity,
+        }));
+      }
 
       if (!validItems.length) {
         toast.error(ERROR_MESSAGES.ORDER_NO_PRODUCTS);
@@ -188,20 +199,24 @@ export function useOrderDraft() {
         return;
       }
 
-      const { data: priceListClients } = await supabase
-        .from("price_list_clients")
-        .select("price_list_id")
-        .eq("client_id", clientId);
-      const priceListIds = priceListClients?.map((plc) => plc.price_list_id) || [];
       let priceMap: Record<string, number> = {};
-      if (priceListIds.length > 0) {
-        const { data: priceItems } = await supabase
-          .from("price_list_items")
-          .select("product_id, custom_price")
-          .in("price_list_id", priceListIds);
-        priceItems?.forEach((pi) => {
-          priceMap[pi.product_id] = Number(pi.custom_price);
-        });
+      try {
+        const { data: priceListClients } = await supabase
+          .from("price_list_clients")
+          .select("price_list_id")
+          .eq("client_id", clientId);
+        const priceListIds = priceListClients?.map((plc) => plc.price_list_id) || [];
+        if (priceListIds.length > 0) {
+          const { data: priceItems } = await supabase
+            .from("price_list_items")
+            .select("product_id, custom_price")
+            .in("price_list_id", priceListIds);
+          priceItems?.forEach((pi) => {
+            priceMap[pi.product_id] = Number(pi.custom_price);
+          });
+        }
+      } catch {
+        console.warn("Price list fetch failed (RLS or network), using original prices");
       }
 
       const productIds = items.map((i: any) => i.product_id);
