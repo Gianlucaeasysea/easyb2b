@@ -62,21 +62,9 @@ Deno.serve(async (req) => {
     })
   }
 
-  const { data: tokenRow } = await supabase
-    .from('gmail_tokens')
-    .select('*')
-    .eq('email', 'business@easysea.org')
-    .single()
-
-  if (!tokenRow) {
-    return new Response(JSON.stringify({ error: 'Gmail not connected', needs_auth: true }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
-
   let accessToken: string
   try {
-    accessToken = await refreshTokenIfNeeded(supabase, tokenRow)
+    accessToken = await getValidGmailAccessToken()
   } catch (err: any) {
     console.error('Token refresh failed:', err)
     return new Response(JSON.stringify({ error: 'Token refresh failed', needs_auth: true }), {
