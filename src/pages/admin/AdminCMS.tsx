@@ -99,7 +99,8 @@ function VideoUploadArea({
     setProgress(0);
 
     const ext = file.name.split(".").pop() || "mp4";
-    const path = `homepage/${Date.now()}.${ext}`;
+    const uid = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    const path = `homepage/${uid}.${ext}`;
 
     // Use XMLHttpRequest for real upload progress
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
